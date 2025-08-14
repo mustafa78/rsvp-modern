@@ -1,3 +1,10 @@
 .DS_Store
 server/.gradle/
 server/build/
+server/.classpath
+server/.idea/
+server/.project
+server/.settings/
+server/bin/
+web/.project
+web/.settings/
