@@ -1,0 +1,54 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-rsvp}
+      POSTGRES_USER: ${POSTGRES_USER:-rsvp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rsvp}
+    ports:
+      - "${PG_PORT:-5433}:5432"
+    volumes:
+      - rsvp_pgdata_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rsvp} -d ${POSTGRES_DB:-rsvp}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  server:
+    image: gradle:8.10.0-jdk21
+    working_dir: /home/gradle/project
+    volumes:
+      - ./server:/home/gradle/project
+      - gradle-cache:/home/gradle/.gradle        # speed up rebuilds
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-rsvp}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-rsvp}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-rsvp}
+    command: sh -lc "./gradlew bootRun --no-daemon"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./web:/app
+      - web-node-modules:/app/node_modules       # keep deps inside container
+    environment:
+      VITE_API_URL: http://localhost:8080/api
+    command: sh -lc "npm install && npm run dev -- --host"
+    ports:
+      - "5173:5173"
+    depends_on:
+      - server
+
+volumes:
+  rsvp_pgdata_dev:
+  gradle-cache:
+  web-node-modules:

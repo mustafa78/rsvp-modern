@@ -8,3 +8,5 @@ server/.settings/
 server/bin/
 web/.project
 web/.settings/
+.env
+.env.dev
