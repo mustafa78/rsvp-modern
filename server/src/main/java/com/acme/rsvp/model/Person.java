@@ -1,20 +1,89 @@
 package com.acme.rsvp.model;
 
 import jakarta.persistence.*;
+import java.util.*;
 
 @Entity
-@Table(name = "people")
-public class Person {
+@Table(name = "persons",
+       indexes = {
+         @Index(name="ix_person_its", columnList="its_number", unique = true),
+         @Index(name="ix_person_email", columnList="email", unique = true)
+       })
+public class Person extends Auditable {
   @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
-  @Column(nullable=false)
-  private String name;
-  @Column(nullable=false, unique=true)
-  private String email;
+
+  @Column(name="its_number", nullable=false, unique=true, length=32)
+  private String itsNumber; // login id
+
+  @Column(name="first_name", nullable=false, length=100)
+  private String firstName;
+
+  @Column(name="last_name", nullable=false, length=100)
+  private String lastName;
+
+  @Column(name="phone", length=32)
   private String phone;
 
-  public Long getId(){return id;} public void setId(Long id){this.id=id;}
-  public String getName(){return name;} public void setName(String n){this.name=n;}
-  public String getEmail(){return email;} public void setEmail(String e){this.email=e;}
-  public String getPhone(){return phone;} public void setPhone(String p){this.phone=p;}
+  @Column(name="email", nullable=false, unique=true, length=255)
+  private String email;
+
+  @ElementCollection(fetch = FetchType.EAGER)
+  @CollectionTable(name="person_roles", joinColumns=@JoinColumn(name="person_id"))
+  @Enumerated(EnumType.STRING)
+  @Column(name="role", nullable=false, length=32)
+  private Set<RoleName> roles = new HashSet<>();
+
+  @Enumerated(EnumType.STRING)
+  @Column(name="pickup_zone", nullable=false, length=64)
+  private PickupZone pickupZone = PickupZone.SELF_PICKUP_NAJMI_MASJID;
+
+  // Auth fields
+  @Column(name="password_hash", nullable=false, length=100)
+  private String passwordHash; // store BCrypt hash
+
+  @Enumerated(EnumType.STRING)
+  @Column(name="account_status", nullable=false, length=16)
+  private AccountStatus accountStatus = AccountStatus.ACTIVE;
+
+  @Column(name="reset_token", length=100)
+  private String resetToken;
+
+  @Column(name="reset_expires_at")
+  private java.time.Instant resetExpiresAt;
+
+  @Column(name="failed_login_count", nullable=false)
+  private int failedLoginCount = 0;
+
+  @Column(name="last_login_at")
+  private java.time.Instant lastLoginAt;
+
+  // getters/setters ...
+  public Long getId() { return id; }
+  public String getItsNumber() { return itsNumber; }
+  public void setItsNumber(String itsNumber) { this.itsNumber = itsNumber; }
+  public String getFirstName() { return firstName; }
+  public void setFirstName(String firstName) { this.firstName = firstName; }
+  public String getLastName() { return lastName; }
+  public void setLastName(String lastName) { this.lastName = lastName; }
+  public String getPhone() { return phone; }
+  public void setPhone(String phone) { this.phone = phone; }
+  public String getEmail() { return email; }
+  public void setEmail(String email) { this.email = email; }
+  public Set<RoleName> getRoles() { return roles; }
+  public void setRoles(Set<RoleName> roles) { this.roles = roles; }
+  public PickupZone getPickupZone() { return pickupZone; }
+  public void setPickupZone(PickupZone pickupZone) { this.pickupZone = pickupZone; }
+  public String getPasswordHash() { return passwordHash; }
+  public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
+  public AccountStatus getAccountStatus() { return accountStatus; }
+  public void setAccountStatus(AccountStatus accountStatus) { this.accountStatus = accountStatus; }
+  public String getResetToken() { return resetToken; }
+  public void setResetToken(String resetToken) { this.resetToken = resetToken; }
+  public java.time.Instant getResetExpiresAt() { return resetExpiresAt; }
+  public void setResetExpiresAt(java.time.Instant resetExpiresAt) { this.resetExpiresAt = resetExpiresAt; }
+  public int getFailedLoginCount() { return failedLoginCount; }
+  public void setFailedLoginCount(int failedLoginCount) { this.failedLoginCount = failedLoginCount; }
+  public java.time.Instant getLastLoginAt() { return lastLoginAt; }
+  public void setLastLoginAt(java.time.Instant lastLoginAt) { this.lastLoginAt = lastLoginAt; }
 }

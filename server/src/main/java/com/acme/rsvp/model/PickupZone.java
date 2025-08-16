@@ -1,0 +1,11 @@
+package com.acme.rsvp.model;
+
+public enum PickupZone {
+  SELF_PICKUP_NAJMI_MASJID, 
+  NORTH_POTOMAC_ROCKVILLE, 
+  GERMANTOWN, 
+  WASHINGTON_DC, 
+  FREDERICK, 
+  ELLICOTT_CITY_COLUMBIA, 
+  CLARKSVILLE
+}
