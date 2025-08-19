@@ -1,38 +1,83 @@
 package com.acme.rsvp.dto;
 
-import com.acme.rsvp.model.EventStatus;
-import jakarta.validation.constraints.*;
-import java.time.*;
-import java.util.*;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Set;
 
-public class EventDtos {
+import com.acme.rsvp.model.EventStatus;
 
-  public static abstract class BaseEventReq {
-    @NotBlank public String title;
-    public String description;
-    @NotNull public LocalDate eventDate;
-    public LocalTime startTime;
-    @NotNull public OffsetDateTime registrationOpenAt;
-    @NotNull public OffsetDateTime registrationCloseAt;
-    public EventStatus status = EventStatus.DRAFT;
-    public Set<Long> chefIds = new HashSet<>();
-  }
+/**
+ * Aggregated DTOs for Events to simplify imports and keep shapes consistent
+ * with EventService.
+ *
+ * - Requests are simple classes with public fields (so EventService can use
+ * req.field style). - Responses use records for immutability.
+ */
+public final class EventDtos {
 
-  public static class CreateUpdateNiyazEventRequest extends BaseEventReq {
-    @NotBlank public String miqaatName;
-    @NotNull public LocalDate miqaatDate;
-    public LocalTime miqaatTime;
-  }
+	private EventDtos() {
+	}
 
-  public static class CreateUpdateThaaliEventRequest extends BaseEventReq {
-    public List<MenuItemDto> menu = new ArrayList<>();
-  }
+	/* ============== Base Request ============== */
+	public static class BaseEventReq {
+		public String title;
+		public String description;
+		public LocalDate eventDate;
+		public LocalTime startTime;
+		public OffsetDateTime registrationOpenAt;
+		public OffsetDateTime registrationCloseAt;
+		public EventStatus status;
+	}
 
-  public record EventSummaryDto(Long id, String type, String title, String description, LocalDate eventDate, LocalTime startTime, OffsetDateTime registrationOpenAt, OffsetDateTime registrationCloseAt, EventStatus status) {}
-  public record NiyazEventDto(Long id, String title, String description, LocalDate eventDate, LocalTime startTime, OffsetDateTime registrationOpenAt, OffsetDateTime registrationCloseAt, EventStatus status, String miqaatName, LocalDate miqaatDate, LocalTime miqaatTime, Set<Long> chefIds) {}
-  public record ThaaliEventDto(Long id, String title, String description, LocalDate eventDate, LocalTime startTime, OffsetDateTime registrationOpenAt, OffsetDateTime registrationCloseAt, EventStatus status, List<MenuItemDto> menu, Set<Long> chefIds) {}
+	/* ============== NIYAZ ============== */
+	public static class CreateUpdateNiyazEventRequest extends BaseEventReq {
+		public String miqaatName;
+		public LocalDate miqaatDate;
+		public LocalTime miqaatTime;
+		public Set<Long> chefIds;
+	}
 
-  public record MenuItemDto(Long id, String name, String description, BigDecimal quartsPerThaaliUnit, List<MenuItemIngredientDto> ingredients) {}
-  public record MenuItemIngredientDto(Long ingredientId, String ingredientName, String unit, BigDecimal qtyPerQuart) {}
+	/* ============== THAALI ============== */
+	public static class CreateUpdateThaaliEventRequest extends BaseEventReq {
+		public Set<Long> chefIds;
+		/**
+		 * Menu assignment is catalog-backed: pick a dish and optional override +
+		 * position.
+		 */
+		public List<MenuAssignmentDto> menu;
+	}
+
+	/** Assign a Dish to a Thaali event. */
+	public static record MenuAssignmentDto(Long dishId, BigDecimal quartsPerThaaliUnit, // null => use
+																						// Dish.defaultQuartsPerThaaliUnit
+			Integer position) {
+	}
+
+	/* ============== READ MODELS ============== */
+
+	public static record EventSummaryDto(Long id, String type, String title, String description, LocalDate eventDate,
+			LocalTime startTime, OffsetDateTime registrationOpenAt, OffsetDateTime registrationCloseAt,
+			EventStatus status) {
+	}
+
+	public static record NiyazEventDto(Long id, String title, String description, LocalDate eventDate,
+			LocalTime startTime, OffsetDateTime registrationOpenAt, OffsetDateTime registrationCloseAt,
+			EventStatus status, String miqaatName, LocalDate miqaatDate, LocalTime miqaatTime, Set<Long> chefIds) {
+	}
+
+	public static record MenuItemIngredientDto(Long ingredientId, String ingredientName, String unit,
+			BigDecimal qtyPerQuart) {
+	}
+
+	public static record MenuItemDto(Long id, String name, String description, BigDecimal quartsPerThaaliUnit,
+			List<MenuItemIngredientDto> ingredients, Long dishId, Integer position) {
+	}
+
+	public static record ThaaliEventDto(Long id, String title, String description, LocalDate eventDate,
+			LocalTime startTime, OffsetDateTime registrationOpenAt, OffsetDateTime registrationCloseAt,
+			EventStatus status, List<MenuItemDto> menu, Set<Long> chefIds) {
+	}
 }

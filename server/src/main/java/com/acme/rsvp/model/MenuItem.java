@@ -1,44 +1,36 @@
 package com.acme.rsvp.model;
 
 import jakarta.persistence.*;
-import java.util.*;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name="menu_items")
-public class MenuItem extends Auditable {
+public class MenuItem {
   @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
   @ManyToOne(optional=false) @JoinColumn(name="event_id")
-  private ThaaliEvent event;
+  private Event event;
 
-  @Column(name="name", nullable=false, length=200)
-  private String name;
+  // New catalog link (optional but recommended)
+  @ManyToOne @JoinColumn(name="dish_id")
+  private Dish dish;
 
-  @Column(name="description", length=1000)
-  private String description;
+  // Optional override per event; if null, use dish.defaultQuartsPerThaaliUnit
+  @Column(name="quarts_per_thaali_unit", precision=6, scale=2)
+  private BigDecimal quartsPerThaaliUnit;
 
-  /**
-   * Multiplier applied to total \"thaali quarts\" to get quarts for this dish.
-   * Default 1.0 => each dish needs the same quarts as the total thaali quarts.
-   * Adjust if one dish is made in a different proportion.
-   */
-  @Column(name="quarts_per_thaali_unit", nullable=false)
-  private java.math.BigDecimal quartsPerThaaliUnit = java.math.BigDecimal.ONE;
+  @Column(name="position")
+  private Integer position;
 
-  @OneToMany(mappedBy="menuItem", cascade=CascadeType.ALL, orphanRemoval=true)
-  private Set<MenuItemIngredient> ingredients = new HashSet<>();
-
-  // getters/setters...
-  public Long getId() { return id; }
-  public ThaaliEvent getEvent() { return event; }
-  public void setEvent(ThaaliEvent event) { this.event = event; }
-  public String getName() { return name; }
-  public void setName(String name) { this.name = name; }
-  public String getDescription() { return description; }
-  public void setDescription(String description) { this.description = description; }
-  public java.math.BigDecimal getQuartsPerThaaliUnit() { return quartsPerThaaliUnit; }
-  public void setQuartsPerThaaliUnit(java.math.BigDecimal v) { this.quartsPerThaaliUnit = v; }
-  public Set<MenuItemIngredient> getIngredients() { return ingredients; }
-  public void setIngredients(Set<MenuItemIngredient> ingredients) { this.ingredients = ingredients; }
+  public Long getId(){ return id; }
+  public void setId(Long id){ this.id = id; }
+  public Event getEvent(){ return event; }
+  public void setEvent(Event event){ this.event = event; }
+  public Dish getDish(){ return dish; }
+  public void setDish(Dish dish){ this.dish = dish; }
+  public BigDecimal getQuartsPerThaaliUnit(){ return quartsPerThaaliUnit; }
+  public void setQuartsPerThaaliUnit(BigDecimal q){ this.quartsPerThaaliUnit = q; }
+  public Integer getPosition(){ return position; }
+  public void setPosition(Integer position){ this.position = position; }
 }

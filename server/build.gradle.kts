@@ -2,6 +2,7 @@ plugins {
   id("org.springframework.boot") version "3.5.1"
   id("io.spring.dependency-management") version "1.1.6"
   java
+  id("org.flywaydb.flyway") version "11.10.0"
 }
 
 group = "com.acme"
@@ -18,11 +19,21 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-starter-validation")
   implementation("org.springframework.boot:spring-boot-starter-data-jpa")
   implementation("org.springframework.boot:spring-boot-starter-security")
+  
   implementation("org.flywaydb:flyway-core:11.10.0")
   implementation("org.flywaydb:flyway-database-postgresql:11.10.0")
+  
   runtimeOnly("org.postgresql:postgresql:42.7.4")
 
   testImplementation("org.springframework.boot:spring-boot-starter-test")
+}
+
+flyway {
+    // keep creds out of source; these are fallbacks:
+    url = System.getenv("SPRING_DATASOURCE_URL") ?: "jdbc:postgresql://localhost:5432/rsvp"
+    user = System.getenv("SPRING_DATASOURCE_USERNAME") ?: "rsvp"
+    password = System.getenv("SPRING_DATASOURCE_PASSWORD") ?: "rsvp"
+    locations = arrayOf("filesystem:src/main/resources/db/migration")
 }
 
 tasks.test { useJUnitPlatform() }

@@ -1,63 +1,58 @@
 package com.acme.rsvp.repository;
 
-import com.acme.rsvp.model.ThaaliOrder;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-
 import java.math.BigDecimal;
 import java.util.List;
 
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.acme.rsvp.model.ThaaliOrder;
+
 public interface ThaaliOrderRepository extends JpaRepository<ThaaliOrder, Long> {
 
-  boolean existsByEventIdAndPersonId(Long eventId, Long personId);
+	@Query(value = "SELECT COALESCE(SUM(large_count),0) FROM thaali_orders WHERE event_id = :eventId", nativeQuery = true)
+	long totalLarge(@Param("eventId") Long eventId);
 
-  List<ThaaliOrder> findByEventId(Long eventId);
+	@Query(value = "SELECT COALESCE(SUM(small_count),0) FROM thaali_orders WHERE event_id = :eventId", nativeQuery = true)
+	long totalSmall(@Param("eventId") Long eventId);
 
-  // Size counts for reports
-  @Query("""
-    select coalesce(sum(o.largeCount),0) from ThaaliOrder o
-    where o.event.id = :eventId
-  """)
-  long totalLarge(Long eventId);
+	@Query(value = "SELECT COALESCE(SUM(barakati_count),0) FROM thaali_orders WHERE event_id = :eventId", nativeQuery = true)
+	long totalBarakati(@Param("eventId") Long eventId);
 
-  @Query("""
-    select coalesce(sum(o.smallCount),0) from ThaaliOrder o
-    where o.event.id = :eventId
-  """)
-  long totalSmall(Long eventId);
+	@Query(value = """
+			SELECT COALESCE(SUM(COALESCE(mi.quarts_per_thaali_unit, d.default_quarts_per_thaali_unit)),0)
+			FROM menu_items mi
+			JOIN dishes d ON d.id = mi.dish_id
+			WHERE mi.event_id = :eventId
+	""", nativeQuery = true)
+	BigDecimal sumQuartsPerThaaliUnit(@Param("eventId") Long eventId);
 
-  @Query("""
-    select coalesce(sum(o.barakatiCount),0) from ThaaliOrder o
-    where o.event.id = :eventId
-  """)
-  long totalBarakati(Long eventId);
+	@Query(value = """   
+			SELECT i.id AS ingredient_id,
+				i.name AS ingredient_name,
+				i.unit AS unit,
+				SUM(di.qty_per_quart * COALESCE(mi.quarts_per_thaali_unit, d.default_quarts_per_thaali_unit)) AS qty_per_thaali_unit    
+			FROM menu_items mi    
+			JOIN dishes d ON d.id = mi.dish_id    
+			JOIN dish_ingredients di ON di.dish_id = d.id    
+			JOIN ingredients i ON i.id = di.ingredient_id    
+			WHERE mi.event_id = :eventId    
+			GROUP BY i.id, i.name, i.unit  
+	""", nativeQuery = true)
+	List<Object[]> ingredientPerThaaliUnit(@Param("eventId") Long eventId);
 
-  // Total quarts for a Thaali event
-  @Query("""
-    select
-      ( coalesce(sum(o.largeCount),0) * 1.0
-      + coalesce(sum(o.smallCount),0) * 0.5
-      + coalesce(sum(o.barakatiCount),0) * 0.25 )
-    from ThaaliOrder o
-    where o.event.id = :eventId
-  """)
-  Double totalThaaliQuartsAsDouble(Long eventId);
-
-  default BigDecimal totalThaaliQuarts(Long eventId) {
-    Double d = totalThaaliQuartsAsDouble(eventId);
-    return d == null ? BigDecimal.ZERO : new BigDecimal(String.valueOf(d));
-  }
-
-  // Shopping list: sum per ingredient across the event menu
-  @Query("""
-    select mi.ingredient.id as ingredientId,
-           mi.ingredient.name as ingredientName,
-           mi.ingredient.unit as unit,
-           sum(mi.quantityPerQuart * (m.quartsPerThaaliUnit)) as qtyPerThaaliQuartUnit
-    from MenuItemIngredient mi
-    join mi.menuItem m
-    where m.event.id = :eventId
-    group by mi.ingredient.id, mi.ingredient.name, mi.ingredient.unit
-  """)
-  List<Object[]> ingredientPerThaaliUnit(Long eventId);
+	@Query(value = """    
+			WITH units AS (      
+				SELECT (COALESCE(SUM(large_count),0) + 0.5*COALESCE(SUM(small_count),0) + 0.25*COALESCE(SUM(barakati_count),0)) AS u      
+				FROM thaali_orders 
+				WHERE event_id = :eventId    
+			),    
+			qptu AS (      
+				SELECT COALESCE(SUM(COALESCE(mi.quarts_per_thaali_unit, d.default_quarts_per_thaali_unit)),0) AS q      
+				FROM menu_items mi JOIN dishes d ON d.id = mi.dish_id WHERE mi.event_id = :eventId    
+			)    
+			SELECT (SELECT u FROM units) * (SELECT q FROM qptu)  
+	""")
+	BigDecimal totalThaaliQuarts(@Param("eventId") Long eventId);
 }
