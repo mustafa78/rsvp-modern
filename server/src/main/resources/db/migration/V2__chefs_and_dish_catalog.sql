@@ -1,11 +1,14 @@
--- V3: Introduce 'chefs' (independent of people/persons), a reusable dish catalog,
+-- V2: Introduce 'chefs' (independent of people/persons), a reusable dish catalog,
 -- and make menu_items reference dishes. Keep old event_person_chefs if present.
 
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='event_chefs') THEN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema='public' AND table_name='event_chefs'
+  ) THEN
     IF EXISTS (
-      SELECT 1 FROM information_schema.columns 
+      SELECT 1 FROM information_schema.columns
       WHERE table_schema='public' AND table_name='event_chefs' AND column_name='person_id'
     ) THEN
       EXECUTE 'ALTER TABLE public.event_chefs RENAME TO event_person_chefs';
@@ -27,7 +30,7 @@ CREATE TABLE IF NOT EXISTS chefs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 2) Event↔Chef join
+-- 2) Event↔️Chef join
 CREATE TABLE IF NOT EXISTS event_chefs (
   event_id BIGINT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
   chef_id  BIGINT NOT NULL REFERENCES chefs(id)  ON DELETE RESTRICT,
@@ -38,13 +41,15 @@ CREATE TABLE IF NOT EXISTS event_chefs (
 -- 3) Dish catalog + per-quart recipe
 CREATE TABLE IF NOT EXISTS dishes (
   id BIGSERIAL PRIMARY KEY,
-  name TEXT NOT NULL UNIQUE,
+  name VARCHAR(200) NOT NULL UNIQUE,
   description TEXT,
   default_quarts_per_thaali_unit NUMERIC(6,2) NOT NULL DEFAULT 1.00,
   active BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- NOTE: assumes 'ingredients' table already exists from V1
 CREATE TABLE IF NOT EXISTS dish_ingredients (
   dish_id BIGINT NOT NULL REFERENCES dishes(id) ON DELETE CASCADE,
   ingredient_id BIGINT NOT NULL REFERENCES ingredients(id) ON DELETE RESTRICT,
@@ -53,20 +58,34 @@ CREATE TABLE IF NOT EXISTS dish_ingredients (
 );
 
 -- 4) Menu items now point to a dish (optional override + sort position)
-ALTER TABLE menu_items
-  ADD COLUMN IF NOT EXISTS dish_id BIGINT,
-  ADD COLUMN IF NOT EXISTS position SMALLINT;
+-- Split into separate ALTERs to avoid parser quirks
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS dish_id BIGINT;
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS position SMALLINT;
 
-ALTER TABLE menu_items
-  ADD CONSTRAINT IF NOT EXISTS fk_menu_items_dish
-  FOREIGN KEY (dish_id) REFERENCES dishes(id) ON DELETE RESTRICT;
-
+-- Postgres does NOT support "ADD CONSTRAINT IF NOT EXISTS", so guard via catalog
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname = 'uk_menu_items_event_dish'
+    SELECT 1
+    FROM   pg_constraint
+    WHERE  conname = 'fk_menu_items_dish'
   ) THEN
-    EXECUTE 'CREATE UNIQUE INDEX uk_menu_items_event_dish ON public.menu_items(event_id, dish_id) WHERE dish_id IS NOT NULL';
+    EXECUTE 'ALTER TABLE ONLY public.menu_items
+             ADD CONSTRAINT fk_menu_items_dish
+             FOREIGN KEY (dish_id) REFERENCES public.dishes(id) ON DELETE RESTRICT';
+  END IF;
+END$$;
+
+-- Unique per-event dish (only when dish_id is set)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE schemaname='public' AND indexname='uk_menu_items_event_dish'
+  ) THEN
+    EXECUTE 'CREATE UNIQUE INDEX uk_menu_items_event_dish
+             ON public.menu_items(event_id, dish_id)
+             WHERE dish_id IS NOT NULL';
   END IF;
 END$$;
 

@@ -9,6 +9,7 @@ services:
       - "${PG_PORT:-5433}:5432"
     volumes:
       - rsvp_pgdata_dev:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro   # ← add this line
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rsvp} -d ${POSTGRES_DB:-rsvp}"]
       interval: 5s
