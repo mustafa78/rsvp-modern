@@ -41,18 +41,4 @@ public interface ThaaliOrderRepository extends JpaRepository<ThaaliOrder, Long> 
 			GROUP BY i.id, i.name, i.unit  
 	""", nativeQuery = true)
 	List<Object[]> ingredientPerThaaliUnit(@Param("eventId") Long eventId);
-
-	@Query(value = """    
-			WITH units AS (      
-				SELECT (COALESCE(SUM(large_count),0) + 0.5*COALESCE(SUM(small_count),0) + 0.25*COALESCE(SUM(barakati_count),0)) AS u      
-				FROM thaali_orders 
-				WHERE event_id = :eventId    
-			),    
-			qptu AS (      
-				SELECT COALESCE(SUM(COALESCE(mi.quarts_per_thaali_unit, d.default_quarts_per_thaali_unit)),0) AS q      
-				FROM menu_items mi JOIN dishes d ON d.id = mi.dish_id WHERE mi.event_id = :eventId    
-			)    
-			SELECT (SELECT u FROM units) * (SELECT q FROM qptu)  
-	""")
-	BigDecimal totalThaaliQuarts(@Param("eventId") Long eventId);
 }

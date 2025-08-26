@@ -1,18 +1,22 @@
 package com.acme.rsvp.service;
 
-import com.acme.rsvp.dto.RsvpDtos.*;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.acme.rsvp.dto.RsvpDtos.ShoppingListItemDto;
+import com.acme.rsvp.dto.RsvpDtos.ThaaliCountReportDto;
+import com.acme.rsvp.dto.RsvpDtos.ThaaliOrderDto;
 import com.acme.rsvp.model.Person;
-import com.acme.rsvp.model.PickupZone;
 import com.acme.rsvp.model.ThaaliEvent;
 import com.acme.rsvp.model.ThaaliOrder;
 import com.acme.rsvp.repository.PersonRepository;
 import com.acme.rsvp.repository.ThaaliEventRepository;
 import com.acme.rsvp.repository.ThaaliOrderRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
 
 @Service
 public class ThaaliService {
@@ -42,13 +46,13 @@ public class ThaaliService {
   @Transactional(readOnly = true)
   public ThaaliCountReportDto counts(Long eventId) {
     long L = orderRepo.totalLarge(eventId), S = orderRepo.totalSmall(eventId), B = orderRepo.totalBarakati(eventId);
-    BigDecimal q = orderRepo.totalThaaliQuarts(eventId);
+    BigDecimal q = totalThaaliQuarts(eventId);
     return new ThaaliCountReportDto(L, S, B, q);
   }
 
   @Transactional(readOnly = true)
   public List<ShoppingListItemDto> shoppingList(Long eventId) {
-    BigDecimal totalQuarts = orderRepo.totalThaaliQuarts(eventId);
+    BigDecimal totalQuarts = totalThaaliQuarts(eventId);
     var unitRows = orderRepo.ingredientPerThaaliUnit(eventId);
     List<ShoppingListItemDto> out = new ArrayList<>();
     for (Object[] row : unitRows) {
@@ -58,4 +62,19 @@ public class ThaaliService {
     }
     return out;
   }
+  
+  public BigDecimal totalThaaliQuarts(Long eventId) {
+	  BigDecimal large = BigDecimal.valueOf(orderRepo.totalLarge(eventId));
+	  BigDecimal small = BigDecimal.valueOf(orderRepo.totalSmall(eventId));
+	  BigDecimal barakati = BigDecimal.valueOf(orderRepo.totalBarakati(eventId));
+
+	  BigDecimal units = large
+	      .add(small.multiply(new BigDecimal("0.5")))
+	      .add(barakati.multiply(new BigDecimal("0.25")));
+
+	  BigDecimal qptu = orderRepo.sumQuartsPerThaaliUnit(eventId);
+	  if (qptu == null) qptu = BigDecimal.ZERO;
+
+	  return units.multiply(qptu).setScale(2, RoundingMode.HALF_UP);
+  }  
 }

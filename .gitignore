@@ -8,5 +8,6 @@ server/.settings/
 server/bin/
 web/.project
 web/.settings/
+web/package-lock.json
 .env
 .env.dev

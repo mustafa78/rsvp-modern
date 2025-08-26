@@ -1,94 +1,128 @@
 package com.acme.rsvp.service;
 
-import java.time.Instant;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
+import com.acme.rsvp.dto.auth.*;
+import com.acme.rsvp.model.PasswordResetToken;
+import com.acme.rsvp.model.Person;
+import com.acme.rsvp.model.SessionToken;
+import com.acme.rsvp.repository.PasswordResetTokenRepository;
+import com.acme.rsvp.repository.PersonRepository;
+import com.acme.rsvp.repository.SessionTokenRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
+import jakarta.persistence.TypedQuery;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.acme.rsvp.dto.AuthResponse;
-import com.acme.rsvp.dto.LoginRequest;
-import com.acme.rsvp.dto.PasswordChangeRequest;
-import com.acme.rsvp.dto.PasswordResetConfirmRequest;
-import com.acme.rsvp.dto.PasswordResetRequest;
-import com.acme.rsvp.dto.PersonDtos.PersonDto;
-import com.acme.rsvp.dto.RegisterRequest;
-import com.acme.rsvp.model.AccountStatus;
-import com.acme.rsvp.model.Person;
-import com.acme.rsvp.model.PickupZone;
-import com.acme.rsvp.model.RoleName;
-import com.acme.rsvp.repository.PersonRepository;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class AuthService {
-  private final PersonRepository people;
-  private final PasswordEncoder encoder;
 
-  public AuthService(PersonRepository people, PasswordEncoder encoder) { this.people = people; this.encoder = encoder; }
+  private final PersonRepository personRepo;
+  private final SessionTokenRepository tokenRepo;
+  private final PasswordResetTokenRepository prtRepo;
+  private final PasswordEncoder encoder;
+  private final EntityManager em;
+  private final EmailService emailService;
+
+  public AuthService(PersonRepository personRepo, SessionTokenRepository tokenRepo,
+                     PasswordResetTokenRepository prtRepo, PasswordEncoder encoder,
+                     EntityManager em, EmailService emailService) {
+    this.personRepo = personRepo;
+    this.tokenRepo = tokenRepo;
+    this.prtRepo = prtRepo;
+    this.encoder = encoder;
+    this.em = em;
+    this.emailService = emailService;
+  }
 
   @Transactional
-  public PersonDto register(RegisterRequest req) {
-    if (people.existsByItsNumber(req.itsNumber())) throw new IllegalArgumentException("ITS already registered");
-    if (people.existsByEmail(req.email())) throw new IllegalArgumentException("Email already registered");
-    Person p = new Person();
+  public AuthResponse register(RegisterRequest req) {
+    Person p = findByItsOrEmail(req.itsNumber(), req.email()).orElse(null);
+    if (p != null) throw new IllegalArgumentException("User already exists");
+    p = new Person();
     p.setItsNumber(req.itsNumber());
     p.setFirstName(req.firstName());
     p.setLastName(req.lastName());
-    p.setEmail(req.email());
     p.setPhone(req.phone());
-    p.setPickupZone(req.pickupZone() == null ? PickupZone.SELF_PICKUP_NAJMI_MASJID : req.pickupZone());
+    p.setEmail(req.email());
+    try { p.setPickupZone(req.pickupZone()); } catch (Exception ignored) {}
     p.setPasswordHash(encoder.encode(req.password()));
-    p.getRoles().add(RoleName.USER);
-    people.save(p);
-    return toDto(p);
-  }
-
-  public AuthResponse login(LoginRequest req) {
-    Person p = people.findByItsNumber(req.itsNumber()).orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
-    if (p.getAccountStatus() != AccountStatus.ACTIVE) throw new IllegalStateException("Account not active");
-    if (!encoder.matches(req.password(), p.getPasswordHash())) throw new IllegalArgumentException("Invalid credentials");
-    p.setLastLoginAt(Instant.now());
-    people.save(p);
-    String token = UUID.randomUUID().toString(); // stub token
-    return new AuthResponse(token, p.getId(), p.getItsNumber(), p.getFirstName(), p.getLastName(), p.getEmail(),
-        p.getRoles().stream().map(Enum::name).collect(Collectors.toSet()));
+    personRepo.save(p);
+    return toAuthResponse(p);
   }
 
   @Transactional
-  public void changePassword(PasswordChangeRequest req) {
-    Person p = people.findByItsNumber(req.itsNumber()).orElseThrow(() -> new IllegalArgumentException("User not found"));
-    if (!encoder.matches(req.oldPassword(), p.getPasswordHash())) throw new IllegalArgumentException("Old password mismatch");
+  public SessionToken login(LoginRequest req) {
+    Person p = findByItsOrEmail(req.itsNumber(), req.itsNumber())
+        .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    if (p.getPasswordHash() == null || !encoder.matches(req.password(), p.getPasswordHash())) {
+      throw new IllegalArgumentException("Invalid credentials");
+    }
+    var now = OffsetDateTime.now(ZoneOffset.UTC);
+    SessionToken t = new SessionToken(UUID.randomUUID(), p, now, now.plusDays(7));
+    tokenRepo.save(t);
+    return t;
+  }
+
+  @Transactional
+  public void logout(UUID tokenId) {
+    tokenRepo.findById(tokenId).ifPresent(t -> { t.setRevoked(true); tokenRepo.save(t); });
+  }
+
+  @Transactional
+  public void changePassword(Person current, PasswordChangeRequest req) {
+    if (current.getPasswordHash() == null || !encoder.matches(req.currentPassword(), current.getPasswordHash())) {
+      throw new IllegalArgumentException("Current password incorrect");
+    }
+    current.setPasswordHash(encoder.encode(req.newPassword()));
+    personRepo.save(current);
+  }
+
+  @Transactional
+  public void sendReset(String itsOrEmail, String baseUrl) {
+    Person p = findByItsOrEmail(itsOrEmail, itsOrEmail)
+        .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+    for (var t : prtRepo.findByPersonAndUsedAtIsNull(p)) {
+      t.setUsedAt(OffsetDateTime.now());
+      prtRepo.save(t);
+    }
+    var now = OffsetDateTime.now(ZoneOffset.UTC);
+    var token = new PasswordResetToken(UUID.randomUUID(), p, now, now.plusHours(2));
+    prtRepo.save(token);
+    String link = baseUrl + "/reset-password?token=" + token.getId();
+    emailService.sendPasswordResetLink(p.getEmail() != null ? p.getEmail() : p.getItsNumber() + "@example.invalid", link);
+  }
+
+  @Transactional
+  public void confirmReset(PasswordConfirmRequest req) {
+    UUID id = UUID.fromString(req.token());
+    var t = prtRepo.findByIdAndUsedAtIsNullAndExpiresAtAfter(id, OffsetDateTime.now(ZoneOffset.UTC))
+        .orElseThrow(() -> new IllegalArgumentException("Invalid/expired token"));
+    Person p = t.getPerson();
     p.setPasswordHash(encoder.encode(req.newPassword()));
-    people.save(p);
+    personRepo.save(p);
+    t.setUsedAt(OffsetDateTime.now(ZoneOffset.UTC));
+    prtRepo.save(t);
   }
 
-  @Transactional
-  public String requestPasswordReset(PasswordResetRequest req) {
-    Person p = people.findByItsNumber(req.itsOrEmail()).orElse(
-        people.findByEmail(req.itsOrEmail()).orElseThrow(() -> new IllegalArgumentException("User not found")));
-    String token = UUID.randomUUID().toString();
-    p.setResetToken(token);
-    p.setResetExpiresAt(Instant.now().plusSeconds(3600));
-    people.save(p);
-    return token; // email in real impl
+  private Optional<Person> findByItsOrEmail(String its, String email) {
+    try {
+      TypedQuery<Person> q = em.createQuery(
+          "select p from Person p where p.itsNumber = :its or p.email = :email", Person.class);
+      q.setParameter("its", its);
+      q.setParameter("email", email);
+      return Optional.of(q.getSingleResult());
+    } catch (NoResultException e) {
+      return Optional.empty();
+    }
   }
 
-  @Transactional
-  public void confirmPasswordReset(PasswordResetConfirmRequest req) {
-    Person p = people.findByItsNumber(req.itsNumber()).orElseThrow(() -> new IllegalArgumentException("User not found"));
-    if (p.getResetToken() == null || p.getResetExpiresAt() == null) throw new IllegalStateException("Reset not requested");
-    if (!p.getResetToken().equals(req.token())) throw new IllegalArgumentException("Invalid token");
-    if (Instant.now().isAfter(p.getResetExpiresAt())) throw new IllegalStateException("Token expired");
-    p.setPasswordHash(encoder.encode(req.newPassword()));
-    p.setResetToken(null); p.setResetExpiresAt(null);
-    people.save(p);
-  }
-
-  private static PersonDto toDto(Person p) {
-    Set<String> roles = p.getRoles().stream().map(Enum::name).collect(Collectors.toSet());
-    return new PersonDto(p.getId(), p.getItsNumber(), p.getFirstName(), p.getLastName(), p.getEmail(), p.getPhone(), roles, p.getPickupZone());
+  private static AuthResponse toAuthResponse(Person p) {
+    return new AuthResponse(p.getId(), p.getItsNumber(), p.getFirstName(), p.getLastName(), p.getEmail());
   }
 }

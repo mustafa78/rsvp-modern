@@ -1,16 +1,35 @@
 package com.acme.rsvp.service;
 
-import com.acme.rsvp.dto.EventDtos.*;
-import com.acme.rsvp.model.*;
-import com.acme.rsvp.repository.*;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.acme.rsvp.dto.EventDtos.BaseEventReq;
+import com.acme.rsvp.dto.EventDtos.CreateUpdateNiyazEventRequest;
+import com.acme.rsvp.dto.EventDtos.CreateUpdateThaaliEventRequest;
+import com.acme.rsvp.dto.EventDtos.EventSummaryDto;
+import com.acme.rsvp.dto.EventDtos.MenuAssignmentDto;
+import com.acme.rsvp.dto.EventDtos.MenuItemDto;
+import com.acme.rsvp.dto.EventDtos.MenuItemIngredientDto;
+import com.acme.rsvp.dto.EventDtos.NiyazEventDto;
+import com.acme.rsvp.dto.EventDtos.ThaaliEventDto;
+import com.acme.rsvp.model.Chef;
+import com.acme.rsvp.model.Dish;
+import com.acme.rsvp.model.Event;
+import com.acme.rsvp.model.EventStatus;
+import com.acme.rsvp.model.MenuItem;
+import com.acme.rsvp.model.NiyazEvent;
+import com.acme.rsvp.model.ThaaliEvent;
+import com.acme.rsvp.repository.ChefRepository;
+import com.acme.rsvp.repository.DishRepository;
+import com.acme.rsvp.repository.EventRepository;
+import com.acme.rsvp.repository.MenuItemRepository;
+import com.acme.rsvp.repository.NiyazEventRepository;
+import com.acme.rsvp.repository.ThaaliEventRepository;
 
 @Service
 public class EventService {
@@ -18,20 +37,20 @@ public class EventService {
   private final EventRepository eventRepo;
   private final NiyazEventRepository niyazRepo;
   private final ThaaliEventRepository thaaliRepo;
-  private final PersonRepository personRepo;
+  private final ChefRepository chefRepo;
   private final MenuItemRepository menuRepo;
   private final DishRepository dishRepo;
 
   public EventService(EventRepository eventRepo,
                       NiyazEventRepository niyazRepo,
                       ThaaliEventRepository thaaliRepo,
-                      PersonRepository personRepo,
+                      ChefRepository chefRepo,
                       MenuItemRepository menuRepo,
                       DishRepository dishRepo) {
     this.eventRepo = eventRepo;
     this.niyazRepo = niyazRepo;
     this.thaaliRepo = thaaliRepo;
-    this.personRepo = personRepo;
+    this.chefRepo = chefRepo;
     this.menuRepo = menuRepo;
     this.dishRepo = dishRepo;
   }
@@ -110,15 +129,12 @@ public class EventService {
     e.setStatus(req.status);
   }
 
-  private void attachChefs(Event e, Set<Long> chefIds) {
-    Set<Person> newChefs = new HashSet<>();
-    if (chefIds != null) {
-      for (Long pid : chefIds) {
-        Person p = personRepo.findById(pid).orElseThrow();
-        newChefs.add(p);
-      }
-    }
-    e.setChefs(newChefs);
+  private void attachChefs(Event e, java.util.Set<Long> chefIds) {
+	  if (chefIds == null) chefIds = java.util.Set.of();
+	  java.util.Set<Chef> chefs = chefIds.stream()
+	      .map(id -> chefRepo.findById(id).orElseThrow())
+	      .collect(java.util.stream.Collectors.toSet());
+	  e.setChefs(chefs);
   }
 
   private void upsertMenu(Long eventId, List<MenuAssignmentDto> items) {
@@ -152,7 +168,7 @@ public class EventService {
         e.getRegistrationOpenAt(), e.getRegistrationCloseAt(), e.getStatus()
     );
   }
-
+   
   private ThaaliEventDto toDto(ThaaliEvent e) {
     // Always fetch menu from repository for consistency
     var items = menuRepo.findByEvent_IdOrderByPositionAsc(e.getId());
@@ -180,7 +196,7 @@ public class EventService {
       return new MenuItemDto(mi.getId(), name, desc, q, lines, dishId, mi.getPosition());
     }).toList();
 
-    var chefIds = e.getChefs().stream().map(Person::getId).collect(Collectors.toSet());
+    var chefIds = e.getChefs().stream().map(Chef::getId).collect(Collectors.toSet());
 
     return new ThaaliEventDto(
         e.getId(), e.getTitle(), e.getDescription(), e.getEventDate(), e.getStartTime(),
@@ -189,11 +205,12 @@ public class EventService {
   }
 
   private static NiyazEventDto toDto(NiyazEvent e) {
-    var chefIds = e.getChefs().stream().map(Person::getId).collect(Collectors.toSet());
-    return new NiyazEventDto(
-        e.getId(), e.getTitle(), e.getDescription(), e.getEventDate(), e.getStartTime(),
-        e.getRegistrationOpenAt(), e.getRegistrationCloseAt(), e.getStatus(),
-        e.getMiqaatName(), e.getMiqaatDate(), e.getMiqaatTime(), chefIds
-    );
+	  Set<Long> chefIds = e.getChefs().stream().map(Chef::getId).collect(java.util.stream.Collectors.toSet());
+	  return new NiyazEventDto(
+	      e.getId(), e.getTitle(), e.getDescription(), e.getEventDate(), e.getStartTime(),
+	      e.getRegistrationOpenAt(), e.getRegistrationCloseAt(), e.getStatus(),
+	      e.getMiqaatName(), e.getMiqaatDate(), e.getMiqaatTime(), chefIds
+	  );
   }
+
 }

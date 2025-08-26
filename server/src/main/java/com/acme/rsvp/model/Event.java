@@ -39,8 +39,8 @@ public abstract class Event extends Auditable {
   @ManyToMany
   @JoinTable(name="event_chefs",
     joinColumns=@JoinColumn(name="event_id"),
-    inverseJoinColumns=@JoinColumn(name="person_id"))
-  private Set<Person> chefs = new HashSet<>();
+    inverseJoinColumns=@JoinColumn(name="chef_id"))
+  private Set<Chef> chefs = new HashSet<>();
 
   // getters/setters ...
   public Long getId() { return id; }
@@ -58,8 +58,8 @@ public abstract class Event extends Auditable {
   public void setRegistrationCloseAt(OffsetDateTime registrationCloseAt) { this.registrationCloseAt = registrationCloseAt; }
   public EventStatus getStatus() { return status; }
   public void setStatus(EventStatus status) { this.status = status; }
-  public Set<Person> getChefs() { return chefs; }
-  public void setChefs(Set<Person> chefs) { this.chefs = chefs; }
+  public Set<Chef> getChefs() { return chefs; }
+  public void setChefs(Set<Chef> chefs) { this.chefs = chefs; }
 
   @Transient
   public boolean isRegistrationOpen(OffsetDateTime now) {
