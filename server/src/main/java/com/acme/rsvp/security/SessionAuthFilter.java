@@ -1,66 +1,62 @@
 package com.acme.rsvp.security;
 
-import com.acme.rsvp.model.Person;
-import com.acme.rsvp.model.SessionToken;
-import com.acme.rsvp.repository.SessionTokenRepository;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
-
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.acme.rsvp.model.Person;
+import com.acme.rsvp.model.SessionToken;
+import com.acme.rsvp.repository.SessionTokenRepository;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 @Component
 public class SessionAuthFilter extends OncePerRequestFilter {
 
-  public static final String COOKIE_NAME = "RSVP_SESSION";
+	public static final String COOKIE_NAME = "RSVP_SESSION";
 
-  private final SessionTokenRepository tokenRepo;
+	private final SessionTokenRepository sessions;
 
-  public SessionAuthFilter(SessionTokenRepository tokenRepo) {
-    this.tokenRepo = tokenRepo;
-  }
+	public SessionAuthFilter(SessionTokenRepository sessions) {
+		this.sessions = sessions;
+	}
 
-  @Override
-  protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-      throws ServletException, IOException {
+	@Override
+	protected void doFilterInternal(HttpServletRequest req, HttpServletResponse resp, FilterChain chain)
+			throws ServletException, IOException {
 
-    if (SecurityContextHolder.getContext().getAuthentication() == null) {
-      String token = readCookie(request, COOKIE_NAME);
-      if (token != null && !token.isBlank()) {
-        try {
-          UUID id = UUID.fromString(token);
-          Optional<SessionToken> st = tokenRepo.findActive(id, OffsetDateTime.now());
-          if (st.isPresent()) {
-            Person p = st.get().getPerson();
-            List<GrantedAuthority> auths = List.of(new SimpleGrantedAuthority("ROLE_USER"));
-            var auth = new UsernamePasswordAuthenticationToken(p, null, auths);
-            SecurityContextHolder.getContext().setAuthentication(auth);
-          }
-        } catch (IllegalArgumentException ignored) {
-        }
-      }
-    }
-    filterChain.doFilter(request, response);
-  }
+		String path = req.getRequestURI();
+		if ("OPTIONS".equalsIgnoreCase(req.getMethod()) || path.startsWith("/api/auth/")) {
+			chain.doFilter(req, resp);
+			return;
+		}
 
-  private static String readCookie(HttpServletRequest req, String name) {
-    Cookie[] cookies = req.getCookies();
-    if (cookies == null) return null;
-    for (Cookie c : cookies) {
-      if (name.equals(c.getName())) return c.getValue();
-    }
-    return null;
-  }
+		String cookie = CookieUtil.readCookie(req, COOKIE_NAME); // your helper
+		if (cookie != null && !cookie.isBlank()) {
+			try {
+				UUID id = UUID.fromString(cookie);
+				Optional<SessionToken> tok = sessions.findActive(id, OffsetDateTime.now());
+				if (tok.isPresent()) {
+					Person user = tok.get().getPerson();
+					var auth = new UsernamePasswordAuthenticationToken(user, null, List.of());
+					SecurityContextHolder.getContext().setAuthentication(auth);
+				}
+			} catch (IllegalArgumentException ignored) {
+				// bad UUID -> treat as anonymous
+			}
+		}
+		// Never send 401/403 here — just continue
+		chain.doFilter(req, resp);
+	}
+
 }

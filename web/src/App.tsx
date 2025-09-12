@@ -1,19 +1,21 @@
-import { Outlet, NavLink } from 'react-router-dom';
+// web/src/App.tsx
+import { Link, Outlet } from 'react-router-dom';
 
 export default function App() {
   return (
-    <div className="min-h-screen">
-      {/* optional header/nav */}
-      <header className="p-4 border-b">
-        <nav className="flex gap-4">
-          <NavLink to="/">Events</NavLink>
-          <NavLink to="/admin">Admin</NavLink>
-          <NavLink to="/login" className="ml-auto">Login</NavLink>
-        </nav>
+    <div className="min-h-screen bg-neutral-50 text-black">
+      <header className="border-b">
+        <div className="max-w-6xl mx-auto px-4 h-12 flex items-center justify-between">
+          <nav className="space-x-6">
+            <Link to="/">Events</Link>
+            <Link to="/admin">Admin</Link>
+          </nav>
+          <nav>
+            <Link to="/login">Login</Link>
+          </nav>
+        </div>
       </header>
-
-      <main className="p-4">
-        {/* child routes render here */}
+      <main className="max-w-6xl mx-auto px-4 py-6">
         <Outlet />
       </main>
     </div>

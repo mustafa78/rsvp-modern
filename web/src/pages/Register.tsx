@@ -1,54 +1,84 @@
-import { useState } from 'react';
-import { api } from '../api/client';
+// web/src/pages/Register.tsx
+import { FormEvent, useEffect, useState } from 'react';
+import { getPickupZones, register } from '../lib/api';
+import { Link, useNavigate } from 'react-router-dom';
 
-export default function Register() {
-  const [form, setForm] = useState<any>({
-    itsNumber: '', firstName: '', lastName: '', phone: '', email: '', pickupZone: 'SELF_PICKUP_NAJMI_MASJID', password: ''
+type Zone = { id: number; name: string };
+
+export default function RegisterPage() {
+  const navigate = useNavigate();
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState({
+    itsNumber: '',
+    firstName: '',
+    lastName: '',
+    phone: '',
+    email: '',
+    password: '',
+    pickupZoneId: 0,
   });
-  const [msg, setMsg] = useState<string | null>(null);
 
-  const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
+  useEffect(() => {
+    getPickupZones()
+      .then((zs) => {
+        setZones(zs);
+        if (zs.length && form.pickupZoneId === 0) {
+          setForm((f) => ({ ...f, pickupZoneId: zs[0].id }));
+        }
+      })
+      .catch(() => setError('Failed to load pickup zones'));
+  }, []);
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: name === 'pickupZoneId' ? Number(value) : value }));
+  };
+
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setMsg(null);
+    setError(null);
+    setSubmitting(true);
     try {
-      await api.register(form);
-      setMsg('Account created. You can now login.');
-    } catch (e: any) {
-      setMsg(e.message || 'Failed');
+      await register(form);
+      navigate('/login');
+    } catch (err: any) {
+      setError(err?.message ?? 'Registration failed');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="max-w-lg mx-auto p-6">
-      <h1 className="text-2xl font-semibold mb-4">Create account</h1>
-      <form onSubmit={onSubmit} className="grid grid-cols-2 gap-3">
-        <input className="border rounded px-3 py-2 col-span-2" placeholder="ITS Number"
-               value={form.itsNumber} onChange={e => set('itsNumber', e.target.value)} />
-        <input className="border rounded px-3 py-2" placeholder="First name"
-               value={form.firstName} onChange={e => set('firstName', e.target.value)} />
-        <input className="border rounded px-3 py-2" placeholder="Last name"
-               value={form.lastName} onChange={e => set('lastName', e.target.value)} />
-        <input className="border rounded px-3 py-2 col-span-2" placeholder="Phone"
-               value={form.phone} onChange={e => set('phone', e.target.value)} />
-        <input className="border rounded px-3 py-2 col-span-2" placeholder="Email"
-               value={form.email} onChange={e => set('email', e.target.value)} />
-        <select className="border rounded px-3 py-2 col-span-2"
-                value={form.pickupZone} onChange={e => set('pickupZone', e.target.value)}>
-          <option value="SELF_PICKUP_NAJMI_MASJID">Self Pickup Najmi Masjid</option>
-          <option value="NORTH_POTOMAC_ROCKVILLE">North Potomac/Rockville</option>
-          <option value="GERMANTOWN">Germantown</option>
-          <option value="WASHINGTON_DC">Washington DC</option>
-          <option value="FREDERICK">Frederick</option>
-          <option value="ELLICOTT_CITY_COLUMBIA">Ellicott City/Columbia</option>
-          <option value="CLARKSVILLE">Clarksville</option>
+    <div className="max-w-xl mx-auto px-4 py-8">
+      <h1 className="text-2xl font-semibold mb-6">Create account</h1>
+      <form onSubmit={onSubmit} className="space-y-4">
+        <input className="w-full border rounded px-3 py-2" name="itsNumber" placeholder="ITS Number" value={form.itsNumber} onChange={onChange} />
+        <div className="grid grid-cols-2 gap-3">
+          <input className="border rounded px-3 py-2" name="firstName" placeholder="First name" value={form.firstName} onChange={onChange} />
+          <input className="border rounded px-3 py-2" name="lastName" placeholder="Last name" value={form.lastName} onChange={onChange} />
+        </div>
+        <input className="w-full border rounded px-3 py-2" name="phone" placeholder="Phone" value={form.phone} onChange={onChange} />
+        <input className="w-full border rounded px-3 py-2" name="email" type="email" placeholder="Email" value={form.email} onChange={onChange} />
+
+        <select className="w-full border rounded px-3 py-2" name="pickupZoneId" value={form.pickupZoneId} onChange={onChange}>
+          {zones.map((z) => (
+            <option key={z.id} value={z.id}>{z.name}</option>
+          ))}
         </select>
-        <input className="border rounded px-3 py-2 col-span-2" type="password" placeholder="Password"
-               value={form.password} onChange={e => set('password', e.target.value)} />
-        <button className="bg-black text-white rounded px-4 py-2 col-span-2">Register</button>
+
+        <input className="w-full border rounded px-3 py-2" name="password" type="password" placeholder="Password" value={form.password} onChange={onChange} />
+
+        {error && <p className="text-red-600 text-sm">{error}</p>}
+        <button disabled={submitting} className="w-full rounded bg-black text-white py-2 disabled:opacity-60">
+          {submitting ? 'Registering…' : 'Register'}
+        </button>
       </form>
-      {msg && <div className="mt-4 text-sm">{msg}</div>}
+
+      <p className="mt-4 text-sm">
+        Already have an account? <Link className="underline" to="/login">Login</Link>
+      </p>
     </div>
   );
 }

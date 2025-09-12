@@ -17,14 +17,14 @@ import './styles/index.css'
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <App />,             // layout only; no router here
+    element: <App />,
+    // optional safety net so you don’t get a silent blank on errors
+    errorElement: <div style={{padding:24}}>Something went wrong. <a href="/">Go home</a></div>,
     children: [
       { index: true, element: <EventsPage /> },
       { path: 'events/:id', element: <EventDetailPage /> },
       { path: 'events/:id/rsvp', element: <RsvpPage /> },
       { path: 'admin', element: <AdminPage /> },
-
-      // auth routes live in the same tree
       { path: 'login', element: <Login /> },
       { path: 'register', element: <Register /> },
       { path: 'forgot-password', element: <ForgotPassword /> },

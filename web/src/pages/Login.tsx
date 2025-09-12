@@ -26,7 +26,7 @@ export default function Login() {
     <div className="max-w-md mx-auto p-6">
       <h1 className="text-2xl font-semibold mb-4">Login</h1>
       <form onSubmit={onSubmit} className="space-y-3">
-        <input className="border rounded px-3 py-2 w-full" placeholder="ITS Number or Email"
+        <input className="border rounded px-3 py-2 w-full" placeholder="ITS Number"
                value={its} onChange={e => setIts(e.target.value)} />
         <input className="border rounded px-3 py-2 w-full" type="password" placeholder="Password"
                value={password} onChange={e => setPassword(e.target.value)} />
