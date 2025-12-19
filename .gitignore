@@ -6,6 +6,7 @@ server/.idea/
 server/.project
 server/.settings/
 server/bin/
+web/node_modules/
 web/.project
 web/.settings/
 web/package-lock.json

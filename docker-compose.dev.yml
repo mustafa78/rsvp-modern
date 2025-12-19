@@ -35,31 +35,12 @@ services:
       db:
         condition: service_healthy
 
-  migrate:
-    image: gradle:8.10.0-jdk21
-    working_dir: /home/gradle/project
-    volumes:
-      - ./server:/home/gradle/project
-      - gradle-cache:/home/gradle/.gradle
-    environment:
-      SPRING_PROFILES_ACTIVE: dev
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-rsvp}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-rsvp}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-rsvp}
-    depends_on:
-      db:
-        condition: service_healthy
-    entrypoint: ["sh","-lc"]
-    command: "./gradlew --no-daemon flywayInfo flywayMigrate"
-
   web:
     image: node:20-alpine
     working_dir: /app
     volumes:
       - ./web:/app
       - web-node-modules:/app/node_modules       # keep deps inside container
-    environment:
-      VITE_API_URL: http://localhost:8080/api
     command: sh -lc "npm install && npm run dev -- --host"
     ports:
       - "5173:5173"

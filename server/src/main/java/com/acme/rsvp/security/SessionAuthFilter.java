@@ -31,17 +31,27 @@ public class SessionAuthFilter extends OncePerRequestFilter {
 		this.sessions = sessions;
 	}
 
+	// Public auth endpoints that don't need session authentication
+	private static final List<String> PUBLIC_AUTH_PATHS = List.of(
+		"/api/auth/login",
+		"/api/auth/register",
+		"/api/auth/password/reset/request",
+		"/api/auth/password/reset/confirm",
+		"/api/auth/pickup-zones"
+	);
+
 	@Override
 	protected void doFilterInternal(HttpServletRequest req, HttpServletResponse resp, FilterChain chain)
 			throws ServletException, IOException {
 
 		String path = req.getRequestURI();
-		if ("OPTIONS".equalsIgnoreCase(req.getMethod()) || path.startsWith("/api/auth/")) {
+		// Skip authentication setup only for OPTIONS and specific public auth endpoints
+		if ("OPTIONS".equalsIgnoreCase(req.getMethod()) || PUBLIC_AUTH_PATHS.contains(path)) {
 			chain.doFilter(req, resp);
 			return;
 		}
 
-		String cookie = CookieUtil.readCookie(req, COOKIE_NAME); // your helper
+		String cookie = CookieUtil.readCookie(req, COOKIE_NAME);
 		if (cookie != null && !cookie.isBlank()) {
 			try {
 				UUID id = UUID.fromString(cookie);

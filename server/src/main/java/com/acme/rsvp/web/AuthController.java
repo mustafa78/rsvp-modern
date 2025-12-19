@@ -102,7 +102,7 @@ public class AuthController {
 		if (me == null)
 			return ResponseEntity.status(401).build();
 		return ResponseEntity.ok(
-				new AuthResponse(me.getId(), me.getItsNumber(), me.getFirstName(), me.getLastName(), me.getEmail()));
+				new AuthResponse(me.getId(), me.getItsNumber(), me.getFirstName(), me.getLastName(), me.getEmail(), me.getPhone()));
 	}
 
 	@PostMapping("/password/change")

@@ -11,6 +11,6 @@ import java.util.UUID;
 
 public interface SessionTokenRepository extends JpaRepository<SessionToken, UUID> {
 
-  @Query("select t from SessionToken t where t.id = :id and t.revoked = false and t.expiresAt > :now")
+  @Query("select t from SessionToken t join fetch t.person where t.id = :id and t.revoked = false and t.expiresAt > :now")
   Optional<SessionToken> findActive(@Param("id") UUID id, @Param("now") OffsetDateTime now);
 }

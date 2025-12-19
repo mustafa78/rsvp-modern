@@ -142,6 +142,6 @@ public class AuthService {
 	}
 
 	private static AuthResponse toAuthResponse(Person p) {
-		return new AuthResponse(p.getId(), p.getItsNumber(), p.getFirstName(), p.getLastName(), p.getEmail());
+		return new AuthResponse(p.getId(), p.getItsNumber(), p.getFirstName(), p.getLastName(), p.getEmail(), p.getPhone());
 	}
 }

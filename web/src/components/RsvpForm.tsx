@@ -1,4 +1,6 @@
 import { useForm } from 'react-hook-form'
+import { useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { api } from '../api/client'
@@ -15,9 +17,45 @@ const Schema = z.object({
 
 type FormValues = z.infer<typeof Schema>
 
+type User = {
+  personId: number;
+  itsNumber: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+}
+
 export default function RsvpForm(){
   const { id } = useParams()
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({ resolver: zodResolver(Schema) })
+  const { data: user } = useQuery<User>({
+    queryKey: ['me'],
+    queryFn: () => api.me() as Promise<User>,
+    retry: false,
+  })
+
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormValues>({
+    resolver: zodResolver(Schema),
+    defaultValues: {
+      status: 'YES',
+      role: 'OTHER',
+      headcount: 1
+    }
+  })
+
+  // Pre-fill form when user data is loaded
+  useEffect(() => {
+    if (user) {
+      reset({
+        name: `${user.firstName} ${user.lastName}`,
+        email: user.email || '',
+        phone: user.phone || '',
+        status: 'YES',
+        role: 'OTHER',
+        headcount: 1
+      })
+    }
+  }, [user, reset])
 
   return (
     <form className="space-y-3" onSubmit={handleSubmit(async (values)=>{
