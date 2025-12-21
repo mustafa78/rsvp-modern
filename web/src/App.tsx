@@ -9,6 +9,7 @@ type User = {
   firstName: string;
   lastName: string;
   email: string;
+  roles: string[];
 };
 
 export default function App() {
@@ -38,7 +39,7 @@ export default function App() {
         <div className="max-w-6xl mx-auto px-4 h-12 flex items-center justify-between">
           <nav className="space-x-6">
             <Link to="/">Events</Link>
-            <Link to="/admin">Admin</Link>
+            {user?.roles?.includes('ADMIN') && <Link to="/admin">Admin</Link>}
           </nav>
           <nav className="flex items-center space-x-4">
             {isLoading ? null : user ? (

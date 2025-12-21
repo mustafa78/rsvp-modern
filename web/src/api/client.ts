@@ -23,6 +23,8 @@ export const api = {
 
   post: async (path: string, data: any) => ({ data: await jsonFetch<any>(`/api${path}`, { method: 'POST', body: JSON.stringify(data) }) }),
 
+  put: async (path: string, data: any) => ({ data: await jsonFetch<any>(`/api${path}`, { method: 'PUT', body: JSON.stringify(data) }) }),
+
   login: (itsNumber: string, password: string) =>
     jsonFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ itsNumber, password }) }),
 

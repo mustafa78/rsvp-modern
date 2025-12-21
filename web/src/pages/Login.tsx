@@ -16,7 +16,22 @@ export default function Login() {
       setMsg('Logged in!');
       window.location.href = '/';
     } catch (e: any) {
-      setMsg(e.message || 'Login failed');
+      // Parse error message and show user-friendly text
+      let errorMsg = 'Login failed';
+      try {
+        const parsed = JSON.parse(e.message);
+        if (parsed.error === 'invalid_credentials') {
+          errorMsg = 'Invalid ITS number or password. Please try again.';
+        } else if (parsed.error) {
+          errorMsg = parsed.error;
+        }
+      } catch {
+        // Not JSON, use as-is if it's a meaningful message
+        if (e.message && !e.message.startsWith('{')) {
+          errorMsg = e.message;
+        }
+      }
+      setMsg(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -38,7 +53,11 @@ export default function Login() {
         <a href="/register" className="underline mr-4">Create account</a>
         <a href="/forgot-password" className="underline">Forgot password?</a>
       </div>
-      {msg && <div className="mt-4 text-sm">{msg}</div>}
+      {msg && (
+        <div className={`mt-4 text-sm ${msg === 'Logged in!' ? 'text-green-600' : 'text-red-600'}`}>
+          {msg}
+        </div>
+      )}
     </div>
   );
 }

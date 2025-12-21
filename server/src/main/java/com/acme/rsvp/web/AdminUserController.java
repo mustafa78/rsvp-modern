@@ -1,0 +1,51 @@
+package com.acme.rsvp.web;
+
+import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.acme.rsvp.dto.AdminUserDtos.UpdateRolesRequest;
+import com.acme.rsvp.dto.AdminUserDtos.UpdateStatusRequest;
+import com.acme.rsvp.dto.AdminUserDtos.UserListDto;
+import com.acme.rsvp.service.AdminUserService;
+
+import jakarta.validation.Valid;
+
+@RestController
+@RequestMapping("/api/admin/users")
+public class AdminUserController {
+
+    private final AdminUserService adminUserService;
+
+    public AdminUserController(AdminUserService adminUserService) {
+        this.adminUserService = adminUserService;
+    }
+
+    @GetMapping
+    public ResponseEntity<List<UserListDto>> list() {
+        return ResponseEntity.ok(adminUserService.listAllUsers());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<UserListDto> get(@PathVariable Long id) {
+        return ResponseEntity.ok(adminUserService.getUser(id));
+    }
+
+    @PutMapping("/{id}/roles")
+    public ResponseEntity<UserListDto> updateRoles(@PathVariable Long id,
+            @Valid @RequestBody UpdateRolesRequest request) {
+        return ResponseEntity.ok(adminUserService.updateRoles(id, request));
+    }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<UserListDto> updateStatus(@PathVariable Long id,
+            @Valid @RequestBody UpdateStatusRequest request) {
+        return ResponseEntity.ok(adminUserService.updateStatus(id, request));
+    }
+}

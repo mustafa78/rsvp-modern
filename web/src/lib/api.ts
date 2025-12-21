@@ -1,5 +1,5 @@
 // web/src/lib/api.ts
-const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 export const endpoints = {
   register:      () => `${API_BASE}/auth/register`,

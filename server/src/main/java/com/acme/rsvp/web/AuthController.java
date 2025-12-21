@@ -34,12 +34,17 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
+import org.springframework.beans.factory.annotation.Value;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
 	private final AuthService auth;
 	private final PickupZoneRepository zones;
+
+	@Value("${app.frontend-url:http://localhost:5173}")
+	private String frontendUrl;
 
 	public AuthController(AuthService auth, PickupZoneRepository zones) {
 		this.auth = auth;
@@ -101,8 +106,9 @@ public class AuthController {
 	public ResponseEntity<?> me(@AuthenticationPrincipal Person me) {
 		if (me == null)
 			return ResponseEntity.status(401).build();
+		var roleNames = me.getRoles().stream().map(Enum::name).collect(java.util.stream.Collectors.toSet());
 		return ResponseEntity.ok(
-				new AuthResponse(me.getId(), me.getItsNumber(), me.getFirstName(), me.getLastName(), me.getEmail(), me.getPhone()));
+				new AuthResponse(me.getId(), me.getItsNumber(), me.getFirstName(), me.getLastName(), me.getEmail(), me.getPhone(), roleNames));
 	}
 
 	@PostMapping("/password/change")
@@ -115,9 +121,8 @@ public class AuthController {
 	}
 
 	@PostMapping("/password/reset/request")
-	public ResponseEntity<?> resetRequest(@Valid @RequestBody PasswordResetRequest req, HttpServletRequest httpReq) {
-		String base = getBaseUrl(httpReq);
-		auth.sendReset(req.itsNumberOrEmail(), base);
+	public ResponseEntity<?> resetRequest(@Valid @RequestBody PasswordResetRequest req) {
+		auth.sendReset(req.itsNumberOrEmail(), frontendUrl);
 		return ResponseEntity.ok(Map.of("ok", true));
 	}
 
