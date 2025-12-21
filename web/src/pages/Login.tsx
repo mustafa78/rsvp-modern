@@ -50,7 +50,6 @@ export default function Login() {
         </button>
       </form>
       <div className="mt-3 text-sm">
-        <a href="/register" className="underline mr-4">Create account</a>
         <a href="/forgot-password" className="underline">Forgot password?</a>
       </div>
       {msg && (

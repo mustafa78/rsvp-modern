@@ -18,6 +18,12 @@ type User = {
   lastLoginAt: string | null;
 };
 
+type PickupZone = {
+  id: number;
+  name: string;
+  active: boolean;
+};
+
 const roleLabels: Record<RoleName, string> = {
   USER: 'User',
   SUPER_USER: 'Super User',
@@ -36,10 +42,23 @@ const statusColors: Record<AccountStatus, string> = {
   DISABLED: 'bg-red-100 text-red-700',
 };
 
+const initialCreateForm = {
+  itsNumber: '',
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  password: '',
+  pickupZoneId: '',
+  roles: ['USER'] as RoleName[],
+};
+
 export default function UserList() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editRoles, setEditRoles] = useState<RoleName[]>([]);
   const [editStatus, setEditStatus] = useState<AccountStatus>('ACTIVE');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createForm, setCreateForm] = useState(initialCreateForm);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
@@ -47,6 +66,28 @@ export default function UserList() {
   const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ['admin-users'],
     queryFn: async () => (await api.get('/admin/users')).data,
+  });
+
+  const { data: zones } = useQuery<PickupZone[]>({
+    queryKey: ['pickup-zones'],
+    queryFn: async () => (await api.get('/pickup-zones')).data,
+  });
+
+  const createUserMutation = useMutation({
+    mutationFn: async (data: typeof createForm) => {
+      const payload = {
+        ...data,
+        pickupZoneId: data.pickupZoneId ? Number(data.pickupZoneId) : null,
+      };
+      return api.post('/admin/users', payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      setShowCreateForm(false);
+      setCreateForm(initialCreateForm);
+      setError(null);
+    },
+    onError: (err: any) => setError(err.message),
   });
 
   const updateRolesMutation = useMutation({
@@ -91,6 +132,14 @@ export default function UserList() {
     }
   };
 
+  const toggleCreateRole = (role: RoleName) => {
+    if (createForm.roles.includes(role)) {
+      setCreateForm({ ...createForm, roles: createForm.roles.filter((r) => r !== role) });
+    } else {
+      setCreateForm({ ...createForm, roles: [...createForm.roles, role] });
+    }
+  };
+
   const saveChanges = () => {
     if (!editingUser) return;
 
@@ -106,6 +155,12 @@ export default function UserList() {
     if (!rolesChanged && !statusChanged) {
       setEditingUser(null);
     }
+  };
+
+  const handleCreateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    createUserMutation.mutate(createForm);
   };
 
   const filteredUsers = users?.filter((user) => {
@@ -126,13 +181,148 @@ export default function UserList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Users</h1>
-        <div className="text-sm text-gray-500">
-          {users?.length || 0} total users
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-500">{users?.length || 0} total users</span>
+          {!showCreateForm && (
+            <button onClick={() => setShowCreateForm(true)} className="btn">
+              + Create User
+            </button>
+          )}
         </div>
       </div>
 
       {error && (
         <div className="bg-red-100 text-red-700 px-4 py-2 rounded">{error}</div>
+      )}
+
+      {/* Create User Form */}
+      {showCreateForm && (
+        <div className="card">
+          <h2 className="text-lg font-semibold mb-4">Create New User</h2>
+          <form onSubmit={handleCreateSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">ITS Number *</label>
+                <input
+                  className="input"
+                  value={createForm.itsNumber}
+                  onChange={(e) => setCreateForm({ ...createForm, itsNumber: e.target.value })}
+                  placeholder="e.g., 30702040"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Email *</label>
+                <input
+                  type="email"
+                  className="input"
+                  value={createForm.email}
+                  onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                  placeholder="user@example.com"
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">First Name *</label>
+                <input
+                  className="input"
+                  value={createForm.firstName}
+                  onChange={(e) => setCreateForm({ ...createForm, firstName: e.target.value })}
+                  placeholder="First name"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Last Name *</label>
+                <input
+                  className="input"
+                  value={createForm.lastName}
+                  onChange={(e) => setCreateForm({ ...createForm, lastName: e.target.value })}
+                  placeholder="Last name"
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Phone</label>
+                <input
+                  className="input"
+                  value={createForm.phone}
+                  onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Password *</label>
+                <input
+                  type="password"
+                  className="input"
+                  value={createForm.password}
+                  onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                  placeholder="Initial password"
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Pickup Zone</label>
+                <select
+                  className="input"
+                  value={createForm.pickupZoneId}
+                  onChange={(e) => setCreateForm({ ...createForm, pickupZoneId: e.target.value })}
+                >
+                  <option value="">-- No zone --</option>
+                  {zones?.filter(z => z.active).map((zone) => (
+                    <option key={zone.id} value={zone.id}>{zone.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Roles</label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {(['USER', 'SUPER_USER', 'ADMIN'] as RoleName[]).map((role) => (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => toggleCreateRole(role)}
+                      className={`px-3 py-1 rounded-full text-sm border transition-colors ${
+                        createForm.roles.includes(role)
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                      }`}
+                    >
+                      {roleLabels[role]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                className="btn"
+                disabled={createUserMutation.isPending}
+              >
+                {createUserMutation.isPending ? 'Creating...' : 'Create User'}
+              </button>
+              <button
+                type="button"
+                className="btn bg-gray-500"
+                onClick={() => {
+                  setShowCreateForm(false);
+                  setCreateForm(initialCreateForm);
+                  setError(null);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
       {/* Search */}

@@ -6,6 +6,8 @@ import java.util.Set;
 import com.acme.rsvp.model.AccountStatus;
 import com.acme.rsvp.model.RoleName;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public class AdminUserDtos {
@@ -21,6 +23,17 @@ public class AdminUserDtos {
             AccountStatus accountStatus,
             String pickupZoneName,
             Instant lastLoginAt) {
+    }
+
+    public record CreateUserRequest(
+            @NotBlank String itsNumber,
+            @NotBlank String firstName,
+            @NotBlank String lastName,
+            @NotBlank @Email String email,
+            String phone,
+            @NotBlank String password,
+            Long pickupZoneId,
+            Set<RoleName> roles) {
     }
 
     public record UpdateRolesRequest(@NotNull Set<RoleName> roles) {

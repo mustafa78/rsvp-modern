@@ -1,11 +1,14 @@
 package com.acme.rsvp.service;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.acme.rsvp.dto.AdminUserDtos.CreateUserRequest;
 import com.acme.rsvp.dto.AdminUserDtos.UpdateRolesRequest;
 import com.acme.rsvp.dto.AdminUserDtos.UpdateStatusRequest;
 import com.acme.rsvp.dto.AdminUserDtos.UserListDto;
@@ -13,21 +16,65 @@ import com.acme.rsvp.model.AccountStatus;
 import com.acme.rsvp.model.Person;
 import com.acme.rsvp.model.RoleName;
 import com.acme.rsvp.repository.PersonRepository;
+import com.acme.rsvp.repository.PickupZoneRepository;
 
 @Service
 @Transactional(readOnly = true)
 public class AdminUserService {
 
     private final PersonRepository personRepository;
+    private final PickupZoneRepository pickupZoneRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public AdminUserService(PersonRepository personRepository) {
+    public AdminUserService(PersonRepository personRepository, PickupZoneRepository pickupZoneRepository,
+            PasswordEncoder passwordEncoder) {
         this.personRepository = personRepository;
+        this.pickupZoneRepository = pickupZoneRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public List<UserListDto> listAllUsers() {
         return personRepository.findAll().stream()
                 .map(this::toDto)
                 .toList();
+    }
+
+    @Transactional
+    public UserListDto createUser(CreateUserRequest request) {
+        // Check for duplicate ITS number
+        if (personRepository.existsByItsNumber(request.itsNumber())) {
+            throw new IllegalArgumentException("ITS number already exists: " + request.itsNumber());
+        }
+        // Check for duplicate email
+        if (personRepository.existsByEmail(request.email())) {
+            throw new IllegalArgumentException("Email already exists: " + request.email());
+        }
+
+        Person person = new Person();
+        person.setItsNumber(request.itsNumber());
+        person.setFirstName(request.firstName());
+        person.setLastName(request.lastName());
+        person.setEmail(request.email());
+        person.setPhone(request.phone());
+        person.setPasswordHash(passwordEncoder.encode(request.password()));
+        person.setAccountStatus(AccountStatus.ACTIVE);
+
+        // Set roles (default to USER if none provided)
+        if (request.roles() != null && !request.roles().isEmpty()) {
+            person.setRoles(request.roles());
+        } else {
+            Set<RoleName> defaultRoles = new HashSet<>();
+            defaultRoles.add(RoleName.USER);
+            person.setRoles(defaultRoles);
+        }
+
+        // Set pickup zone if provided
+        if (request.pickupZoneId() != null) {
+            pickupZoneRepository.findById(request.pickupZoneId())
+                    .ifPresent(person::setPickupZone);
+        }
+
+        return toDto(personRepository.save(person));
     }
 
     public UserListDto getUser(Long id) {
