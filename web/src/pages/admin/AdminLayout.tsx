@@ -28,7 +28,7 @@ const navItems: NavItem[] = [
   {
     label: 'Reports',
     children: [
-      { label: 'Select event first', path: '/admin/events', disabled: true },
+      { label: 'Shopping List Generator', path: '/admin/reports/shopping-list' },
     ],
   },
   {

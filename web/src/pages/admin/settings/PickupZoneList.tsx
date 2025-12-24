@@ -11,6 +11,14 @@ type PickupZone = {
   active: boolean;
 };
 
+// Format SCREAMING_SNAKE_CASE to Title Case
+function formatZoneName(name: string): string {
+  return name
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   active: z.boolean(),
@@ -97,8 +105,11 @@ export default function PickupZoneList() {
     return <div className="text-gray-500">Loading...</div>;
   }
 
-  const activeZones = zones?.filter((z) => z.active) || [];
-  const inactiveZones = zones?.filter((z) => !z.active) || [];
+  // Sort zones: active first, then alphabetically
+  const sortedZones = [...(zones || [])].sort((a, b) => {
+    if (a.active !== b.active) return a.active ? -1 : 1;
+    return formatZoneName(a.name).localeCompare(formatZoneName(b.name));
+  });
 
   return (
     <div className="space-y-4">
@@ -156,59 +167,56 @@ export default function PickupZoneList() {
         </div>
       )}
 
-      {/* Active Zones */}
+      {/* Zones Table */}
       <div className="card">
-        <h2 className="text-lg font-semibold mb-4">Active Zones ({activeZones.length})</h2>
-        {activeZones.length === 0 ? (
-          <p className="text-gray-500">No active zones. Create your first zone above.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {activeZones.map((zone) => (
-              <div
-                key={zone.id}
-                className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                  <span className="font-medium">{zone.name}</span>
-                </div>
-                <button
-                  onClick={() => startEdit(zone)}
-                  className="text-sm text-blue-600 hover:underline"
-                >
-                  Edit
-                </button>
-              </div>
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-gray-200">
+              <th className="text-left py-3 px-4 font-semibold text-gray-700">Zone Name</th>
+              <th className="text-left py-3 px-4 font-semibold text-gray-700 w-24">Status</th>
+              <th className="text-right py-3 px-4 font-semibold text-gray-700 w-20">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedZones.length === 0 && (
+              <tr>
+                <td colSpan={3} className="py-8 text-center text-gray-500">
+                  No pickup zones. Create your first zone above.
+                </td>
+              </tr>
+            )}
+            {sortedZones.map((zone) => (
+              <tr key={zone.id} className="border-b border-gray-100 hover:bg-gray-50">
+                <td className="py-3 px-4">
+                  <span className="font-medium">{formatZoneName(zone.name)}</span>
+                  <span className="text-xs text-gray-400 ml-2">({zone.name})</span>
+                </td>
+                <td className="py-3 px-4">
+                  {zone.active ? (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                      Active
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full"></span>
+                      Inactive
+                    </span>
+                  )}
+                </td>
+                <td className="py-3 px-4 text-right">
+                  <button
+                    onClick={() => startEdit(zone)}
+                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    Edit
+                  </button>
+                </td>
+              </tr>
             ))}
-          </div>
-        )}
+          </tbody>
+        </table>
       </div>
-
-      {/* Inactive Zones */}
-      {inactiveZones.length > 0 && (
-        <div className="card">
-          <h2 className="text-lg font-semibold mb-4">Inactive Zones ({inactiveZones.length})</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {inactiveZones.map((zone) => (
-              <div
-                key={zone.id}
-                className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
-                  <span className="font-medium text-gray-600">{zone.name}</span>
-                </div>
-                <button
-                  onClick={() => startEdit(zone)}
-                  className="text-sm text-blue-600 hover:underline"
-                >
-                  Edit
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Info */}
       <div className="card bg-blue-50 border border-blue-200">

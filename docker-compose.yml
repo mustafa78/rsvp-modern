@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - /srv/rsvp/pgdata:/var/lib/postgresql/data  # <-- bind mount
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U rsvp -d rsvp"]
       interval: 5s
@@ -48,3 +48,6 @@ services:
     depends_on:
       - server
     restart: unless-stopped
+
+volumes:
+  pgdata:

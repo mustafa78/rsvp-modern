@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -6,30 +6,35 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { api } from '../../../api/client';
 
-type Chef = { id: number; name: string; type: string; active: boolean };
+type Person = {
+  id: number;
+  itsNumber: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string | null;
+};
 
 const schema = z.object({
-  title: z.string().min(1, 'Title is required'),
+  miqaatName: z.string().min(1, 'Miqaat name is required'),
   description: z.string().optional(),
-  eventDate: z.string().min(1, 'Event date is required'),
+  eventDate: z.string().min(1, 'Miqaat date is required'),
   startTime: z.string().optional(),
   registrationOpenAt: z.string().min(1, 'Registration open date is required'),
   registrationCloseAt: z.string().min(1, 'Registration close date is required'),
-  miqaatName: z.string().min(1, 'Miqaat name is required'),
-  miqaatDate: z.string().min(1, 'Miqaat date is required'),
-  miqaatTime: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
 
 export default function CreateNiyazEvent() {
   const navigate = useNavigate();
-  const [selectedChefs, setSelectedChefs] = useState<number[]>([]);
+  const [selectedHosts, setSelectedHosts] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [hostSearch, setHostSearch] = useState('');
 
-  const { data: chefs } = useQuery<Chef[]>({
-    queryKey: ['chefs'],
-    queryFn: async () => (await api.get('/chefs')).data,
+  const { data: persons } = useQuery<Person[]>({
+    queryKey: ['persons'],
+    queryFn: async () => (await api.get('/admin/users')).data,
   });
 
   const {
@@ -39,15 +44,12 @@ export default function CreateNiyazEvent() {
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      title: '',
+      miqaatName: '',
       description: '',
       eventDate: '',
       startTime: '',
       registrationOpenAt: '',
       registrationCloseAt: '',
-      miqaatName: '',
-      miqaatDate: '',
-      miqaatTime: '',
     },
   });
 
@@ -66,7 +68,8 @@ export default function CreateNiyazEvent() {
   const onSubmit = (values: FormValues) => {
     setError(null);
     const payload = {
-      title: values.title,
+      // title will be auto-populated from miqaatName on backend
+      title: values.miqaatName,
       description: values.description || null,
       eventDate: values.eventDate,
       startTime: values.startTime || null,
@@ -74,22 +77,37 @@ export default function CreateNiyazEvent() {
       registrationCloseAt: values.registrationCloseAt ? `${values.registrationCloseAt}T23:59:59Z` : null,
       status: 'DRAFT',
       miqaatName: values.miqaatName,
-      miqaatDate: values.miqaatDate,
-      miqaatTime: values.miqaatTime || null,
-      chefIds: selectedChefs,
+      hostIds: selectedHosts,
     };
     createMutation.mutate(payload);
   };
 
-  const toggleChef = (chefId: number) => {
-    if (selectedChefs.includes(chefId)) {
-      setSelectedChefs(selectedChefs.filter((id) => id !== chefId));
-    } else {
-      setSelectedChefs([...selectedChefs, chefId]);
+  const addHost = (personId: number) => {
+    if (!selectedHosts.includes(personId)) {
+      setSelectedHosts([...selectedHosts, personId]);
     }
   };
 
-  const activeChefs = chefs?.filter((c) => c.active) || [];
+  const removeHost = (personId: number) => {
+    setSelectedHosts(selectedHosts.filter((id) => id !== personId));
+  };
+
+  // Filter persons based on search
+  const filteredPersons = useMemo(() => {
+    if (!persons) return [];
+    if (!hostSearch.trim()) return persons;
+    const query = hostSearch.toLowerCase();
+    return persons.filter(p =>
+      p.firstName.toLowerCase().includes(query) ||
+      p.lastName.toLowerCase().includes(query) ||
+      p.itsNumber.toLowerCase().includes(query) ||
+      p.email.toLowerCase().includes(query)
+    );
+  }, [persons, hostSearch]);
+
+  // Separate selected and unselected persons
+  const selectedHostIds = new Set(selectedHosts);
+  const unselectedPersons = filteredPersons.filter(p => !selectedHostIds.has(p.id));
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -100,37 +118,14 @@ export default function CreateNiyazEvent() {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Miqaat Info */}
+        {/* Miqaat Details */}
         <div className="card space-y-4">
           <h2 className="text-lg font-semibold">Miqaat Details</h2>
 
           <div>
             <label className="block text-sm font-medium mb-1">Miqaat Name *</label>
-            <input className="input" {...register('miqaatName')} placeholder="e.g., Urus Mubarak" />
+            <input className="input" {...register('miqaatName')} placeholder="e.g., Urus Mubarak, Syedna Taher Saifuddin RA" />
             {errors.miqaatName && <p className="text-red-500 text-sm mt-1">{errors.miqaatName.message}</p>}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Miqaat Date *</label>
-              <input type="date" className="input" {...register('miqaatDate')} />
-              {errors.miqaatDate && <p className="text-red-500 text-sm mt-1">{errors.miqaatDate.message}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Miqaat Time</label>
-              <input type="time" className="input" {...register('miqaatTime')} />
-            </div>
-          </div>
-        </div>
-
-        {/* Event Details */}
-        <div className="card space-y-4">
-          <h2 className="text-lg font-semibold">Event Details</h2>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Title *</label>
-            <input className="input" {...register('title')} placeholder="e.g., Niyaz for Urus Mubarak" />
-            {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>}
           </div>
 
           <div>
@@ -140,12 +135,12 @@ export default function CreateNiyazEvent() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Event Date *</label>
+              <label className="block text-sm font-medium mb-1">Miqaat Date *</label>
               <input type="date" className="input" {...register('eventDate')} />
               {errors.eventDate && <p className="text-red-500 text-sm mt-1">{errors.eventDate.message}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Start Time</label>
+              <label className="block text-sm font-medium mb-1">Miqaat Start Time</label>
               <input type="time" className="input" {...register('startTime')} />
             </div>
           </div>
@@ -168,35 +163,134 @@ export default function CreateNiyazEvent() {
           </div>
         </div>
 
-        {/* Chef Selection */}
+        {/* Niyaz Hosts Selection */}
         <div className="card space-y-4">
-          <h2 className="text-lg font-semibold">Chefs / Cooking Groups</h2>
-          <p className="text-sm text-gray-500">Select who will be cooking for this event (optional)</p>
-
-          <div className="flex gap-2 flex-wrap">
-            {activeChefs.map((chef) => {
-              const isSelected = selectedChefs.includes(chef.id);
-              return (
-                <button
-                  key={chef.id}
-                  type="button"
-                  onClick={() => toggleChef(chef.id)}
-                  className={`px-3 py-1 rounded-full text-sm border ${
-                    isSelected
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
-                  }`}
-                >
-                  {chef.name}
-                  {isSelected && ' ✓'}
-                </button>
-              );
-            })}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Niyaz Khidmat</h2>
+              <p className="text-sm text-gray-500">Select one or more persons performing this Niyaz khidmat</p>
+            </div>
+            {selectedHosts.length > 0 && (
+              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                {selectedHosts.length} selected
+              </span>
+            )}
           </div>
 
-          {activeChefs.length === 0 && (
-            <p className="text-gray-400 text-sm">No chefs available. Create chefs in the Catalog first.</p>
+          {/* Selected Hosts */}
+          {selectedHosts.length > 0 && (
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-green-50 px-4 py-2 border-b">
+                <h3 className="text-sm font-semibold text-green-900">Selected Khidmatguzars</h3>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {selectedHosts.map((hostId, idx) => {
+                  const person = persons?.find((p) => p.id === hostId);
+                  return (
+                    <div key={hostId} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center justify-center w-6 h-6 bg-green-100 text-green-700 rounded-full text-xs font-bold">
+                          {idx + 1}
+                        </span>
+                        <div>
+                          <span className="font-medium text-gray-900">{person?.firstName} {person?.lastName}</span>
+                          <span className="text-gray-500 text-sm ml-2">({person?.itsNumber})</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeHost(hostId)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded text-sm transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
+
+          {/* Search and Available Persons */}
+          <div className="border rounded-lg overflow-hidden">
+            <div className="bg-gray-50 px-4 py-2 border-b">
+              <h3 className="text-sm font-semibold text-gray-700">Available Members</h3>
+            </div>
+
+            {/* Search */}
+            <div className="p-3 border-b bg-white">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  className="input pl-9 py-2 text-sm"
+                  placeholder="Search by name, ITS number, or email..."
+                  value={hostSearch}
+                  onChange={(e) => setHostSearch(e.target.value)}
+                />
+                {hostSearch && (
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                    onClick={() => setHostSearch('')}
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Person List */}
+            <div className="max-h-64 overflow-y-auto">
+              {unselectedPersons.length === 0 ? (
+                <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                  {hostSearch ? (
+                    <>No members match "{hostSearch}"</>
+                  ) : persons?.length === 0 ? (
+                    <>No members available.</>
+                  ) : (
+                    <>All members have been selected</>
+                  )}
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {unselectedPersons.map((person) => (
+                    <button
+                      key={person.id}
+                      type="button"
+                      onClick={() => addHost(person.id)}
+                      className="w-full text-left px-4 py-3 hover:bg-green-50 flex items-center justify-between group transition-colors"
+                    >
+                      <div>
+                        <span className="text-gray-700 group-hover:text-green-700">{person.firstName} {person.lastName}</span>
+                        <span className="text-gray-400 text-sm ml-2">({person.itsNumber})</span>
+                      </div>
+                      <span className="text-green-600 opacity-0 group-hover:opacity-100 text-sm font-medium transition-opacity">
+                        + Add
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            {persons && persons.length > 0 && (
+              <div className="px-4 py-2 bg-gray-50 border-t text-xs text-gray-500">
+                {hostSearch ? (
+                  <>Showing {unselectedPersons.length} of {persons.length - selectedHosts.length} available members</>
+                ) : (
+                  <>{persons.length - selectedHosts.length} members available</>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Submit */}

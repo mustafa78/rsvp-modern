@@ -38,6 +38,9 @@ public class IngredientService {
         Ingredient i = new Ingredient();
         i.setName(req.name());
         i.setUnit(req.unit());
+        i.setCategory(req.category());
+        i.setDefaultStore(req.defaultStore());
+        i.setStorageLocation(req.storageLocation());
         i.setNotes(req.notes());
         repo.save(i);
         return toDto(i);
@@ -47,6 +50,9 @@ public class IngredientService {
         Ingredient i = repo.findById(id).orElseThrow();
         i.setName(req.name());
         i.setUnit(req.unit());
+        i.setCategory(req.category());
+        i.setDefaultStore(req.defaultStore());
+        i.setStorageLocation(req.storageLocation());
         i.setNotes(req.notes());
         repo.save(i);
         return toDto(i);
@@ -55,6 +61,14 @@ public class IngredientService {
     /* ======================= Helpers ======================= */
 
     private IngredientDto toDto(Ingredient i) {
-        return new IngredientDto(i.getId(), i.getName(), i.getUnit(), i.getNotes());
+        return new IngredientDto(
+            i.getId(),
+            i.getName(),
+            i.getUnit(),
+            i.getCategory(),
+            i.getDefaultStore(),
+            i.getStorageLocation(),
+            i.getNotes()
+        );
     }
 }

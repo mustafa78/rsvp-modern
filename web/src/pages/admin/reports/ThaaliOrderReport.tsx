@@ -22,7 +22,22 @@ type ShoppingItem = {
   ingredientName: string;
   unit: string;
   requiredQty: number;
+  defaultStore: string | null;
+  category: string | null;
 };
+
+// Group shopping items by store
+function groupByStore(items: ShoppingItem[]): Record<string, ShoppingItem[]> {
+  const grouped: Record<string, ShoppingItem[]> = {};
+  for (const item of items) {
+    const store = item.defaultStore || 'Other';
+    if (!grouped[store]) {
+      grouped[store] = [];
+    }
+    grouped[store].push(item);
+  }
+  return grouped;
+}
 
 export default function ThaaliOrderReport() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -111,28 +126,39 @@ export default function ThaaliOrderReport() {
         ) : !shoppingList || shoppingList.length === 0 ? (
           <p className="text-gray-500">No ingredients calculated. Make sure the event has a menu with dishes that have ingredients.</p>
         ) : (
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b">
-                <th className="pb-2 font-medium">Ingredient</th>
-                <th className="pb-2 font-medium text-right">Required Qty</th>
-                <th className="pb-2 font-medium">Unit</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shoppingList.map((item) => (
-                <tr key={item.ingredientId} className="border-b last:border-0">
-                  <td className="py-2 font-medium">{item.ingredientName}</td>
-                  <td className="py-2 text-right text-lg">
-                    {typeof item.requiredQty === 'number'
-                      ? item.requiredQty.toFixed(2)
-                      : item.requiredQty}
-                  </td>
-                  <td className="py-2 text-gray-600">{item.unit}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="space-y-6">
+            {Object.entries(groupByStore(shoppingList)).map(([store, items]) => (
+              <div key={store}>
+                <h3 className="text-md font-semibold text-gray-700 bg-gray-100 px-3 py-2 rounded-t border-b">
+                  {store} <span className="text-gray-400 font-normal">({items.length} items)</span>
+                </h3>
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b bg-gray-50">
+                      <th className="py-2 px-3 font-medium text-sm text-gray-600">Ingredient</th>
+                      <th className="py-2 px-3 font-medium text-sm text-gray-600">Category</th>
+                      <th className="py-2 px-3 font-medium text-sm text-gray-600 text-right">Qty</th>
+                      <th className="py-2 px-3 font-medium text-sm text-gray-600">Unit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item) => (
+                      <tr key={item.ingredientId} className="border-b last:border-0 hover:bg-gray-50">
+                        <td className="py-2 px-3 font-medium">{item.ingredientName}</td>
+                        <td className="py-2 px-3 text-gray-500 text-sm">{item.category || '-'}</td>
+                        <td className="py-2 px-3 text-right text-lg font-semibold">
+                          {typeof item.requiredQty === 'number'
+                            ? item.requiredQty.toFixed(2)
+                            : item.requiredQty}
+                        </td>
+                        <td className="py-2 px-3 text-gray-600">{item.unit}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

@@ -1,18 +1,73 @@
 package com.acme.rsvp.web;
 
 import com.acme.rsvp.dto.RsvpDtos.*;
+import com.acme.rsvp.model.Person;
 import com.acme.rsvp.service.ThaaliService;
 import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/thaali/{eventId}/orders")
 public class ThaaliOrderController {
-  private final ThaaliService svc;
-  public ThaaliOrderController(ThaaliService svc){ this.svc = svc; }
 
-  @PostMapping public ThaaliOrderDto upsert(@PathVariable Long eventId, @Valid @RequestBody ThaaliOrderDto dto){ return svc.upsert(eventId, dto); }
-  @GetMapping("/counts") public ThaaliCountReportDto counts(@PathVariable Long eventId){ return svc.counts(eventId); }
-  @GetMapping("/shopping-list") public List<ShoppingListItemDto> shopping(@PathVariable Long eventId){ return svc.shoppingList(eventId); }
+    private final ThaaliService service;
+
+    public ThaaliOrderController(ThaaliService service) {
+        this.service = service;
+    }
+
+    // Create or update order for the current user
+    @PostMapping
+    public ThaaliOrderDto upsertMyOrder(
+            @PathVariable Long eventId,
+            @Valid @RequestBody ThaaliOrderRequest request,
+            @AuthenticationPrincipal Person user) {
+        return service.upsert(eventId, user.getId(), request);
+    }
+
+    // Get the current user's order for this event
+    @GetMapping("/my")
+    public ResponseEntity<ThaaliOrderDto> getMyOrder(
+            @PathVariable Long eventId,
+            @AuthenticationPrincipal Person user) {
+        ThaaliOrderDto order = service.getOrder(eventId, user.getId());
+        return order != null ? ResponseEntity.ok(order) : ResponseEntity.noContent().build();
+    }
+
+    // Delete the current user's order
+    @DeleteMapping("/my")
+    public ResponseEntity<Void> deleteMyOrder(
+            @PathVariable Long eventId,
+            @AuthenticationPrincipal Person user) {
+        service.deleteOrder(eventId, user.getId());
+        return ResponseEntity.noContent().build();
+    }
+
+    // Admin: Get all orders for this event
+    @GetMapping
+    public List<ThaaliOrderDto> getAllOrders(@PathVariable Long eventId) {
+        return service.getOrdersByEvent(eventId);
+    }
+
+    // Admin: Get counts summary
+    @GetMapping("/counts")
+    public ThaaliCountReportDto counts(@PathVariable Long eventId) {
+        return service.counts(eventId);
+    }
+
+    // Admin: Get detailed report with counts per menu item
+    @GetMapping("/detailed-report")
+    public ThaaliDetailedReportDto detailedReport(@PathVariable Long eventId) {
+        return service.detailedReport(eventId);
+    }
+
+    // Admin: Get shopping list
+    @GetMapping("/shopping-list")
+    public List<ShoppingListItemDto> shoppingList(@PathVariable Long eventId) {
+        return service.shoppingList(eventId);
+    }
 }
