@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -9,6 +9,8 @@ type Ingredient = {
   id: number;
   name: string;
   unit: string;
+  category: string | null;
+  defaultStore: string | null;
   notes: string | null;
 };
 
@@ -26,12 +28,27 @@ export default function IngredientList() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
 
   const { data: ingredients, isLoading } = useQuery<Ingredient[]>({
     queryKey: ['ingredients'],
     queryFn: async () => (await api.get('/ingredients')).data,
   });
+
+  // Filter ingredients based on search query
+  const filteredIngredients = useMemo(() => {
+    if (!ingredients) return [];
+    if (!searchQuery.trim()) return ingredients;
+    const query = searchQuery.toLowerCase();
+    return ingredients.filter(i =>
+      i.name.toLowerCase().includes(query) ||
+      i.unit.toLowerCase().includes(query) ||
+      i.category?.toLowerCase().includes(query) ||
+      i.defaultStore?.toLowerCase().includes(query) ||
+      i.notes?.toLowerCase().includes(query)
+    );
+  }, [ingredients, searchQuery]);
 
   const {
     register,
@@ -120,6 +137,34 @@ export default function IngredientList() {
         )}
       </div>
 
+      {/* Search Bar */}
+      {!showForm && (
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            className="input pl-10"
+            placeholder="Search ingredients by name, unit, category, or store..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              onClick={() => setSearchQuery('')}
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
+
       {error && (
         <div className="bg-red-100 text-red-700 px-4 py-2 rounded">{error}</div>
       )}
@@ -166,35 +211,55 @@ export default function IngredientList() {
       )}
 
       {/* Ingredients Table */}
-      <div className="card">
+      <div className="card overflow-hidden">
         {!ingredients || ingredients.length === 0 ? (
-          <p className="text-gray-500">No ingredients yet. Create your first ingredient above.</p>
+          <p className="text-gray-500 p-4">No ingredients yet. Create your first ingredient above.</p>
+        ) : filteredIngredients.length === 0 ? (
+          <p className="text-gray-500 p-4">No ingredients match your search "{searchQuery}"</p>
         ) : (
-          <table className="w-full text-left">
+          <table className="w-full text-left table-fixed">
             <thead>
-              <tr className="border-b">
-                <th className="pb-2 font-medium">Name</th>
-                <th className="pb-2 font-medium">Unit</th>
-                <th className="pb-2 font-medium">Notes</th>
-                <th className="pb-2 font-medium">Actions</th>
+              <tr className="bg-gray-50 border-b">
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[30%]">Name</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[10%] text-center">Unit</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[15%]">Category</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[15%]">Store</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[20%]">Notes</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[10%] text-center">Actions</th>
               </tr>
             </thead>
-            <tbody>
-              {ingredients.map((ingredient) => (
-                <tr key={ingredient.id} className="border-b last:border-0">
-                  <td className="py-3 font-medium">{ingredient.name}</td>
-                  <td className="py-3">
-                    <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm">
+            <tbody className="divide-y divide-gray-100">
+              {filteredIngredients.map((ingredient, idx) => (
+                <tr key={ingredient.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <td className="py-3 px-4 font-medium text-gray-900">{ingredient.name}</td>
+                  <td className="py-3 px-4 text-center">
+                    <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-sm font-medium">
                       {ingredient.unit}
                     </span>
                   </td>
-                  <td className="py-3 text-gray-500 text-sm">
+                  <td className="py-3 px-4">
+                    {ingredient.category ? (
+                      <span className="text-sm text-gray-600 capitalize">{ingredient.category}</span>
+                    ) : (
+                      <span className="text-sm text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
+                    {ingredient.defaultStore ? (
+                      <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">
+                        {ingredient.defaultStore}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-gray-500 text-sm truncate">
                     {ingredient.notes || '-'}
                   </td>
-                  <td className="py-3">
+                  <td className="py-3 px-4 text-center">
                     <button
                       onClick={() => startEdit(ingredient)}
-                      className="text-sm text-blue-600 hover:underline"
+                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
                     >
                       Edit
                     </button>
@@ -205,6 +270,17 @@ export default function IngredientList() {
           </table>
         )}
       </div>
+
+      {/* Stats */}
+      {ingredients && ingredients.length > 0 && (
+        <div className="text-sm text-gray-500">
+          {searchQuery ? (
+            <>Showing {filteredIngredients.length} of {ingredients.length} ingredients</>
+          ) : (
+            <>Showing {ingredients.length} ingredient{ingredients.length !== 1 ? 's' : ''}</>
+          )}
+        </div>
+      )}
     </div>
   );
 }

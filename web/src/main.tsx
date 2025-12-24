@@ -25,6 +25,7 @@ import UserList from './pages/admin/settings/UserList'
 import PickupZoneList from './pages/admin/settings/PickupZoneList'
 import ThaaliOrderReport from './pages/admin/reports/ThaaliOrderReport'
 import NiyazRsvpReport from './pages/admin/reports/NiyazRsvpReport'
+import ShoppingListGenerator from './pages/admin/reports/ShoppingListGenerator'
 import './styles/index.css'
 
 const router = createBrowserRouter([
@@ -53,6 +54,7 @@ const router = createBrowserRouter([
           { path: 'settings/zones', element: <PickupZoneList /> },
           { path: 'reports/orders/:eventId', element: <ThaaliOrderReport /> },
           { path: 'reports/rsvps/:eventId', element: <NiyazRsvpReport /> },
+          { path: 'reports/shopping-list', element: <ShoppingListGenerator /> },
         ],
       },
       { path: 'login', element: <Login /> },

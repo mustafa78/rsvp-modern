@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -31,6 +31,7 @@ export default function CreateThaaliEvent() {
   const [selectedChefs, setSelectedChefs] = useState<number[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItemSelection[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [dishSearch, setDishSearch] = useState('');
 
   const { data: chefs } = useQuery<Chef[]>({
     queryKey: ['chefs'],
@@ -118,6 +119,17 @@ export default function CreateThaaliEvent() {
   const activeChefs = chefs?.filter((c) => c.active) || [];
   const activeDishes = dishes?.filter((d) => d.active) || [];
 
+  // Filter dishes based on search
+  const filteredDishes = useMemo(() => {
+    if (!dishSearch.trim()) return activeDishes;
+    const query = dishSearch.toLowerCase();
+    return activeDishes.filter(d => d.name.toLowerCase().includes(query));
+  }, [activeDishes, dishSearch]);
+
+  // Separate selected and unselected dishes
+  const selectedDishIds = new Set(menuItems.map(m => m.dishId));
+  const unselectedDishes = filteredDishes.filter(d => !selectedDishIds.has(d.id));
+
   return (
     <div className="space-y-6 max-w-3xl">
       <h1 className="text-2xl font-bold">Create Thaali Event</h1>
@@ -129,7 +141,7 @@ export default function CreateThaaliEvent() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Basic Info */}
         <div className="card space-y-4">
-          <h2 className="text-lg font-semibold">Event Details</h2>
+          <h2 className="text-lg font-semibold">Thaali Details</h2>
 
           <div>
             <label className="block text-sm font-medium mb-1">Title *</label>
@@ -144,12 +156,12 @@ export default function CreateThaaliEvent() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Event Date *</label>
+              <label className="block text-sm font-medium mb-1">Thaali Date *</label>
               <input type="date" className="input" {...register('eventDate')} />
               {errors.eventDate && <p className="text-red-500 text-sm mt-1">{errors.eventDate.message}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Start Time</label>
+              <label className="block text-sm font-medium mb-1">Pickup Time</label>
               <input type="time" className="input" {...register('startTime')} />
             </div>
           </div>
@@ -174,58 +186,126 @@ export default function CreateThaaliEvent() {
 
         {/* Menu Selection */}
         <div className="card space-y-4">
-          <h2 className="text-lg font-semibold">Menu</h2>
-          <p className="text-sm text-gray-500">Select dishes for this event's menu</p>
-
-          <div className="flex gap-2 flex-wrap">
-            {activeDishes.map((dish) => {
-              const isSelected = menuItems.some((m) => m.dishId === dish.id);
-              return (
-                <button
-                  key={dish.id}
-                  type="button"
-                  onClick={() => (isSelected ? removeDishFromMenu(dish.id) : addDishToMenu(dish.id))}
-                  className={`px-3 py-1 rounded-full text-sm border ${
-                    isSelected
-                      ? 'bg-purple-600 text-white border-purple-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-purple-400'
-                  }`}
-                >
-                  {dish.name}
-                  {isSelected && ' ✓'}
-                </button>
-              );
-            })}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Menu</h2>
+              <p className="text-sm text-gray-500">Select dishes for this event's menu</p>
+            </div>
+            {menuItems.length > 0 && (
+              <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                {menuItems.length} selected
+              </span>
+            )}
           </div>
 
+          {/* Selected Menu Items */}
           {menuItems.length > 0 && (
-            <div className="mt-4">
-              <h3 className="text-sm font-medium mb-2">Selected Menu Items:</h3>
-              <ul className="space-y-1">
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-purple-50 px-4 py-2 border-b">
+                <h3 className="text-sm font-semibold text-purple-900">Selected Menu Items</h3>
+              </div>
+              <div className="divide-y divide-gray-100">
                 {menuItems.map((item, idx) => {
                   const dish = dishes?.find((d) => d.id === item.dishId);
                   return (
-                    <li key={item.dishId} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
-                      <span>
-                        {idx + 1}. {dish?.name}
-                      </span>
+                    <div key={item.dishId} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center justify-center w-6 h-6 bg-purple-100 text-purple-700 rounded-full text-xs font-bold">
+                          {idx + 1}
+                        </span>
+                        <span className="font-medium text-gray-900">{dish?.name}</span>
+                      </div>
                       <button
                         type="button"
                         onClick={() => removeDishFromMenu(item.dishId)}
-                        className="text-red-500 text-sm hover:underline"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded text-sm transition-colors"
                       >
                         Remove
                       </button>
-                    </li>
+                    </div>
                   );
                 })}
-              </ul>
+              </div>
             </div>
           )}
 
-          {activeDishes.length === 0 && (
-            <p className="text-gray-400 text-sm">No dishes available. Create dishes in the Catalog first.</p>
-          )}
+          {/* Search and Available Dishes */}
+          <div className="border rounded-lg overflow-hidden">
+            <div className="bg-gray-50 px-4 py-2 border-b">
+              <h3 className="text-sm font-semibold text-gray-700">Available Dishes</h3>
+            </div>
+
+            {/* Search */}
+            <div className="p-3 border-b bg-white">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  className="input pl-9 py-2 text-sm"
+                  placeholder="Search dishes..."
+                  value={dishSearch}
+                  onChange={(e) => setDishSearch(e.target.value)}
+                />
+                {dishSearch && (
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                    onClick={() => setDishSearch('')}
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Dish List */}
+            <div className="max-h-64 overflow-y-auto">
+              {unselectedDishes.length === 0 ? (
+                <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                  {dishSearch ? (
+                    <>No dishes match "{dishSearch}"</>
+                  ) : activeDishes.length === 0 ? (
+                    <>No dishes available. Create dishes in the Catalog first.</>
+                  ) : (
+                    <>All dishes have been selected</>
+                  )}
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {unselectedDishes.map((dish) => (
+                    <button
+                      key={dish.id}
+                      type="button"
+                      onClick={() => addDishToMenu(dish.id)}
+                      className="w-full text-left px-4 py-3 hover:bg-purple-50 flex items-center justify-between group transition-colors"
+                    >
+                      <span className="text-gray-700 group-hover:text-purple-700">{dish.name}</span>
+                      <span className="text-purple-600 opacity-0 group-hover:opacity-100 text-sm font-medium transition-opacity">
+                        + Add
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            {activeDishes.length > 0 && (
+              <div className="px-4 py-2 bg-gray-50 border-t text-xs text-gray-500">
+                {dishSearch ? (
+                  <>Showing {unselectedDishes.length} of {activeDishes.length - menuItems.length} available dishes</>
+                ) : (
+                  <>{activeDishes.length - menuItems.length} dishes available</>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Chef Selection */}

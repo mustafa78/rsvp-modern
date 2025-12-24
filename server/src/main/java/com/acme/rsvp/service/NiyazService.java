@@ -12,28 +12,50 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class NiyazService {
-  private final NiyazEventRepository eventRepo;
-  private final PersonRepository personRepo;
-  private final NiyazRsvpRepository rsvpRepo;
 
-  public NiyazService(NiyazEventRepository eventRepo, PersonRepository personRepo, NiyazRsvpRepository rsvpRepo) {
-    this.eventRepo = eventRepo; this.personRepo = personRepo; this.rsvpRepo = rsvpRepo;
-  }
+    private final NiyazEventRepository eventRepo;
+    private final PersonRepository personRepo;
+    private final NiyazRsvpRepository rsvpRepo;
 
-  @Transactional
-  public NiyazRsvpDto upsert(Long eventId, NiyazRsvpDto dto) {
-    NiyazEvent e = eventRepo.findById(eventId).orElseThrow();
-    Person p = personRepo.findById(dto.personId()).orElseThrow();
+    public NiyazService(NiyazEventRepository eventRepo, PersonRepository personRepo, NiyazRsvpRepository rsvpRepo) {
+        this.eventRepo = eventRepo;
+        this.personRepo = personRepo;
+        this.rsvpRepo = rsvpRepo;
+    }
 
-    NiyazRsvp r = rsvpRepo.findAll().stream()
-        .filter(x -> x.getEvent().getId().equals(eventId) && x.getPerson().getId().equals(dto.personId()))
-        .findFirst().orElseGet(NiyazRsvp::new);
+    @Transactional
+    public NiyazRsvpDto upsert(Long eventId, Long personId, int adults, int kids) {
+        NiyazEvent e = eventRepo.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found: " + eventId));
+        Person p = personRepo.findById(personId)
+                .orElseThrow(() -> new IllegalArgumentException("Person not found: " + personId));
 
-    r.setEvent(e); r.setPerson(p); r.setAdults(dto.adults()); r.setKids(dto.kids());
-    rsvpRepo.save(r);
-    return dto;
-  }
+        NiyazRsvp r = rsvpRepo.findByEventIdAndPersonId(eventId, personId)
+                .orElseGet(NiyazRsvp::new);
 
-  @Transactional(readOnly = true) public long totalAdults(Long eventId){ return rsvpRepo.totalAdults(eventId); }
-  @Transactional(readOnly = true) public long totalKids(Long eventId){ return rsvpRepo.totalKids(eventId); }
+        r.setEvent(e);
+        r.setPerson(p);
+        r.setAdults(adults);
+        r.setKids(kids);
+        rsvpRepo.save(r);
+
+        return new NiyazRsvpDto(eventId, personId, adults, kids);
+    }
+
+    @Transactional(readOnly = true)
+    public NiyazRsvpDto getMyRsvp(Long eventId, Long personId) {
+        return rsvpRepo.findByEventIdAndPersonId(eventId, personId)
+                .map(r -> new NiyazRsvpDto(eventId, personId, r.getAdults(), r.getKids()))
+                .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public long totalAdults(Long eventId) {
+        return rsvpRepo.totalAdults(eventId);
+    }
+
+    @Transactional(readOnly = true)
+    public long totalKids(Long eventId) {
+        return rsvpRepo.totalKids(eventId);
+    }
 }

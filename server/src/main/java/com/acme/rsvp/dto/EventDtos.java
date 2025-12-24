@@ -17,97 +17,106 @@ import java.util.Set;
  */
 public final class EventDtos {
 
-  private EventDtos() {}
+    private EventDtos() {}
 
-  /* ============== Base Request ============== */
-  public static class BaseEventReq {
-    public String title;
-    public String description;
-    public LocalDate eventDate;
-    public LocalTime startTime;
-    public OffsetDateTime registrationOpenAt;
-    public OffsetDateTime registrationCloseAt;
-    public EventStatus status;
-  }
+    /* ============== Base Request ============== */
+    public static class BaseEventReq {
+        public String title;
+        public String description;
+        public LocalDate eventDate;
+        public LocalTime startTime;
+        public OffsetDateTime registrationOpenAt;
+        public OffsetDateTime registrationCloseAt;
+        public EventStatus status;
+    }
 
-  /* ============== NIYAZ ============== */
-  public static class CreateUpdateNiyazEventRequest extends BaseEventReq {
-    public String miqaatName;
-    public LocalDate miqaatDate;
-    public LocalTime miqaatTime;
-    public Set<Long> chefIds;
-  }
+    /* ============== NIYAZ ============== */
+    public static class CreateUpdateNiyazEventRequest extends BaseEventReq {
+        public String miqaatName;
+        public Set<Long> chefIds;
+        public Set<Long> hostIds; // Person IDs who are hosting this Niyaz
+    }
 
-  /* ============== THAALI ============== */
-  public static class CreateUpdateThaaliEventRequest extends BaseEventReq {
-    public Set<Long> chefIds;
-    /** Menu assignment is catalog-backed: pick a dish and optional override + position. */
-    public List<MenuAssignmentDto> menu;
-  }
+    /* ============== THAALI ============== */
+    public static class CreateUpdateThaaliEventRequest extends BaseEventReq {
+        public Set<Long> chefIds;
+        /** Menu assignment is catalog-backed: pick a dish and optional override + position. */
+        public List<MenuAssignmentDto> menu;
+    }
 
-  /** Assign a Dish to a Thaali event. */
-  public static record MenuAssignmentDto(
-      Long dishId,
-      BigDecimal quartsPerThaaliUnit, // null => use Dish.defaultQuartsPerThaaliUnit
-      Integer position
-  ) {}
+    /** Assign a Dish to a Thaali event. */
+    public static record MenuAssignmentDto(
+            Long dishId,
+            BigDecimal quartsPerThaaliUnit, // null => use Dish.defaultQuartsPerThaaliUnit
+            Integer position
+    ) {}
 
-  /* ============== READ MODELS ============== */
+    /* ============== READ MODELS ============== */
 
-  public static record EventSummaryDto(
-      Long id,
-      String type,
-      String title,
-      String description,
-      LocalDate eventDate,
-      LocalTime startTime,
-      OffsetDateTime registrationOpenAt,
-      OffsetDateTime registrationCloseAt,
-      EventStatus status
-  ) {}
+    public static record EventSummaryDto(
+            Long id,
+            String type,
+            String title,
+            String description,
+            LocalDate eventDate,
+            LocalTime startTime,
+            OffsetDateTime registrationOpenAt,
+            OffsetDateTime registrationCloseAt,
+            EventStatus status,
+            // Niyaz-specific field (null for Thaali)
+            String miqaatName
+    ) {}
 
-  public static record NiyazEventDto(
-      Long id,
-      String title,
-      String description,
-      LocalDate eventDate,
-      LocalTime startTime,
-      OffsetDateTime registrationOpenAt,
-      OffsetDateTime registrationCloseAt,
-      EventStatus status,
-      String miqaatName,
-      LocalDate miqaatDate,
-      LocalTime miqaatTime,
-      Set<Long> chefIds
-  ) {}
+    // Host info for Niyaz events
+    public static record HostDto(
+            Long id,
+            String firstName,
+            String lastName,
+            String fullName
+    ) {}
 
-  public static record MenuItemIngredientDto(
-      Long ingredientId,
-      String ingredientName,
-      String unit,
-      BigDecimal qtyPerQuart
-  ) {}
+    public static record NiyazEventDto(
+            Long id,
+            String title,
+            String description,
+            LocalDate eventDate,
+            LocalTime startTime,
+            OffsetDateTime registrationOpenAt,
+            OffsetDateTime registrationCloseAt,
+            EventStatus status,
+            String miqaatName,
+            Set<Long> chefIds,
+            Set<Long> hostIds,
+            List<HostDto> hosts // Full host info for display
+    ) {}
 
-  public static record MenuItemDto(
-      Long id,
-      String name,
-      String description,
-      BigDecimal quartsPerThaaliUnit,
-      List<MenuItemIngredientDto> ingredients,
-      Long dishId,
-      Integer position
-  ) {}
+    public static record MenuItemIngredientDto(
+            Long ingredientId,
+            String ingredientName,
+            String unit,
+            BigDecimal qtyPerQuart
+    ) {}
 
-  public static record ThaaliEventDto(
-      Long id,
-      String title,
-      String description,
-      LocalDate eventDate,
-      LocalTime startTime,
-      OffsetDateTime registrationOpenAt,
-      OffsetDateTime registrationCloseAt,
-      EventStatus status,
-      List<MenuItemDto> menu,
-      Set<Long> chefIds
-  ) {}
+    public static record MenuItemDto(
+            Long id,
+            String name,
+            String description,
+            BigDecimal quartsPerThaaliUnit,
+            List<MenuItemIngredientDto> ingredients,
+            Long dishId,
+            Integer position
+    ) {}
+
+    public static record ThaaliEventDto(
+            Long id,
+            String title,
+            String description,
+            LocalDate eventDate,
+            LocalTime startTime,
+            OffsetDateTime registrationOpenAt,
+            OffsetDateTime registrationCloseAt,
+            EventStatus status,
+            List<MenuItemDto> menu,
+            Set<Long> chefIds
+    ) {}
 }
