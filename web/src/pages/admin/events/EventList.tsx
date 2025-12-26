@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../../api/client';
@@ -15,17 +15,42 @@ type Event = {
   status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED';
 };
 
+type User = {
+  personId: number;
+  roles: string[];
+};
+
 type StatusFilter = 'ALL' | 'DRAFT' | 'PUBLISHED' | 'CANCELLED';
+
+// Role helpers
+const hasRole = (roles: string[], role: string) => roles?.includes(role) ?? false;
+const isAdmin = (roles: string[]) => hasRole(roles, 'ADMIN');
+const isNiyazCoordinator = (roles: string[]) => hasRole(roles, 'NIYAZ_COORDINATOR');
+const isThaaliCoordinator = (roles: string[]) => hasRole(roles, 'THAALI_COORDINATOR');
 
 export default function EventList() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
   const queryClient = useQueryClient();
 
+  const { data: user } = useQuery<User>({
+    queryKey: ['me'],
+    queryFn: () => api.me() as Promise<User>,
+    staleTime: 1000 * 60 * 5,
+  });
+
   const { data: events, isLoading } = useQuery<Event[]>({
     queryKey: ['admin-events'],
     queryFn: async () => (await api.get('/events')).data,
   });
+
+  // Determine what event types the user can see/create based on roles
+  const userRoles = user?.roles || [];
+  const canSeeAllTypes = isAdmin(userRoles);
+  const canSeeThaali = canSeeAllTypes || isThaaliCoordinator(userRoles);
+  const canSeeNiyaz = canSeeAllTypes || isNiyazCoordinator(userRoles);
+  const canCreateThaali = canSeeAllTypes || isThaaliCoordinator(userRoles);
+  const canCreateNiyaz = canSeeAllTypes || isNiyazCoordinator(userRoles);
 
   const publishMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -46,10 +71,23 @@ export default function EventList() {
   });
 
   const filteredEvents = events?.filter((e) => {
+    // Role-based type filtering
+    if (e.type === 'THAALI' && !canSeeThaali) return false;
+    if (e.type === 'NIYAZ' && !canSeeNiyaz) return false;
+    // User-selected filters
     if (statusFilter !== 'ALL' && e.status !== statusFilter) return false;
     if (typeFilter !== 'ALL' && e.type !== typeFilter) return false;
     return true;
   }) || [];
+
+  // Determine page title based on role
+  const pageTitle = canSeeAllTypes
+    ? 'All Events'
+    : canSeeNiyaz && !canSeeThaali
+    ? 'Niyaz Events'
+    : canSeeThaali && !canSeeNiyaz
+    ? 'Thaali Events'
+    : 'Events';
 
   const handlePublish = (id: number) => {
     if (confirm('Publish this event? Users will be able to see and register for it.')) {
@@ -70,14 +108,18 @@ export default function EventList() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">All Events</h1>
+        <h1 className="text-2xl font-bold">{pageTitle}</h1>
         <div className="flex gap-2">
-          <Link to="/admin/events/new/thaali" className="btn">
-            + Thaali Event
-          </Link>
-          <Link to="/admin/events/new/niyaz" className="btn bg-gray-700">
-            + Niyaz Event
-          </Link>
+          {canCreateThaali && (
+            <Link to="/admin/events/new/thaali" className="btn">
+              + Thaali Event
+            </Link>
+          )}
+          {canCreateNiyaz && (
+            <Link to="/admin/events/new/niyaz" className="btn bg-gray-700">
+              + Niyaz Event
+            </Link>
+          )}
         </div>
       </div>
 
@@ -97,20 +139,23 @@ export default function EventList() {
               <option value="CANCELLED">Cancelled</option>
             </select>
           </div>
-          <div>
-            <label className="text-sm text-gray-500 mr-2">Type:</label>
-            <select
-              className="input w-auto"
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-            >
-              <option value="ALL">All</option>
-              <option value="THAALI">Thaali</option>
-              <option value="NIYAZ">Niyaz</option>
-            </select>
-          </div>
+          {/* Only show type filter if user can see both types */}
+          {canSeeAllTypes && (
+            <div>
+              <label className="text-sm text-gray-500 mr-2">Type:</label>
+              <select
+                className="input w-auto"
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+              >
+                <option value="ALL">All</option>
+                <option value="THAALI">Thaali</option>
+                <option value="NIYAZ">Niyaz</option>
+              </select>
+            </div>
+          )}
           <div className="text-sm text-gray-500">
-            Showing {filteredEvents.length} of {events?.length || 0} events
+            Showing {filteredEvents.length} events
           </div>
         </div>
       </div>

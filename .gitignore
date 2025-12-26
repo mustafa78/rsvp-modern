@@ -6,10 +6,13 @@ server/.idea/
 server/.project
 server/.settings/
 server/bin/
+web/dist
 web/node_modules/
+web/.nvmrc
 web/.project
 web/.settings/
 web/package-lock.json
 .env
 .env.dev
 CLAUDE.md
+rsvp-modern-session.md

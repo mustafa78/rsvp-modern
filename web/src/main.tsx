@@ -23,6 +23,7 @@ import IngredientList from './pages/admin/catalog/IngredientList'
 import ChefList from './pages/admin/catalog/ChefList'
 import UserList from './pages/admin/settings/UserList'
 import PickupZoneList from './pages/admin/settings/PickupZoneList'
+import RoleManagement from './pages/admin/settings/RoleManagement'
 import ThaaliOrderReport from './pages/admin/reports/ThaaliOrderReport'
 import NiyazRsvpReport from './pages/admin/reports/NiyazRsvpReport'
 import ShoppingListGenerator from './pages/admin/reports/ShoppingListGenerator'
@@ -46,11 +47,14 @@ const router = createBrowserRouter([
           { path: 'events', element: <EventList /> },
           { path: 'events/new/thaali', element: <CreateThaaliEvent /> },
           { path: 'events/new/niyaz', element: <CreateNiyazEvent /> },
+          { path: 'events/edit/thaali/:id', element: <CreateThaaliEvent /> },
+          { path: 'events/edit/niyaz/:id', element: <CreateNiyazEvent /> },
           { path: 'events/:id', element: <EventDetail /> },
           { path: 'catalog/dishes', element: <DishList /> },
           { path: 'catalog/ingredients', element: <IngredientList /> },
           { path: 'catalog/chefs', element: <ChefList /> },
           { path: 'settings/users', element: <UserList /> },
+          { path: 'settings/roles', element: <RoleManagement /> },
           { path: 'settings/zones', element: <PickupZoneList /> },
           { path: 'reports/orders/:eventId', element: <ThaaliOrderReport /> },
           { path: 'reports/rsvps/:eventId', element: <NiyazRsvpReport /> },

@@ -142,7 +142,6 @@ public class AuthService {
 	}
 
 	private static AuthResponse toAuthResponse(Person p) {
-		var roleNames = p.getRoles().stream().map(Enum::name).collect(java.util.stream.Collectors.toSet());
-		return new AuthResponse(p.getId(), p.getItsNumber(), p.getFirstName(), p.getLastName(), p.getEmail(), p.getPhone(), roleNames);
+		return new AuthResponse(p.getId(), p.getItsNumber(), p.getFirstName(), p.getLastName(), p.getEmail(), p.getPhone(), p.getRoles());
 	}
 }

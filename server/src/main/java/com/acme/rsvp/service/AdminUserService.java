@@ -14,7 +14,6 @@ import com.acme.rsvp.dto.AdminUserDtos.UpdateStatusRequest;
 import com.acme.rsvp.dto.AdminUserDtos.UserListDto;
 import com.acme.rsvp.model.AccountStatus;
 import com.acme.rsvp.model.Person;
-import com.acme.rsvp.model.RoleName;
 import com.acme.rsvp.repository.PersonRepository;
 import com.acme.rsvp.repository.PickupZoneRepository;
 
@@ -61,10 +60,10 @@ public class AdminUserService {
 
         // Set roles (default to USER if none provided)
         if (request.roles() != null && !request.roles().isEmpty()) {
-            person.setRoles(request.roles());
+            person.setRoles(new HashSet<>(request.roles()));
         } else {
-            Set<RoleName> defaultRoles = new HashSet<>();
-            defaultRoles.add(RoleName.USER);
+            Set<String> defaultRoles = new HashSet<>();
+            defaultRoles.add("USER");
             person.setRoles(defaultRoles);
         }
 
@@ -87,7 +86,7 @@ public class AdminUserService {
     public UserListDto updateRoles(Long id, UpdateRolesRequest request) {
         Person person = personRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + id));
-        person.setRoles(request.roles());
+        person.setRoles(new HashSet<>(request.roles()));
         return toDto(personRepository.save(person));
     }
 

@@ -70,6 +70,13 @@ public class EventService {
     }
 
     @Transactional(readOnly = true)
+    public List<EventSummaryDto> listPublished() {
+        return eventRepo.findByStatus(EventStatus.PUBLISHED).stream()
+                .map(EventService::toSummary)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public EventSummaryDto getSummary(Long id) {
         return eventRepo.findById(id).map(EventService::toSummary).orElseThrow();
     }

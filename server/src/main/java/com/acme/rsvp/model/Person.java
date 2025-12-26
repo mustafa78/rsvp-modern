@@ -18,6 +18,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+// Note: EnumType and Enumerated still used for AccountStatus
+
 @Entity
 @Table(name = "persons", indexes = { @Index(name = "ix_person_its", columnList = "its_number", unique = true),
 		@Index(name = "ix_person_email", columnList = "email", unique = true) })
@@ -43,9 +45,8 @@ public class Person extends Auditable {
 
 	@ElementCollection(fetch = FetchType.EAGER)
 	@CollectionTable(name = "person_roles", joinColumns = @JoinColumn(name = "person_id"))
-	@Enumerated(EnumType.STRING)
-	@Column(name = "role", nullable = false, length = 32)
-	private Set<RoleName> roles = new HashSet<>();
+	@Column(name = "role", nullable = false, length = 50)
+	private Set<String> roles = new HashSet<>();
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "pickup_zone_id")
@@ -116,11 +117,11 @@ public class Person extends Auditable {
 		this.email = email;
 	}
 
-	public Set<RoleName> getRoles() {
+	public Set<String> getRoles() {
 		return roles;
 	}
 
-	public void setRoles(Set<RoleName> roles) {
+	public void setRoles(Set<String> roles) {
 		this.roles = roles;
 	}
 

@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,6 +9,19 @@ import { api } from '../../../api/client';
 type Chef = { id: number; name: string; type: string; active: boolean };
 type Dish = { id: number; name: string; description: string; defaultQuartsPerThaaliUnit: number; active: boolean };
 
+type ThaaliEventData = {
+  id: number;
+  title: string;
+  description: string | null;
+  eventDate: string;
+  startTime: string | null;
+  registrationOpenAt: string;
+  registrationCloseAt: string;
+  status: string;
+  chefIds: number[];
+  menu: { id: number; dishId: number; position: number; quartsPerThaaliUnit: number | null }[];
+};
+
 const schema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
@@ -16,6 +29,7 @@ const schema = z.object({
   startTime: z.string().optional(),
   registrationOpenAt: z.string().min(1, 'Registration open date is required'),
   registrationCloseAt: z.string().min(1, 'Registration close date is required'),
+  status: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -28,6 +42,9 @@ type MenuItemSelection = {
 
 export default function CreateThaaliEvent() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const isEditMode = !!id;
+
   const [selectedChefs, setSelectedChefs] = useState<number[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItemSelection[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -43,9 +60,17 @@ export default function CreateThaaliEvent() {
     queryFn: async () => (await api.get('/dishes')).data,
   });
 
+  // Fetch existing event data in edit mode
+  const { data: existingEvent, isLoading: isLoadingEvent } = useQuery<ThaaliEventData>({
+    queryKey: ['thaali-event', id],
+    queryFn: async () => (await api.get(`/thaali/${id}`)).data,
+    enabled: isEditMode,
+  });
+
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -56,8 +81,33 @@ export default function CreateThaaliEvent() {
       startTime: '',
       registrationOpenAt: '',
       registrationCloseAt: '',
+      status: 'DRAFT',
     },
   });
+
+  // Populate form with existing data in edit mode
+  useEffect(() => {
+    if (existingEvent) {
+      reset({
+        title: existingEvent.title || '',
+        description: existingEvent.description || '',
+        eventDate: existingEvent.eventDate || '',
+        startTime: existingEvent.startTime?.slice(0, 5) || '',
+        registrationOpenAt: existingEvent.registrationOpenAt?.split('T')[0] || '',
+        registrationCloseAt: existingEvent.registrationCloseAt?.split('T')[0] || '',
+        status: existingEvent.status || 'DRAFT',
+      });
+      setSelectedChefs(existingEvent.chefIds || []);
+      // Map menu items
+      if (existingEvent.menu) {
+        setMenuItems(existingEvent.menu.map(m => ({
+          dishId: m.dishId,
+          quartsPerThaaliUnit: m.quartsPerThaaliUnit,
+          position: m.position,
+        })));
+      }
+    }
+  }, [existingEvent, reset]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -71,6 +121,18 @@ export default function CreateThaaliEvent() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await api.put(`/events/thaali/${id}`, data);
+    },
+    onSuccess: () => {
+      navigate('/admin/events');
+    },
+    onError: (err: any) => {
+      setError(err.message || 'Failed to update event');
+    },
+  });
+
   const onSubmit = (values: FormValues) => {
     setError(null);
     const payload = {
@@ -80,7 +142,7 @@ export default function CreateThaaliEvent() {
       startTime: values.startTime || null,
       registrationOpenAt: values.registrationOpenAt ? `${values.registrationOpenAt}T00:00:00Z` : null,
       registrationCloseAt: values.registrationCloseAt ? `${values.registrationCloseAt}T23:59:59Z` : null,
-      status: 'DRAFT',
+      status: isEditMode ? values.status : 'DRAFT',
       chefIds: selectedChefs,
       menu: menuItems.map((item, idx) => ({
         dishId: item.dishId,
@@ -88,7 +150,12 @@ export default function CreateThaaliEvent() {
         position: idx + 1,
       })),
     };
-    createMutation.mutate(payload);
+
+    if (isEditMode) {
+      updateMutation.mutate(payload);
+    } else {
+      createMutation.mutate(payload);
+    }
   };
 
   const addDishToMenu = (dishId: number) => {
@@ -119,6 +186,10 @@ export default function CreateThaaliEvent() {
   const activeChefs = chefs?.filter((c) => c.active) || [];
   const activeDishes = dishes?.filter((d) => d.active) || [];
 
+  if (isEditMode && isLoadingEvent) {
+    return <div className="text-gray-500">Loading event...</div>;
+  }
+
   // Filter dishes based on search
   const filteredDishes = useMemo(() => {
     if (!dishSearch.trim()) return activeDishes;
@@ -132,7 +203,7 @@ export default function CreateThaaliEvent() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <h1 className="text-2xl font-bold">Create Thaali Event</h1>
+      <h1 className="text-2xl font-bold">{isEditMode ? 'Edit Thaali Event' : 'Create Thaali Event'}</h1>
 
       {error && (
         <div className="bg-red-100 text-red-700 px-4 py-2 rounded">{error}</div>
@@ -339,10 +410,31 @@ export default function CreateThaaliEvent() {
           )}
         </div>
 
+        {/* Status (Edit Mode Only) */}
+        {isEditMode && (
+          <div className="card space-y-4">
+            <h2 className="text-lg font-semibold">Event Status</h2>
+            <div>
+              <label className="block text-sm font-medium mb-1">Status</label>
+              <select className="input" {...register('status')}>
+                <option value="DRAFT">Draft</option>
+                <option value="PUBLISHED">Published</option>
+                <option value="CANCELLED">Cancelled</option>
+              </select>
+            </div>
+          </div>
+        )}
+
         {/* Submit */}
         <div className="flex gap-3">
-          <button type="submit" className="btn" disabled={isSubmitting || createMutation.isPending}>
-            {isSubmitting || createMutation.isPending ? 'Creating...' : 'Create Event'}
+          <button
+            type="submit"
+            className="btn"
+            disabled={isSubmitting || createMutation.isPending || updateMutation.isPending}
+          >
+            {isSubmitting || createMutation.isPending || updateMutation.isPending
+              ? (isEditMode ? 'Saving...' : 'Creating...')
+              : (isEditMode ? 'Save Changes' : 'Create Event')}
           </button>
           <button type="button" className="btn bg-gray-500" onClick={() => navigate('/admin/events')}>
             Cancel
