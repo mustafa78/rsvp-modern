@@ -19,10 +19,16 @@ public class EventController {
         this.service = service;
     }
 
-    // List all events (summary)
+    // List all events (summary) - for admin use
     @GetMapping("/events")
     public List<EventSummaryDto> list() {
         return service.listAll();
+    }
+
+    // List only published events - for public/user use
+    @GetMapping("/events/public")
+    public List<EventSummaryDto> listPublished() {
+        return service.listPublished();
     }
 
     // Get event summary by ID

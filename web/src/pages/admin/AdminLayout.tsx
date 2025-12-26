@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../../api/client';
 
 type NavItem = {
   label: string;
@@ -7,38 +9,78 @@ type NavItem = {
   children?: { label: string; path: string; disabled?: boolean }[];
 };
 
-const navItems: NavItem[] = [
-  { label: 'Dashboard', path: '/admin' },
-  {
-    label: 'Events',
-    children: [
-      { label: 'All Events', path: '/admin/events' },
-      { label: 'Create Thaali', path: '/admin/events/new/thaali' },
-      { label: 'Create Niyaz', path: '/admin/events/new/niyaz' },
-    ],
-  },
-  {
-    label: 'Catalog',
-    children: [
-      { label: 'Dishes', path: '/admin/catalog/dishes' },
-      { label: 'Ingredients', path: '/admin/catalog/ingredients' },
-      { label: 'Chefs', path: '/admin/catalog/chefs' },
-    ],
-  },
-  {
-    label: 'Reports',
-    children: [
-      { label: 'Shopping List Generator', path: '/admin/reports/shopping-list' },
-    ],
-  },
-  {
-    label: 'Settings',
-    children: [
-      { label: 'Users', path: '/admin/settings/users' },
-      { label: 'Pickup Zones', path: '/admin/settings/zones' },
-    ],
-  },
-];
+type User = {
+  personId: number;
+  roles: string[];
+};
+
+// Helper to check if user has a specific role
+const hasRole = (roles: string[], role: string) => roles?.includes(role) ?? false;
+const isAdmin = (roles: string[]) => hasRole(roles, 'ADMIN');
+const isNiyazCoordinator = (roles: string[]) => hasRole(roles, 'NIYAZ_COORDINATOR');
+const isThaaliCoordinator = (roles: string[]) => hasRole(roles, 'THAALI_COORDINATOR');
+
+// Build navigation items based on user roles
+const getNavItems = (roles: string[]): NavItem[] => {
+  const items: NavItem[] = [];
+  const admin = isAdmin(roles);
+  const niyazCoord = isNiyazCoordinator(roles);
+  const thaaliCoord = isThaaliCoordinator(roles);
+
+  // Dashboard - visible to all admin panel users
+  items.push({ label: 'Dashboard', path: '/admin' });
+
+  // Events section
+  const eventChildren: { label: string; path: string }[] = [];
+  if (admin || niyazCoord || thaaliCoord) {
+    eventChildren.push({ label: 'All Events', path: '/admin/events' });
+  }
+  if (admin || thaaliCoord) {
+    eventChildren.push({ label: 'Create Thaali', path: '/admin/events/new/thaali' });
+  }
+  if (admin || niyazCoord) {
+    eventChildren.push({ label: 'Create Niyaz', path: '/admin/events/new/niyaz' });
+  }
+  if (eventChildren.length > 0) {
+    items.push({ label: 'Events', children: eventChildren });
+  }
+
+  // Catalog - admin only for now
+  if (admin) {
+    items.push({
+      label: 'Catalog',
+      children: [
+        { label: 'Dishes', path: '/admin/catalog/dishes' },
+        { label: 'Ingredients', path: '/admin/catalog/ingredients' },
+        { label: 'Chefs', path: '/admin/catalog/chefs' },
+      ],
+    });
+  }
+
+  // Reports - admin only for now
+  if (admin) {
+    items.push({
+      label: 'Reports',
+      children: [
+        { label: 'Shopping List Generator', path: '/admin/reports/shopping-list' },
+      ],
+    });
+  }
+
+  // Settings - admin only
+  if (admin) {
+    items.push({
+      label: 'Settings',
+      children: [
+        { label: 'Users', path: '/admin/settings/users' },
+        { label: 'Roles', path: '/admin/settings/roles' },
+        { label: 'Pickup Zones', path: '/admin/settings/zones' },
+      ],
+    });
+  }
+
+  return items;
+};
 
 function ChevronDown({ open }: { open: boolean }) {
   return (
@@ -112,6 +154,16 @@ function NavSection({ item }: { item: NavItem }) {
 }
 
 export default function AdminLayout() {
+  const { data: user } = useQuery<User>({
+    queryKey: ['me'],
+    queryFn: () => api.me() as Promise<User>,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const navItems = useMemo(() => {
+    return getNavItems(user?.roles || []);
+  }, [user?.roles]);
+
   return (
     <div className="flex min-h-[calc(100vh-3rem)]">
       {/* Sidebar */}

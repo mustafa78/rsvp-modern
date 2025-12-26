@@ -4,8 +4,14 @@ import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import type { Event } from '../types/models';
 
+// Parse date string as local date to avoid timezone issues
+function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
+  const date = parseLocalDate(dateStr);
   return date.toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
@@ -22,7 +28,7 @@ function formatTime(timeStr: string): string {
 }
 
 function getWeekLabel(dateStr: string): string {
-  const date = new Date(dateStr);
+  const date = parseLocalDate(dateStr);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -41,7 +47,7 @@ function getWeekLabel(dateStr: string): string {
 }
 
 function getPastWeekLabel(dateStr: string): string {
-  const date = new Date(dateStr);
+  const date = parseLocalDate(dateStr);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -66,8 +72,8 @@ export default function EventsPage() {
   const [filterType, setFilterType] = useState<FilterType>('all');
 
   const { data, isLoading } = useQuery<Event[]>({
-    queryKey: ['events'],
-    queryFn: async () => (await api.get('/events')).data,
+    queryKey: ['events-public'],
+    queryFn: async () => (await api.get('/events/public')).data,
   });
 
   const { upcomingEvents, pastEvents } = useMemo(() => {
@@ -80,7 +86,7 @@ export default function EventsPage() {
     const past: Event[] = [];
 
     data.forEach(event => {
-      const eventDate = new Date(event.eventDate);
+      const eventDate = parseLocalDate(event.eventDate);
       eventDate.setHours(0, 0, 0, 0);
 
       if (eventDate >= today) {
@@ -91,9 +97,9 @@ export default function EventsPage() {
     });
 
     // Sort upcoming by date ascending (nearest first)
-    upcoming.sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime());
+    upcoming.sort((a, b) => parseLocalDate(a.eventDate).getTime() - parseLocalDate(b.eventDate).getTime());
     // Sort past by date descending (most recent first)
-    past.sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime());
+    past.sort((a, b) => parseLocalDate(b.eventDate).getTime() - parseLocalDate(a.eventDate).getTime());
 
     return { upcomingEvents: upcoming, pastEvents: past };
   }, [data]);
@@ -282,30 +288,6 @@ export default function EventsPage() {
                             )}
                           </td>
 
-                          {/* Status */}
-                          <td className="py-3 px-4 w-24">
-                            <span
-                              className={`inline-flex items-center gap-1 text-xs ${
-                                event.status === 'PUBLISHED'
-                                  ? 'text-green-600'
-                                  : event.status === 'CANCELLED'
-                                  ? 'text-red-600'
-                                  : 'text-gray-500'
-                              }`}
-                            >
-                              <span
-                                className={`w-1.5 h-1.5 rounded-full ${
-                                  event.status === 'PUBLISHED'
-                                    ? 'bg-green-500'
-                                    : event.status === 'CANCELLED'
-                                    ? 'bg-red-500'
-                                    : 'bg-gray-400'
-                                }`}
-                              />
-                              {event.status}
-                            </span>
-                          </td>
-
                           {/* Actions */}
                           <td className="py-3 px-4 w-36 text-right">
                             <div className="flex items-center justify-end gap-2">
@@ -315,7 +297,7 @@ export default function EventsPage() {
                               >
                                 Details
                               </Link>
-                              {!isPast && event.status === 'PUBLISHED' && (
+                              {!isPast && (
                                 <Link
                                   to={`/events/${event.id}/rsvp`}
                                   className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"

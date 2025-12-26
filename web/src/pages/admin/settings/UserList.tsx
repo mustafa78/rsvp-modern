@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../api/client';
 
-type RoleName = 'USER' | 'SUPER_USER' | 'ADMIN';
 type AccountStatus = 'ACTIVE' | 'LOCKED' | 'DISABLED';
 
 type User = {
@@ -12,7 +11,7 @@ type User = {
   lastName: string;
   email: string;
   phone: string | null;
-  roles: RoleName[];
+  roles: string[];
   accountStatus: AccountStatus;
   pickupZoneName: string | null;
   lastLoginAt: string | null;
@@ -24,10 +23,35 @@ type PickupZone = {
   active: boolean;
 };
 
-const roleLabels: Record<RoleName, string> = {
-  USER: 'User',
-  SUPER_USER: 'Super User',
-  ADMIN: 'Admin',
+type Role = {
+  id: number;
+  name: string;
+  description: string | null;
+  active: boolean;
+};
+
+// Format role name for display (e.g., NIYAZ_COORDINATOR -> Niyaz Coordinator)
+const formatRoleName = (name: string): string => {
+  return name
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
+// Get role badge color based on role name
+const getRoleColor = (role: string): string => {
+  switch (role) {
+    case 'ADMIN':
+      return 'bg-red-100 text-red-700';
+    case 'SUPER_USER':
+      return 'bg-purple-100 text-purple-700';
+    case 'NIYAZ_COORDINATOR':
+      return 'bg-green-100 text-green-700';
+    case 'THAALI_COORDINATOR':
+      return 'bg-orange-100 text-orange-700';
+    default:
+      return 'bg-gray-100 text-gray-700';
+  }
 };
 
 const statusLabels: Record<AccountStatus, string> = {
@@ -50,12 +74,12 @@ const initialCreateForm = {
   phone: '',
   password: '',
   pickupZoneId: '',
-  roles: ['USER'] as RoleName[],
+  roles: ['USER'] as string[],
 };
 
 export default function UserList() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [editRoles, setEditRoles] = useState<RoleName[]>([]);
+  const [editRoles, setEditRoles] = useState<string[]>([]);
   const [editStatus, setEditStatus] = useState<AccountStatus>('ACTIVE');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createForm, setCreateForm] = useState(initialCreateForm);
@@ -71,6 +95,11 @@ export default function UserList() {
   const { data: zones } = useQuery<PickupZone[]>({
     queryKey: ['pickup-zones'],
     queryFn: async () => (await api.get('/pickup-zones')).data,
+  });
+
+  const { data: availableRoles } = useQuery<Role[]>({
+    queryKey: ['roles-active'],
+    queryFn: async () => (await api.get('/roles/active')).data,
   });
 
   const createUserMutation = useMutation({
@@ -91,7 +120,7 @@ export default function UserList() {
   });
 
   const updateRolesMutation = useMutation({
-    mutationFn: async ({ id, roles }: { id: number; roles: RoleName[] }) =>
+    mutationFn: async ({ id, roles }: { id: number; roles: string[] }) =>
       api.put(`/admin/users/${id}/roles`, { roles }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
@@ -124,16 +153,20 @@ export default function UserList() {
     setError(null);
   };
 
-  const toggleRole = (role: RoleName) => {
+  const toggleRole = (role: string) => {
     if (editRoles.includes(role)) {
+      // Don't allow removing USER role - it's required
+      if (role === 'USER') return;
       setEditRoles(editRoles.filter((r) => r !== role));
     } else {
       setEditRoles([...editRoles, role]);
     }
   };
 
-  const toggleCreateRole = (role: RoleName) => {
+  const toggleCreateRole = (role: string) => {
     if (createForm.roles.includes(role)) {
+      // Don't allow removing USER role - it's required
+      if (role === 'USER') return;
       setCreateForm({ ...createForm, roles: createForm.roles.filter((r) => r !== role) });
     } else {
       setCreateForm({ ...createForm, roles: [...createForm.roles, role] });
@@ -284,21 +317,24 @@ export default function UserList() {
               <div>
                 <label className="block text-sm font-medium mb-1">Roles</label>
                 <div className="flex flex-wrap gap-2 mt-1">
-                  {(['USER', 'SUPER_USER', 'ADMIN'] as RoleName[]).map((role) => (
+                  {availableRoles?.map((role) => (
                     <button
-                      key={role}
+                      key={role.name}
                       type="button"
-                      onClick={() => toggleCreateRole(role)}
+                      onClick={() => toggleCreateRole(role.name)}
+                      disabled={role.name === 'USER'}
                       className={`px-3 py-1 rounded-full text-sm border transition-colors ${
-                        createForm.roles.includes(role)
+                        createForm.roles.includes(role.name)
                           ? 'bg-blue-600 text-white border-blue-600'
                           : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-                      }`}
+                      } ${role.name === 'USER' ? 'opacity-75 cursor-not-allowed' : ''}`}
+                      title={role.name === 'USER' ? 'User role is required' : role.description || ''}
                     >
-                      {roleLabels[role]}
+                      {formatRoleName(role.name)}
                     </button>
                   ))}
                 </div>
+                <p className="text-xs text-gray-500 mt-1">User role is required and cannot be removed</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -348,21 +384,24 @@ export default function UserList() {
               <div>
                 <label className="block text-sm font-medium mb-2">Roles</label>
                 <div className="flex flex-wrap gap-2">
-                  {(['USER', 'SUPER_USER', 'ADMIN'] as RoleName[]).map((role) => (
+                  {availableRoles?.map((role) => (
                     <button
-                      key={role}
+                      key={role.name}
                       type="button"
-                      onClick={() => toggleRole(role)}
+                      onClick={() => toggleRole(role.name)}
+                      disabled={role.name === 'USER'}
                       className={`px-3 py-1 rounded-full text-sm border transition-colors ${
-                        editRoles.includes(role)
+                        editRoles.includes(role.name)
                           ? 'bg-blue-600 text-white border-blue-600'
                           : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-                      }`}
+                      } ${role.name === 'USER' ? 'opacity-75 cursor-not-allowed' : ''}`}
+                      title={role.name === 'USER' ? 'User role is required' : role.description || ''}
                     >
-                      {roleLabels[role]}
+                      {formatRoleName(role.name)}
                     </button>
                   ))}
                 </div>
+                <p className="text-xs text-gray-500 mt-1">User role is required and cannot be removed</p>
               </div>
 
               <div>
@@ -436,15 +475,9 @@ export default function UserList() {
                       {user.roles.map((role) => (
                         <span
                           key={role}
-                          className={`text-xs px-2 py-0.5 rounded ${
-                            role === 'ADMIN'
-                              ? 'bg-red-100 text-red-700'
-                              : role === 'SUPER_USER'
-                              ? 'bg-purple-100 text-purple-700'
-                              : 'bg-gray-100 text-gray-700'
-                          }`}
+                          className={`text-xs px-2 py-0.5 rounded ${getRoleColor(role)}`}
                         >
-                          {roleLabels[role]}
+                          {formatRoleName(role)}
                         </span>
                       ))}
                     </div>

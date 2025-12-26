@@ -51,6 +51,12 @@ public class ThaaliService {
     public ThaaliOrderDto upsert(Long eventId, Long personId, ThaaliOrderRequest request) {
         ThaaliEvent event = eventRepo.findById(eventId)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found: " + eventId));
+
+        // Check if registration is open
+        if (!event.isRegistrationOpen(java.time.OffsetDateTime.now())) {
+            throw new IllegalStateException("Registration is closed for this event");
+        }
+
         Person person = personRepo.findById(personId)
                 .orElseThrow(() -> new IllegalArgumentException("Person not found: " + personId));
         PickupZone pickupZone = pickupZoneRepo.findById(request.pickupZoneId())

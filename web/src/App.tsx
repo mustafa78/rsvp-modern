@@ -85,7 +85,11 @@ export default function App() {
         <div className="max-w-6xl mx-auto px-4 h-12 flex items-center justify-between">
           <nav className="space-x-6">
             <Link to="/" className="font-semibold">Events</Link>
-            {user.roles?.includes('ADMIN') && <Link to="/admin">Admin</Link>}
+            {(user.roles?.includes('ADMIN') ||
+              user.roles?.includes('NIYAZ_COORDINATOR') ||
+              user.roles?.includes('THAALI_COORDINATOR')) && (
+              <Link to="/admin">Admin</Link>
+            )}
           </nav>
           <nav className="flex items-center space-x-4">
             <span className="text-sm text-gray-600">

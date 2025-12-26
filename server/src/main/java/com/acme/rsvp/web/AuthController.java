@@ -106,9 +106,8 @@ public class AuthController {
 	public ResponseEntity<?> me(@AuthenticationPrincipal Person me) {
 		if (me == null)
 			return ResponseEntity.status(401).build();
-		var roleNames = me.getRoles().stream().map(Enum::name).collect(java.util.stream.Collectors.toSet());
 		return ResponseEntity.ok(
-				new AuthResponse(me.getId(), me.getItsNumber(), me.getFirstName(), me.getLastName(), me.getEmail(), me.getPhone(), roleNames));
+				new AuthResponse(me.getId(), me.getItsNumber(), me.getFirstName(), me.getLastName(), me.getEmail(), me.getPhone(), me.getRoles()));
 	}
 
 	@PostMapping("/password/change")

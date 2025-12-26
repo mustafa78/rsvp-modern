@@ -27,6 +27,12 @@ public class NiyazService {
     public NiyazRsvpDto upsert(Long eventId, Long personId, int adults, int kids) {
         NiyazEvent e = eventRepo.findById(eventId)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found: " + eventId));
+
+        // Check if registration is open
+        if (!e.isRegistrationOpen(java.time.OffsetDateTime.now())) {
+            throw new IllegalStateException("Registration is closed for this event");
+        }
+
         Person p = personRepo.findById(personId)
                 .orElseThrow(() -> new IllegalArgumentException("Person not found: " + personId));
 

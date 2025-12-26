@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.util.Set;
 
 import com.acme.rsvp.model.AccountStatus;
-import com.acme.rsvp.model.RoleName;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -19,7 +18,7 @@ public class AdminUserDtos {
             String lastName,
             String email,
             String phone,
-            Set<RoleName> roles,
+            Set<String> roles,
             AccountStatus accountStatus,
             String pickupZoneName,
             Instant lastLoginAt) {
@@ -33,10 +32,10 @@ public class AdminUserDtos {
             String phone,
             @NotBlank String password,
             Long pickupZoneId,
-            Set<RoleName> roles) {
+            Set<String> roles) {
     }
 
-    public record UpdateRolesRequest(@NotNull Set<RoleName> roles) {
+    public record UpdateRolesRequest(@NotNull Set<String> roles) {
     }
 
     public record UpdateStatusRequest(@NotNull AccountStatus status) {

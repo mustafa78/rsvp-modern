@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,6 +15,19 @@ type Person = {
   phone: string | null;
 };
 
+type NiyazEventData = {
+  id: number;
+  title: string;
+  description: string | null;
+  eventDate: string;
+  startTime: string | null;
+  registrationOpenAt: string;
+  registrationCloseAt: string;
+  status: string;
+  miqaatName: string;
+  hostIds: number[];
+};
+
 const schema = z.object({
   miqaatName: z.string().min(1, 'Miqaat name is required'),
   description: z.string().optional(),
@@ -22,12 +35,16 @@ const schema = z.object({
   startTime: z.string().optional(),
   registrationOpenAt: z.string().min(1, 'Registration open date is required'),
   registrationCloseAt: z.string().min(1, 'Registration close date is required'),
+  status: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
 
 export default function CreateNiyazEvent() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const isEditMode = !!id;
+
   const [selectedHosts, setSelectedHosts] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [hostSearch, setHostSearch] = useState('');
@@ -37,9 +54,17 @@ export default function CreateNiyazEvent() {
     queryFn: async () => (await api.get('/admin/users')).data,
   });
 
+  // Fetch existing event data in edit mode
+  const { data: existingEvent, isLoading: isLoadingEvent } = useQuery<NiyazEventData>({
+    queryKey: ['niyaz-event', id],
+    queryFn: async () => (await api.get(`/niyaz/${id}`)).data,
+    enabled: isEditMode,
+  });
+
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -50,8 +75,25 @@ export default function CreateNiyazEvent() {
       startTime: '',
       registrationOpenAt: '',
       registrationCloseAt: '',
+      status: 'DRAFT',
     },
   });
+
+  // Populate form with existing data in edit mode
+  useEffect(() => {
+    if (existingEvent) {
+      reset({
+        miqaatName: existingEvent.miqaatName || '',
+        description: existingEvent.description || '',
+        eventDate: existingEvent.eventDate || '',
+        startTime: existingEvent.startTime?.slice(0, 5) || '',
+        registrationOpenAt: existingEvent.registrationOpenAt?.split('T')[0] || '',
+        registrationCloseAt: existingEvent.registrationCloseAt?.split('T')[0] || '',
+        status: existingEvent.status || 'DRAFT',
+      });
+      setSelectedHosts(existingEvent.hostIds || []);
+    }
+  }, [existingEvent, reset]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -65,21 +107,37 @@ export default function CreateNiyazEvent() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await api.put(`/events/niyaz/${id}`, data);
+    },
+    onSuccess: () => {
+      navigate('/admin/events');
+    },
+    onError: (err: any) => {
+      setError(err.message || 'Failed to update event');
+    },
+  });
+
   const onSubmit = (values: FormValues) => {
     setError(null);
     const payload = {
-      // title will be auto-populated from miqaatName on backend
       title: values.miqaatName,
       description: values.description || null,
       eventDate: values.eventDate,
       startTime: values.startTime || null,
       registrationOpenAt: values.registrationOpenAt ? `${values.registrationOpenAt}T00:00:00Z` : null,
       registrationCloseAt: values.registrationCloseAt ? `${values.registrationCloseAt}T23:59:59Z` : null,
-      status: 'DRAFT',
+      status: isEditMode ? values.status : 'DRAFT',
       miqaatName: values.miqaatName,
       hostIds: selectedHosts,
     };
-    createMutation.mutate(payload);
+
+    if (isEditMode) {
+      updateMutation.mutate(payload);
+    } else {
+      createMutation.mutate(payload);
+    }
   };
 
   const addHost = (personId: number) => {
@@ -109,9 +167,13 @@ export default function CreateNiyazEvent() {
   const selectedHostIds = new Set(selectedHosts);
   const unselectedPersons = filteredPersons.filter(p => !selectedHostIds.has(p.id));
 
+  if (isEditMode && isLoadingEvent) {
+    return <div className="text-gray-500">Loading event...</div>;
+  }
+
   return (
     <div className="space-y-6 max-w-3xl">
-      <h1 className="text-2xl font-bold">Create Niyaz Event</h1>
+      <h1 className="text-2xl font-bold">{isEditMode ? 'Edit Niyaz Event' : 'Create Niyaz Event'}</h1>
 
       {error && (
         <div className="bg-red-100 text-red-700 px-4 py-2 rounded">{error}</div>
@@ -293,10 +355,31 @@ export default function CreateNiyazEvent() {
           </div>
         </div>
 
+        {/* Status (Edit Mode Only) */}
+        {isEditMode && (
+          <div className="card space-y-4">
+            <h2 className="text-lg font-semibold">Event Status</h2>
+            <div>
+              <label className="block text-sm font-medium mb-1">Status</label>
+              <select className="input" {...register('status')}>
+                <option value="DRAFT">Draft</option>
+                <option value="PUBLISHED">Published</option>
+                <option value="CANCELLED">Cancelled</option>
+              </select>
+            </div>
+          </div>
+        )}
+
         {/* Submit */}
         <div className="flex gap-3">
-          <button type="submit" className="btn" disabled={isSubmitting || createMutation.isPending}>
-            {isSubmitting || createMutation.isPending ? 'Creating...' : 'Create Event'}
+          <button
+            type="submit"
+            className="btn"
+            disabled={isSubmitting || createMutation.isPending || updateMutation.isPending}
+          >
+            {isSubmitting || createMutation.isPending || updateMutation.isPending
+              ? (isEditMode ? 'Saving...' : 'Creating...')
+              : (isEditMode ? 'Save Changes' : 'Create Event')}
           </button>
           <button type="button" className="btn bg-gray-500" onClick={() => navigate('/admin/events')}>
             Cancel

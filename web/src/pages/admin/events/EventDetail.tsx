@@ -103,6 +103,16 @@ export default function EventDetail() {
       <div className="card">
         <h2 className="text-lg font-semibold mb-4">Actions</h2>
         <div className="flex gap-3 flex-wrap">
+          {event.type === 'NIYAZ' && (
+            <Link to={`/admin/events/edit/niyaz/${event.id}`} className="btn">
+              Edit Event
+            </Link>
+          )}
+          {event.type === 'THAALI' && (
+            <Link to={`/admin/events/edit/thaali/${event.id}`} className="btn">
+              Edit Event
+            </Link>
+          )}
           {event.type === 'THAALI' && event.status === 'PUBLISHED' && (
             <Link to={`/admin/reports/orders/${event.id}`} className="btn bg-purple-600">
               View Orders
@@ -117,13 +127,6 @@ export default function EventDetail() {
             ← Back to Events
           </Link>
         </div>
-      </div>
-
-      <div className="card bg-yellow-50 border border-yellow-200">
-        <h2 className="text-lg font-semibold mb-2">Edit Event</h2>
-        <p className="text-sm text-gray-600">
-          Event editing functionality coming soon. For now, you can publish/cancel events from the Events list.
-        </p>
       </div>
     </div>
   );
