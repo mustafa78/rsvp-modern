@@ -186,11 +186,7 @@ export default function CreateThaaliEvent() {
   const activeChefs = chefs?.filter((c) => c.active) || [];
   const activeDishes = dishes?.filter((d) => d.active) || [];
 
-  if (isEditMode && isLoadingEvent) {
-    return <div className="text-gray-500">Loading event...</div>;
-  }
-
-  // Filter dishes based on search
+  // Filter dishes based on search - must be before any conditional returns
   const filteredDishes = useMemo(() => {
     if (!dishSearch.trim()) return activeDishes;
     const query = dishSearch.toLowerCase();
@@ -201,9 +197,19 @@ export default function CreateThaaliEvent() {
   const selectedDishIds = new Set(menuItems.map(m => m.dishId));
   const unselectedDishes = filteredDishes.filter(d => !selectedDishIds.has(d.id));
 
+  if (isEditMode && isLoadingEvent) {
+    return <div className="text-gray-500">Loading event...</div>;
+  }
+
   return (
     <div className="space-y-6 max-w-3xl">
-      <h1 className="text-2xl font-bold">{isEditMode ? 'Edit Thaali Event' : 'Create Thaali Event'}</h1>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">{isEditMode ? 'Edit Thaali Event' : 'Create Thaali Event'}</h1>
+        <span className="px-3 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
+          Thaali
+        </span>
+      </div>
 
       {error && (
         <div className="bg-red-100 text-red-700 px-4 py-2 rounded">{error}</div>
@@ -211,8 +217,11 @@ export default function CreateThaaliEvent() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Basic Info */}
-        <div className="card space-y-4">
-          <h2 className="text-lg font-semibold">Thaali Details</h2>
+        <div className="card overflow-hidden p-0">
+          <div className="bg-blue-600 px-6 py-4">
+            <h2 className="text-lg font-semibold text-white">Thaali Details</h2>
+          </div>
+          <div className="p-6 space-y-4">
 
           <div>
             <label className="block text-sm font-medium mb-1">Title *</label>
@@ -253,35 +262,37 @@ export default function CreateThaaliEvent() {
               )}
             </div>
           </div>
+          </div>
         </div>
 
         {/* Menu Selection */}
-        <div className="card space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="card overflow-hidden p-0">
+          <div className="bg-blue-600 px-6 py-4 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold">Menu</h2>
-              <p className="text-sm text-gray-500">Select dishes for this event's menu</p>
+              <h2 className="text-lg font-semibold text-white">Menu</h2>
+              <p className="text-sm text-blue-200">Select dishes for this event's menu</p>
             </div>
             {menuItems.length > 0 && (
-              <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+              <span className="px-3 py-1 bg-white/20 text-white rounded-full text-sm font-medium">
                 {menuItems.length} selected
               </span>
             )}
           </div>
 
+          <div className="p-6 space-y-4">
           {/* Selected Menu Items */}
           {menuItems.length > 0 && (
-            <div className="border rounded-lg overflow-hidden">
-              <div className="bg-purple-50 px-4 py-2 border-b">
-                <h3 className="text-sm font-semibold text-purple-900">Selected Menu Items</h3>
+            <div className="border border-blue-200 rounded-lg overflow-hidden">
+              <div className="bg-blue-50 px-4 py-2 border-b border-blue-200">
+                <h3 className="text-sm font-semibold text-blue-900">Selected Menu Items</h3>
               </div>
               <div className="divide-y divide-gray-100">
                 {menuItems.map((item, idx) => {
                   const dish = dishes?.find((d) => d.id === item.dishId);
                   return (
-                    <div key={item.dishId} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
+                    <div key={item.dishId} className="flex items-center justify-between px-4 py-3 hover:bg-blue-50">
                       <div className="flex items-center gap-3">
-                        <span className="flex items-center justify-center w-6 h-6 bg-purple-100 text-purple-700 rounded-full text-xs font-bold">
+                        <span className="flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">
                           {idx + 1}
                         </span>
                         <span className="font-medium text-gray-900">{dish?.name}</span>
@@ -316,7 +327,7 @@ export default function CreateThaaliEvent() {
                 </div>
                 <input
                   type="text"
-                  className="input pl-9 py-2 text-sm"
+                  className="input !pl-10 py-2 text-sm"
                   placeholder="Search dishes..."
                   value={dishSearch}
                   onChange={(e) => setDishSearch(e.target.value)}
@@ -354,10 +365,10 @@ export default function CreateThaaliEvent() {
                       key={dish.id}
                       type="button"
                       onClick={() => addDishToMenu(dish.id)}
-                      className="w-full text-left px-4 py-3 hover:bg-purple-50 flex items-center justify-between group transition-colors"
+                      className="w-full text-left px-4 py-3 hover:bg-blue-50 flex items-center justify-between group transition-colors"
                     >
-                      <span className="text-gray-700 group-hover:text-purple-700">{dish.name}</span>
-                      <span className="text-purple-600 opacity-0 group-hover:opacity-100 text-sm font-medium transition-opacity">
+                      <span className="text-gray-700 group-hover:text-blue-700">{dish.name}</span>
+                      <span className="text-blue-600 opacity-0 group-hover:opacity-100 text-sm font-medium transition-opacity">
                         + Add
                       </span>
                     </button>
@@ -377,13 +388,16 @@ export default function CreateThaaliEvent() {
               </div>
             )}
           </div>
+          </div>
         </div>
 
         {/* Chef Selection */}
-        <div className="card space-y-4">
-          <h2 className="text-lg font-semibold">Chefs / Cooking Groups</h2>
-          <p className="text-sm text-gray-500">Select who will be cooking for this event</p>
-
+        <div className="card overflow-hidden p-0">
+          <div className="bg-blue-600 px-6 py-4">
+            <h2 className="text-lg font-semibold text-white">Chefs / Cooking Groups</h2>
+            <p className="text-sm text-blue-200">Select who will be cooking for this event</p>
+          </div>
+          <div className="p-6">
           <div className="flex gap-2 flex-wrap">
             {activeChefs.map((chef) => {
               const isSelected = selectedChefs.includes(chef.id);
@@ -392,10 +406,10 @@ export default function CreateThaaliEvent() {
                   key={chef.id}
                   type="button"
                   onClick={() => toggleChef(chef.id)}
-                  className={`px-3 py-1 rounded-full text-sm border ${
+                  className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
                     isSelected
                       ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                      : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:bg-blue-50'
                   }`}
                 >
                   {chef.name}
@@ -408,13 +422,16 @@ export default function CreateThaaliEvent() {
           {activeChefs.length === 0 && (
             <p className="text-gray-400 text-sm">No chefs available. Create chefs in the Catalog first.</p>
           )}
+          </div>
         </div>
 
         {/* Status (Edit Mode Only) */}
         {isEditMode && (
-          <div className="card space-y-4">
-            <h2 className="text-lg font-semibold">Event Status</h2>
-            <div>
+          <div className="card overflow-hidden p-0">
+            <div className="bg-blue-600 px-6 py-4">
+              <h2 className="text-lg font-semibold text-white">Thaali Status</h2>
+            </div>
+            <div className="p-6">
               <label className="block text-sm font-medium mb-1">Status</label>
               <select className="input" {...register('status')}>
                 <option value="DRAFT">Draft</option>
@@ -429,14 +446,14 @@ export default function CreateThaaliEvent() {
         <div className="flex gap-3">
           <button
             type="submit"
-            className="btn"
+            className="btn bg-blue-600 hover:bg-blue-700"
             disabled={isSubmitting || createMutation.isPending || updateMutation.isPending}
           >
             {isSubmitting || createMutation.isPending || updateMutation.isPending
               ? (isEditMode ? 'Saving...' : 'Creating...')
               : (isEditMode ? 'Save Changes' : 'Create Event')}
           </button>
-          <button type="button" className="btn bg-gray-500" onClick={() => navigate('/admin/events')}>
+          <button type="button" className="btn bg-gray-500 hover:bg-gray-600" onClick={() => navigate('/admin/events')}>
             Cancel
           </button>
         </div>
