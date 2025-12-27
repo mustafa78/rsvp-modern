@@ -31,22 +31,40 @@ public class SessionAuthFilter extends OncePerRequestFilter {
 		this.sessions = sessions;
 	}
 
-	// Public auth endpoints that don't need session authentication
-	private static final List<String> PUBLIC_AUTH_PATHS = List.of(
+	// Public endpoints that don't need session authentication
+	private static final List<String> PUBLIC_PATHS = List.of(
 		"/api/auth/login",
 		"/api/auth/register",
 		"/api/auth/password/reset/request",
 		"/api/auth/password/reset/confirm",
-		"/api/auth/pickup-zones"
+		"/api/auth/pickup-zones",
+		"/api/events/public"
 	);
+
+	// Patterns for paths with path variables
+	private static final String EVENT_DETAIL_PATTERN = "/api/events/";
 
 	@Override
 	protected void doFilterInternal(HttpServletRequest req, HttpServletResponse resp, FilterChain chain)
 			throws ServletException, IOException {
 
 		String path = req.getRequestURI();
-		// Skip authentication setup only for OPTIONS and specific public auth endpoints
-		if ("OPTIONS".equalsIgnoreCase(req.getMethod()) || PUBLIC_AUTH_PATHS.contains(path)) {
+		String method = req.getMethod();
+
+		// Skip authentication setup for OPTIONS requests
+		if ("OPTIONS".equalsIgnoreCase(method)) {
+			chain.doFilter(req, resp);
+			return;
+		}
+
+		// Skip for explicit public paths
+		if (PUBLIC_PATHS.contains(path)) {
+			chain.doFilter(req, resp);
+			return;
+		}
+
+		// Skip for GET /api/events/{id} (event detail page)
+		if ("GET".equalsIgnoreCase(method) && path.startsWith(EVENT_DETAIL_PATTERN) && !path.contains("/rsvp")) {
 			chain.doFilter(req, resp);
 			return;
 		}

@@ -5,6 +5,21 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { api } from '../../../api/client';
 
+// Format phone number as (xxx) xxx-xxxx
+function formatPhoneNumber(value: string): string {
+  // Remove all non-digit characters
+  const digits = value.replace(/\D/g, '');
+
+  // Limit to 10 digits
+  const limited = digits.slice(0, 10);
+
+  // Format based on length
+  if (limited.length === 0) return '';
+  if (limited.length <= 3) return `(${limited}`;
+  if (limited.length <= 6) return `(${limited.slice(0, 3)}) ${limited.slice(3)}`;
+  return `(${limited.slice(0, 3)}) ${limited.slice(3, 6)}-${limited.slice(6)}`;
+}
+
 type ChefType = 'PERSON' | 'GROUP' | 'EXTERNAL';
 
 type Chef = {
@@ -49,6 +64,8 @@ export default function ChefList() {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -61,6 +78,13 @@ export default function ChefList() {
       active: true,
     },
   });
+
+  const phoneValue = watch('phone');
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setValue('phone', formatted);
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => api.post('/chefs', data),
@@ -178,7 +202,12 @@ export default function ChefList() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Phone</label>
-                <input className="input" {...register('phone')} placeholder="(555) 123-4567" />
+                <input
+                  className="input"
+                  value={phoneValue || ''}
+                  onChange={handlePhoneChange}
+                  placeholder="(xxx) xxx-xxxx"
+                />
               </div>
             </div>
             <div>

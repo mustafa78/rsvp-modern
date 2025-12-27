@@ -1,5 +1,7 @@
 package com.acme.rsvp.security;
 
+import org.springframework.http.ResponseCookie;
+
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -10,21 +12,26 @@ public final class CookieUtil {
 
 	public static void addSessionCookie(HttpServletResponse resp, String name, String value, int maxAgeSeconds,
 			boolean secure) {
-		Cookie c = new Cookie(name, value);
-		c.setHttpOnly(true);
-		c.setSecure(secure);
-		c.setPath("/");
-		c.setMaxAge(maxAgeSeconds);
-		resp.addCookie(c);
+		// Use ResponseCookie to properly set SameSite attribute
+		ResponseCookie cookie = ResponseCookie.from(name, value)
+				.httpOnly(true)
+				.secure(secure)
+				.path("/")
+				.maxAge(maxAgeSeconds)
+				.sameSite(secure ? "None" : "Lax")
+				.build();
+		resp.addHeader("Set-Cookie", cookie.toString());
 	}
 
 	public static void clearCookie(HttpServletResponse resp, String name, boolean secure) {
-		Cookie c = new Cookie(name, "");
-		c.setHttpOnly(true);
-		c.setSecure(secure);
-		c.setPath("/");
-		c.setMaxAge(0);
-		resp.addCookie(c);
+		ResponseCookie cookie = ResponseCookie.from(name, "")
+				.httpOnly(true)
+				.secure(secure)
+				.path("/")
+				.maxAge(0)
+				.sameSite(secure ? "None" : "Lax")
+				.build();
+		resp.addHeader("Set-Cookie", cookie.toString());
 	}
 
 	public static String readCookie(HttpServletRequest req, String name) {
