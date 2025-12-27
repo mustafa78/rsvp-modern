@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../../api/client';
@@ -21,6 +21,35 @@ type User = {
 };
 
 type StatusFilter = 'ALL' | 'DRAFT' | 'PUBLISHED' | 'CANCELLED';
+
+// Format date as "Wed, Dec 31"
+function formatDate(dateStr: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+// Format time as "6:10 PM"
+function formatTime(timeStr: string): string {
+  const [hours, minutes] = timeStr.split(':');
+  const hour = parseInt(hours, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${minutes} ${ampm}`;
+}
+
+// Format short date as "Dec 26"
+function formatShortDate(dateTimeStr: string): string {
+  const date = new Date(dateTimeStr);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+}
 
 // Role helpers
 const hasRole = (roles: string[], role: string) => roles?.includes(role) ?? false;
@@ -161,121 +190,144 @@ export default function EventList() {
       </div>
 
       {/* Events Table */}
-      <div className="card">
+      <div className="card overflow-hidden p-0">
         {filteredEvents.length === 0 ? (
-          <p className="text-gray-500">No events found</p>
+          <p className="text-gray-500 p-6">No events found</p>
         ) : (
-          <table className="w-full text-left">
+          <table className="w-full">
             <thead>
-              <tr className="border-b">
-                <th className="pb-2 font-medium">Title</th>
-                <th className="pb-2 font-medium">Type</th>
-                <th className="pb-2 font-medium">Date</th>
-                <th className="pb-2 font-medium">Registration</th>
-                <th className="pb-2 font-medium">Status</th>
-                <th className="pb-2 font-medium">Actions</th>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Event</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">Registration</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">Status</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider w-40">Actions</th>
               </tr>
             </thead>
-            <tbody>
-              {filteredEvents.map((event) => (
-                <tr key={event.id} className="border-b last:border-0">
-                  <td className="py-3">
-                    <Link
-                      to={`/admin/events/${event.id}`}
-                      className="text-blue-600 hover:underline font-medium"
-                    >
-                      {event.title}
-                    </Link>
-                    {event.description && (
-                      <p className="text-sm text-gray-500 truncate max-w-xs">
-                        {event.description}
-                      </p>
-                    )}
-                  </td>
-                  <td className="py-3">
-                    <span
-                      className={`text-xs px-2 py-1 rounded ${
-                        event.type === 'THAALI'
-                          ? 'bg-purple-100 text-purple-700'
-                          : 'bg-blue-100 text-blue-700'
-                      }`}
-                    >
-                      {event.type}
-                    </span>
-                  </td>
-                  <td className="py-3 text-gray-600">
-                    {event.eventDate}
-                    {event.startTime && (
-                      <span className="text-gray-400 text-sm ml-1">
-                        {event.startTime.slice(0, 5)}
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3 text-sm text-gray-500">
-                    <div>{new Date(event.registrationOpenAt).toLocaleDateString()}</div>
-                    <div className="text-gray-400">
-                      to {new Date(event.registrationCloseAt).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td className="py-3">
-                    <span
-                      className={`text-xs px-2 py-1 rounded ${
-                        event.status === 'PUBLISHED'
-                          ? 'bg-green-100 text-green-700'
-                          : event.status === 'DRAFT'
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : 'bg-red-100 text-red-700'
-                      }`}
-                    >
-                      {event.status}
-                    </span>
-                  </td>
-                  <td className="py-3">
-                    <div className="flex gap-2">
-                      <Link
-                        to={`/admin/events/${event.id}`}
-                        className="text-sm text-blue-600 hover:underline"
+            <tbody className="divide-y divide-gray-100">
+              {filteredEvents.map((event, idx) => {
+                const isNiyaz = event.type === 'NIYAZ';
+                return (
+                  <tr key={event.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                    {/* Event Info */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`flex-shrink-0 w-2 h-10 rounded-full ${
+                            isNiyaz ? 'bg-purple-500' : 'bg-blue-500'
+                          }`}
+                        />
+                        <div className="min-w-0">
+                          <Link
+                            to={`/admin/events/${event.id}`}
+                            className="font-medium text-gray-900 hover:text-blue-600 block truncate"
+                          >
+                            {event.title}
+                          </Link>
+                          <span
+                            className={`inline-flex items-center text-xs font-medium ${
+                              isNiyaz ? 'text-purple-600' : 'text-blue-600'
+                            }`}
+                          >
+                            {isNiyaz ? 'Niyaz' : 'Thaali'}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Date */}
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {formatDate(event.eventDate)}
+                        {event.startTime && (
+                          <span className="text-gray-500"> · {formatTime(event.startTime)}</span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Registration Period */}
+                    <td className="px-4 py-4">
+                      <div className="text-xs text-gray-600">
+                        <span className="text-green-600">{formatShortDate(event.registrationOpenAt)}</span>
+                        <span className="text-gray-400 mx-1">-</span>
+                        <span className="text-red-600">{formatShortDate(event.registrationCloseAt)}</span>
+                      </div>
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-4 py-4 text-center">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          event.status === 'PUBLISHED'
+                            ? 'bg-green-100 text-green-800'
+                            : event.status === 'DRAFT'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
                       >
-                        Edit
-                      </Link>
-                      {event.status === 'DRAFT' && (
-                        <button
-                          onClick={() => handlePublish(event.id)}
-                          className="text-sm text-green-600 hover:underline"
-                          disabled={publishMutation.isPending}
-                        >
-                          Publish
-                        </button>
-                      )}
-                      {event.status === 'PUBLISHED' && (
-                        <button
-                          onClick={() => handleCancel(event.id)}
-                          className="text-sm text-red-600 hover:underline"
-                          disabled={cancelMutation.isPending}
-                        >
-                          Cancel
-                        </button>
-                      )}
-                      {event.type === 'THAALI' && event.status === 'PUBLISHED' && (
+                        {event.status === 'PUBLISHED' && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5" />
+                        )}
+                        {event.status === 'DRAFT' && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5" />
+                        )}
+                        {event.status === 'CANCELLED' && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5" />
+                        )}
+                        {event.status.charAt(0) + event.status.slice(1).toLowerCase()}
+                      </span>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-4 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
                         <Link
-                          to={`/admin/reports/orders/${event.id}`}
-                          className="text-sm text-purple-600 hover:underline"
+                          to={`/admin/events/${event.id}`}
+                          className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
                         >
-                          Orders
+                          Details
                         </Link>
-                      )}
-                      {event.type === 'NIYAZ' && event.status === 'PUBLISHED' && (
-                        <Link
-                          to={`/admin/reports/rsvps/${event.id}`}
-                          className="text-sm text-purple-600 hover:underline"
-                        >
-                          RSVPs
-                        </Link>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        {event.status === 'DRAFT' && (
+                          <button
+                            onClick={() => handlePublish(event.id)}
+                            className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700"
+                            disabled={publishMutation.isPending}
+                          >
+                            Publish
+                          </button>
+                        )}
+                        {event.status === 'PUBLISHED' && (
+                          <>
+                            {event.type === 'THAALI' && (
+                              <Link
+                                to={`/admin/reports/orders/${event.id}`}
+                                className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700"
+                              >
+                                Orders
+                              </Link>
+                            )}
+                            {event.type === 'NIYAZ' && (
+                              <Link
+                                to={`/admin/reports/rsvps/${event.id}`}
+                                className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-white bg-purple-600 rounded hover:bg-purple-700"
+                              >
+                                RSVPs
+                              </Link>
+                            )}
+                            <button
+                              onClick={() => handleCancel(event.id)}
+                              className="text-xs text-red-600 hover:text-red-800 hover:underline ml-1"
+                              disabled={cancelMutation.isPending}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

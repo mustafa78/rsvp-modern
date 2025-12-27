@@ -173,7 +173,13 @@ export default function CreateNiyazEvent() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <h1 className="text-2xl font-bold">{isEditMode ? 'Edit Niyaz Event' : 'Create Niyaz Event'}</h1>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">{isEditMode ? 'Edit Niyaz Event' : 'Create Niyaz Event'}</h1>
+        <span className="px-3 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
+          Niyaz
+        </span>
+      </div>
 
       {error && (
         <div className="bg-red-100 text-red-700 px-4 py-2 rounded">{error}</div>
@@ -181,8 +187,11 @@ export default function CreateNiyazEvent() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Miqaat Details */}
-        <div className="card space-y-4">
-          <h2 className="text-lg font-semibold">Miqaat Details</h2>
+        <div className="card overflow-hidden p-0">
+          <div className="bg-purple-600 px-6 py-4">
+            <h2 className="text-lg font-semibold text-white">Miqaat Details</h2>
+          </div>
+          <div className="p-6 space-y-4">
 
           <div>
             <label className="block text-sm font-medium mb-1">Miqaat Name *</label>
@@ -223,35 +232,37 @@ export default function CreateNiyazEvent() {
               )}
             </div>
           </div>
+          </div>
         </div>
 
         {/* Niyaz Hosts Selection */}
-        <div className="card space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="card overflow-hidden p-0">
+          <div className="bg-purple-600 px-6 py-4 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold">Niyaz Khidmat</h2>
-              <p className="text-sm text-gray-500">Select one or more persons performing this Niyaz khidmat</p>
+              <h2 className="text-lg font-semibold text-white">Niyaz Khidmat</h2>
+              <p className="text-sm text-purple-200">Select one or more persons performing this Niyaz khidmat</p>
             </div>
             {selectedHosts.length > 0 && (
-              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+              <span className="px-3 py-1 bg-white/20 text-white rounded-full text-sm font-medium">
                 {selectedHosts.length} selected
               </span>
             )}
           </div>
 
+          <div className="p-6 space-y-4">
           {/* Selected Hosts */}
           {selectedHosts.length > 0 && (
-            <div className="border rounded-lg overflow-hidden">
-              <div className="bg-green-50 px-4 py-2 border-b">
-                <h3 className="text-sm font-semibold text-green-900">Selected Khidmatguzars</h3>
+            <div className="border border-purple-200 rounded-lg overflow-hidden">
+              <div className="bg-purple-50 px-4 py-2 border-b border-purple-200">
+                <h3 className="text-sm font-semibold text-purple-900">Selected Khidmatguzars</h3>
               </div>
               <div className="divide-y divide-gray-100">
                 {selectedHosts.map((hostId, idx) => {
                   const person = persons?.find((p) => p.id === hostId);
                   return (
-                    <div key={hostId} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
+                    <div key={hostId} className="flex items-center justify-between px-4 py-3 hover:bg-purple-50">
                       <div className="flex items-center gap-3">
-                        <span className="flex items-center justify-center w-6 h-6 bg-green-100 text-green-700 rounded-full text-xs font-bold">
+                        <span className="flex items-center justify-center w-6 h-6 bg-purple-100 text-purple-700 rounded-full text-xs font-bold">
                           {idx + 1}
                         </span>
                         <div>
@@ -289,7 +300,7 @@ export default function CreateNiyazEvent() {
                 </div>
                 <input
                   type="text"
-                  className="input pl-9 py-2 text-sm"
+                  className="input !pl-10 py-2 text-sm"
                   placeholder="Search by name, ITS number, or email..."
                   value={hostSearch}
                   onChange={(e) => setHostSearch(e.target.value)}
@@ -327,13 +338,13 @@ export default function CreateNiyazEvent() {
                       key={person.id}
                       type="button"
                       onClick={() => addHost(person.id)}
-                      className="w-full text-left px-4 py-3 hover:bg-green-50 flex items-center justify-between group transition-colors"
+                      className="w-full text-left px-4 py-3 hover:bg-purple-50 flex items-center justify-between group transition-colors"
                     >
                       <div>
-                        <span className="text-gray-700 group-hover:text-green-700">{person.firstName} {person.lastName}</span>
+                        <span className="text-gray-700 group-hover:text-purple-700">{person.firstName} {person.lastName}</span>
                         <span className="text-gray-400 text-sm ml-2">({person.itsNumber})</span>
                       </div>
-                      <span className="text-green-600 opacity-0 group-hover:opacity-100 text-sm font-medium transition-opacity">
+                      <span className="text-purple-600 opacity-0 group-hover:opacity-100 text-sm font-medium transition-opacity">
                         + Add
                       </span>
                     </button>
@@ -353,13 +364,16 @@ export default function CreateNiyazEvent() {
               </div>
             )}
           </div>
+          </div>
         </div>
 
         {/* Status (Edit Mode Only) */}
         {isEditMode && (
-          <div className="card space-y-4">
-            <h2 className="text-lg font-semibold">Event Status</h2>
-            <div>
+          <div className="card overflow-hidden p-0">
+            <div className="bg-purple-600 px-6 py-4">
+              <h2 className="text-lg font-semibold text-white">Niyaz Status</h2>
+            </div>
+            <div className="p-6">
               <label className="block text-sm font-medium mb-1">Status</label>
               <select className="input" {...register('status')}>
                 <option value="DRAFT">Draft</option>
@@ -374,14 +388,14 @@ export default function CreateNiyazEvent() {
         <div className="flex gap-3">
           <button
             type="submit"
-            className="btn"
+            className="btn bg-purple-600 hover:bg-purple-700"
             disabled={isSubmitting || createMutation.isPending || updateMutation.isPending}
           >
             {isSubmitting || createMutation.isPending || updateMutation.isPending
               ? (isEditMode ? 'Saving...' : 'Creating...')
               : (isEditMode ? 'Save Changes' : 'Create Event')}
           </button>
-          <button type="button" className="btn bg-gray-500" onClick={() => navigate('/admin/events')}>
+          <button type="button" className="btn bg-gray-500 hover:bg-gray-600" onClick={() => navigate('/admin/events')}>
             Cancel
           </button>
         </div>
