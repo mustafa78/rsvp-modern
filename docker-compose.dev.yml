@@ -41,6 +41,8 @@ services:
     volumes:
       - ./web:/app
       - web-node-modules:/app/node_modules       # keep deps inside container
+    environment:
+      VITE_API_TARGET: http://server:8080
     command: sh -lc "npm install && npm run dev -- --host"
     ports:
       - "5173:5173"

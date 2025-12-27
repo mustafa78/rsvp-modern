@@ -37,7 +37,10 @@ public class WebSecurityConfig {
 	    	            "/api/auth/register",
 	    	            "/api/auth/password/reset/request",
 	    	            "/api/auth/password/reset/confirm").permitAll()
-	    	        .requestMatchers(HttpMethod.GET, "/api/auth/pickup-zones").permitAll()
+	    	        .requestMatchers(HttpMethod.GET,
+	    	            "/api/auth/pickup-zones",
+	    	            "/api/events/public",
+	    	            "/api/events/{id}").permitAll()
 	    	        .anyRequest().authenticated()
 	      );
 	    http.addFilterBefore(sessionAuthFilter,
