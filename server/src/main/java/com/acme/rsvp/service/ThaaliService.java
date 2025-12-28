@@ -10,7 +10,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.acme.rsvp.dto.RsvpDtos.DishShoppingListDto;
+import com.acme.rsvp.dto.RsvpDtos.IndividualOrderDto;
+import com.acme.rsvp.dto.RsvpDtos.IndividualOrderItemDto;
+import com.acme.rsvp.dto.RsvpDtos.IndividualOrdersReportDto;
 import com.acme.rsvp.dto.RsvpDtos.MenuItemCountDto;
+import com.acme.rsvp.dto.RsvpDtos.MenuItemInfo;
 import com.acme.rsvp.dto.RsvpDtos.PerDishShoppingListDto;
 import com.acme.rsvp.dto.RsvpDtos.ShoppingListItemDto;
 import com.acme.rsvp.dto.RsvpDtos.ThaaliCountReportDto;
@@ -208,6 +212,45 @@ public class ThaaliService {
     public void deleteOrder(Long eventId, Long personId) {
         orderRepo.findByEventIdAndPersonId(eventId, personId)
                 .ifPresent(orderRepo::delete);
+    }
+
+    @Transactional(readOnly = true)
+    public IndividualOrdersReportDto individualOrdersReport(Long eventId) {
+        // Get all menu items for this event (for column headers)
+        List<MenuItem> menuItems = menuItemRepo.findByEvent_IdOrderByPositionAsc(eventId);
+        List<MenuItemInfo> menuItemInfos = menuItems.stream()
+                .map(mi -> new MenuItemInfo(mi.getId(), mi.getDish() != null ? mi.getDish().getName() : "Unknown"))
+                .toList();
+
+        // Get all orders with person details
+        List<ThaaliOrder> orders = orderRepo.findByEventIdWithPersonAndItems(eventId);
+
+        List<IndividualOrderDto> orderDtos = orders.stream()
+                .map(order -> {
+                    Person person = order.getPerson();
+                    String personName = person.getFirstName() + " " + person.getLastName();
+                    String personPhone = person.getPhone();
+                    String pickupZoneName = order.getPickupZone() != null ? order.getPickupZone().getName() : null;
+
+                    List<IndividualOrderItemDto> items = order.getItems().stream()
+                            .map(item -> new IndividualOrderItemDto(
+                                    item.getMenuItem().getId(),
+                                    item.getMenuItem().getDish() != null ? item.getMenuItem().getDish().getName() : null,
+                                    item.getSize()))
+                            .toList();
+
+                    return new IndividualOrderDto(
+                            order.getId(),
+                            person.getId(),
+                            personName,
+                            personPhone,
+                            pickupZoneName,
+                            items);
+                })
+                .sorted((a, b) -> a.personName().compareToIgnoreCase(b.personName()))
+                .toList();
+
+        return new IndividualOrdersReportDto(menuItemInfos, orderDtos);
     }
 
     private ThaaliOrderDto toDto(ThaaliOrder order) {

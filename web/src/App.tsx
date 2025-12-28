@@ -51,15 +51,20 @@ export default function App() {
   // Show minimal layout for public routes (login, forgot password, etc.)
   if (isPublicRoute) {
     return (
-      <div className="min-h-screen bg-neutral-50 text-black">
+      <div className="min-h-screen bg-neutral-50 text-black flex flex-col">
         <header className="border-b">
           <div className="max-w-6xl mx-auto px-4 h-12 flex items-center">
             <span className="font-semibold">RSVP System</span>
           </div>
         </header>
-        <main className="max-w-6xl mx-auto px-4 py-6">
+        <main className="max-w-6xl mx-auto px-4 py-6 flex-1">
           <Outlet />
         </main>
+        <footer className="border-t">
+          <div className="max-w-6xl mx-auto px-4 py-4 text-center text-sm text-gray-500">
+            Copyright © Anjuman-e-Ezzi, Washington DC. All Rights Reserved
+          </div>
+        </footer>
       </div>
     );
   }
@@ -67,8 +72,15 @@ export default function App() {
   // Show loading state while checking auth
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+      <div className="min-h-screen bg-neutral-50 flex flex-col">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-gray-500">Loading...</div>
+        </div>
+        <footer className="border-t">
+          <div className="max-w-6xl mx-auto px-4 py-4 text-center text-sm text-gray-500">
+            Copyright © Anjuman-e-Ezzi, Washington DC. All Rights Reserved
+          </div>
+        </footer>
       </div>
     );
   }
@@ -80,7 +92,7 @@ export default function App() {
 
   // Authenticated layout
   return (
-    <div className="min-h-screen bg-neutral-50 text-black">
+    <div className="min-h-screen bg-neutral-50 text-black flex flex-col">
       <header className="border-b">
         <div className="max-w-6xl mx-auto px-4 h-12 flex items-center justify-between">
           <nav className="space-x-6">
@@ -104,9 +116,14 @@ export default function App() {
           </nav>
         </div>
       </header>
-      <main className="max-w-6xl mx-auto px-4 py-6">
+      <main className="max-w-6xl mx-auto px-4 py-6 flex-1">
         <Outlet />
       </main>
+      <footer className="border-t">
+        <div className="max-w-6xl mx-auto px-4 py-4 text-center text-sm text-gray-500">
+          Copyright © Anjuman-e-Ezzi, Washington DC. All Rights Reserved
+        </div>
+      </footer>
     </div>
   );
 }
