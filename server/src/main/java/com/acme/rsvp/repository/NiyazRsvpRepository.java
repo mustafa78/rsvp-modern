@@ -1,5 +1,6 @@
 package com.acme.rsvp.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import com.acme.rsvp.model.NiyazRsvp;
@@ -25,4 +26,7 @@ public interface NiyazRsvpRepository extends JpaRepository<NiyazRsvp, Long> {
     where n.event.id = :eventId
   """)
   long totalKids(Long eventId);
+
+  @Query("SELECT r FROM NiyazRsvp r JOIN FETCH r.person WHERE r.event.id = :eventId ORDER BY r.person.lastName, r.person.firstName")
+  List<NiyazRsvp> findByEventIdWithPerson(@Param("eventId") Long eventId);
 }

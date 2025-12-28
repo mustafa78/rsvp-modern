@@ -108,4 +108,44 @@ public interface ThaaliOrderRepository extends JpaRepository<ThaaliOrder, Long> 
             ORDER BY mi.position, oi.size
             """, nativeQuery = true)
     List<Object[]> countsByMenuItemAndSize(@Param("eventId") Long eventId);
+
+    // Shopping list per dish: ingredient quantities grouped by dish
+    @Query(value = """
+            SELECT d.id AS dish_id,
+                   d.name AS dish_name,
+                   SUM(
+                       COALESCE(mi.quarts_per_thaali_unit, d.default_quarts_per_thaali_unit)
+                       * CASE oi.size
+                           WHEN 'LARGE' THEN 1.0
+                           WHEN 'SMALL' THEN 0.5
+                           WHEN 'BARAKATI' THEN 0.25
+                           ELSE 0
+                         END
+                   ) AS total_quarts,
+                   i.id AS ingredient_id,
+                   i.name AS ingredient_name,
+                   i.unit AS unit,
+                   SUM(
+                       di.qty_per_quart
+                       * COALESCE(mi.quarts_per_thaali_unit, d.default_quarts_per_thaali_unit)
+                       * CASE oi.size
+                           WHEN 'LARGE' THEN 1.0
+                           WHEN 'SMALL' THEN 0.5
+                           WHEN 'BARAKATI' THEN 0.25
+                           ELSE 0
+                         END
+                   ) AS required_qty,
+                   i.default_store AS default_store,
+                   i.category AS category
+            FROM thaali_order_items oi
+            JOIN thaali_orders o ON o.id = oi.order_id
+            JOIN menu_items mi ON mi.id = oi.menu_item_id
+            JOIN dishes d ON d.id = mi.dish_id
+            JOIN dish_ingredients di ON di.dish_id = d.id
+            JOIN ingredients i ON i.id = di.ingredient_id
+            WHERE o.event_id = :eventId
+            GROUP BY d.id, d.name, i.id, i.name, i.unit, i.default_store, i.category
+            ORDER BY d.name, i.name
+            """, nativeQuery = true)
+    List<Object[]> shoppingListPerDish(@Param("eventId") Long eventId);
 }

@@ -1,6 +1,8 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../api/client';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 type DishIngredient = {
   ingredientId: number;
@@ -51,7 +53,6 @@ export default function ShoppingListGenerator() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('cumulative');
-  const printRef = useRef<HTMLDivElement>(null);
 
   const { data: dishes, isLoading: dishesLoading } = useQuery<Dish[]>({
     queryKey: ['dishes'],
@@ -174,134 +175,194 @@ export default function ShoppingListGenerator() {
   const totalIngredients = cumulativeShoppingList.length;
   const totalQuarts = selectedDishes.reduce((sum, d) => sum + (parseFloat(d.quarts) || 0), 0);
 
-  // Export to PDF
+  // Export to PDF using jsPDF
   const exportToPDF = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      alert('Please allow popups to export PDF');
+    if (cumulativeShoppingList.length === 0) {
+      alert('No shopping list data to export');
       return;
     }
 
-    const content = generatePrintContent();
-    printWindow.document.write(content);
-    printWindow.document.close();
-    printWindow.onload = () => {
-      printWindow.print();
-    };
-  };
-
-  const generatePrintContent = () => {
+    const doc = new jsPDF();
     const date = new Date().toLocaleDateString();
     const groupedCumulative = groupByStore(cumulativeShoppingList);
+    let yPos = 20;
 
-    let html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Shopping List - ${date}</title>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 20px; font-size: 11px; color: #333; }
-          h1 { font-size: 20px; margin-bottom: 5px; color: #111; }
-          .meta { color: #666; margin-bottom: 15px; }
-          .store-section { margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; overflow: hidden; }
-          .store-header { background: #374151; color: white; padding: 8px 12px; font-size: 13px; font-weight: 600; }
-          .store-header span { color: #9ca3af; font-weight: normal; }
-          .dish-section { margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; overflow: hidden; }
-          .dish-header { background: #2563eb; color: white; padding: 10px 12px; font-size: 14px; font-weight: 600; }
-          .dish-header span { color: #bfdbfe; font-weight: normal; }
-          .sub-store { background: #f3f4f6; padding: 6px 12px; font-size: 11px; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb; }
-          table { width: 100%; border-collapse: collapse; }
-          th { background: #f9fafb; padding: 6px 12px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; font-weight: 600; border-bottom: 1px solid #e5e7eb; }
-          th.qty { text-align: right; }
-          td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; }
-          tr:nth-child(even) { background: #f9fafb; }
-          .ingredient { font-weight: 500; color: #111; width: 45%; }
-          .category { color: #6b7280; text-transform: capitalize; width: 25%; }
-          .qty { text-align: right; font-weight: 700; color: #111; width: 15%; }
-          .unit { color: #6b7280; width: 15%; }
-          .summary { margin-top: 25px; padding: 12px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb; }
-          .summary h3 { margin: 0 0 8px 0; font-size: 13px; }
-          .summary p { margin: 3px 0; color: #374151; }
-          .page-break { page-break-before: always; }
-          h2 { font-size: 16px; margin: 25px 0 15px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb; color: #111; }
-          @media print {
-            body { margin: 10px; }
-            .store-section, .dish-section { break-inside: avoid; }
-          }
-        </style>
-      </head>
-      <body>
-        <h1>Shopping List</h1>
-        <div class="meta">
-          <p>Generated: ${date}</p>
-          <p><strong>Dishes:</strong> ${selectedDishes.map(d => `${d.name} (${d.quarts} qt)`).join(', ')}</p>
-          <p><strong>Total Quarts:</strong> ${totalQuarts.toFixed(1)} | <strong>Total Ingredients:</strong> ${totalIngredients}</p>
-        </div>
-    `;
+    // Title
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Shopping List', 14, yPos);
+    yPos += 10;
 
-    // Cumulative by Store
-    html += `<h2>Cumulative Shopping List (by Store)</h2>`;
+    // Meta info
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100);
+    doc.text(`Generated: ${date}`, 14, yPos);
+    yPos += 5;
+    doc.text(`Dishes: ${selectedDishes.map(d => `${d.name} (${d.quarts} qt)`).join(', ')}`, 14, yPos, { maxWidth: 180 });
+    yPos += 5;
+    doc.text(`Total Quarts: ${totalQuarts.toFixed(1)} | Total Ingredients: ${totalIngredients}`, 14, yPos);
+    yPos += 10;
+
+    // Section title
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(31, 41, 55);
+    doc.text('Cumulative Shopping List (by Store)', 14, yPos);
+    yPos += 8;
+
+    // Shopping list by store
     for (const [store, items] of Object.entries(groupedCumulative)) {
-      html += `
-        <div class="store-section">
-          <div class="store-header">${store} <span>(${items.length} items)</span></div>
-          <table>
-            <thead><tr><th class="ingredient">Ingredient</th><th class="category">Category</th><th class="qty">Qty</th><th class="unit">Unit</th></tr></thead>
-            <tbody>
-              ${items.map(item => `
-                <tr>
-                  <td class="ingredient">${item.name}</td>
-                  <td class="category">${item.category || '-'}</td>
-                  <td class="qty">${item.totalQty.toFixed(2)}</td>
-                  <td class="unit">${item.unit}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      `;
+      // Check if we need a new page
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      // Store header
+      doc.setFillColor(37, 99, 235); // Blue-600
+      doc.rect(14, yPos - 5, 182, 8, 'F');
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255);
+      doc.text(`${store} (${items.length} items)`, 16, yPos);
+      yPos += 6;
+
+      // Table for this store
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Ingredient', 'Category', 'Qty', 'Unit']],
+        body: items.map(item => [
+          item.name,
+          item.category || '-',
+          item.totalQty.toFixed(2),
+          item.unit
+        ]),
+        theme: 'striped',
+        headStyles: {
+          fillColor: [243, 244, 246],
+          textColor: [75, 85, 99],
+          fontStyle: 'bold',
+          fontSize: 9,
+        },
+        bodyStyles: {
+          fontSize: 10,
+          textColor: [31, 41, 55],
+        },
+        columnStyles: {
+          0: { cellWidth: 70 },
+          1: { cellWidth: 50 },
+          2: { cellWidth: 25, halign: 'right', fontStyle: 'bold', textColor: [37, 99, 235] },
+          3: { cellWidth: 30 },
+        },
+        margin: { left: 14, right: 14 },
+      });
+
+      yPos = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
     }
 
-    // Per-Dish Breakdown
-    html += `<div class="page-break"></div>`;
-    html += `<h2>Per-Dish Breakdown</h2>`;
+    // Per-Dish Breakdown on new page
+    doc.addPage();
+    yPos = 20;
+
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(31, 41, 55);
+    doc.text('Per-Dish Breakdown', 14, yPos);
+    yPos += 10;
+
     for (const dishData of perDishShoppingList) {
-      const grouped = groupByStore(dishData.ingredients);
-      html += `<div class="dish-section">`;
-      html += `<div class="dish-header">${dishData.dishName} <span>(${dishData.quarts} quarts)</span></div>`;
-      for (const [store, items] of Object.entries(grouped)) {
-        html += `
-          <div class="sub-store">${store} (${items.length})</div>
-          <table>
-            <thead><tr><th class="ingredient">Ingredient</th><th class="category">Category</th><th class="qty">Qty</th><th class="unit">Unit</th></tr></thead>
-            <tbody>
-              ${items.map(item => `
-                <tr>
-                  <td class="ingredient">${item.name}</td>
-                  <td class="category">${item.category || '-'}</td>
-                  <td class="qty">${item.totalQty.toFixed(2)}</td>
-                  <td class="unit">${item.unit}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        `;
+      if (yPos > 240) {
+        doc.addPage();
+        yPos = 20;
       }
-      html += `</div>`;
+
+      // Dish header
+      doc.setFillColor(37, 99, 235); // Blue-600
+      doc.rect(14, yPos - 5, 182, 10, 'F');
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255);
+      doc.text(`${dishData.dishName} (${dishData.quarts} quarts)`, 16, yPos + 1);
+      yPos += 8;
+
+      const grouped = groupByStore(dishData.ingredients);
+
+      for (const [store, items] of Object.entries(grouped)) {
+        if (yPos > 250) {
+          doc.addPage();
+          yPos = 20;
+        }
+
+        // Sub-store header
+        doc.setFillColor(243, 244, 246);
+        doc.rect(14, yPos - 4, 182, 7, 'F');
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(55, 65, 81);
+        doc.text(`${store} (${items.length})`, 16, yPos);
+        yPos += 5;
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Ingredient', 'Category', 'Qty', 'Unit']],
+          body: items.map(item => [
+            item.name,
+            item.category || '-',
+            item.totalQty.toFixed(2),
+            item.unit
+          ]),
+          theme: 'striped',
+          headStyles: {
+            fillColor: [249, 250, 251],
+            textColor: [107, 114, 128],
+            fontStyle: 'bold',
+            fontSize: 8,
+          },
+          bodyStyles: {
+            fontSize: 9,
+            textColor: [31, 41, 55],
+          },
+          columnStyles: {
+            0: { cellWidth: 70 },
+            1: { cellWidth: 50 },
+            2: { cellWidth: 25, halign: 'right', fontStyle: 'bold', textColor: [37, 99, 235] },
+            3: { cellWidth: 30 },
+          },
+          margin: { left: 14, right: 14 },
+        });
+
+        yPos = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
+      }
+
+      yPos += 6;
     }
 
     // Summary
-    html += `
-      <div class="summary">
-        <h3>Summary</h3>
-        <p><strong>Dishes:</strong> ${selectedDishes.map(d => `${d.name} (${d.quarts} qt)`).join(', ')}</p>
-        <p><strong>Total Quarts:</strong> ${totalQuarts.toFixed(1)}</p>
-        <p><strong>Total Ingredients:</strong> ${totalIngredients}</p>
-      </div>
-    `;
+    if (yPos > 240) {
+      doc.addPage();
+      yPos = 20;
+    }
 
-    html += `</body></html>`;
-    return html;
+    doc.setFillColor(249, 250, 251);
+    doc.rect(14, yPos - 2, 182, 28, 'F');
+    doc.setDrawColor(229, 231, 235);
+    doc.rect(14, yPos - 2, 182, 28, 'S');
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(31, 41, 55);
+    doc.text('Summary', 18, yPos + 5);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    const dishList = selectedDishes.map(d => `${d.name} (${d.quarts} qt)`).join(', ');
+    doc.text(`Dishes: ${dishList}`, 18, yPos + 12, { maxWidth: 170 });
+    doc.text(`Total Quarts: ${totalQuarts.toFixed(1)} | Total Ingredients: ${totalIngredients}`, 18, yPos + 19);
+
+    // Save the PDF
+    const fileName = `shopping-list-${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
   };
 
   if (dishesLoading) {
@@ -405,7 +466,7 @@ export default function ShoppingListGenerator() {
 
       {/* Shopping List Results */}
       {showResults && selectedDishes.length > 0 && (
-        <div className="card" ref={printRef}>
+        <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">
               Shopping List ({totalIngredients} ingredients)

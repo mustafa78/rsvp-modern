@@ -15,6 +15,14 @@ public class RsvpDtos {
             @Min(0) int kids) {
     }
 
+    // Niyaz RSVP with person details for reports
+    public record NiyazRsvpDetailDto(
+            Long personId,
+            String personName,
+            int adults,
+            int kids) {
+    }
+
     // Thaali Order DTOs - new structure with order items
     public record ThaaliOrderItemDto(
             Long menuItemId,
@@ -72,6 +80,18 @@ public class RsvpDtos {
             BigDecimal requiredQty,
             String defaultStore,
             String category) {
+    }
+
+    // Per-dish shopping list DTOs
+    public record DishShoppingListDto(
+            Long dishId,
+            String dishName,
+            BigDecimal totalQuarts,
+            List<ShoppingListItemDto> ingredients) {
+    }
+
+    public record PerDishShoppingListDto(
+            List<DishShoppingListDto> dishes) {
     }
 
     public record RegistrationWindowStatus(boolean open) {

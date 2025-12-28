@@ -1,6 +1,7 @@
 package com.acme.rsvp.web;
 
 import com.acme.rsvp.dto.RsvpDtos.*;
+import com.acme.rsvp.dto.RsvpDtos.PerDishShoppingListDto;
 import com.acme.rsvp.model.Person;
 import com.acme.rsvp.service.ThaaliService;
 import jakarta.validation.Valid;
@@ -65,9 +66,15 @@ public class ThaaliOrderController {
         return service.detailedReport(eventId);
     }
 
-    // Admin: Get shopping list
+    // Admin: Get shopping list (cumulative by store)
     @GetMapping("/shopping-list")
     public List<ShoppingListItemDto> shoppingList(@PathVariable Long eventId) {
         return service.shoppingList(eventId);
+    }
+
+    // Admin: Get shopping list per dish
+    @GetMapping("/shopping-list-per-dish")
+    public PerDishShoppingListDto shoppingListPerDish(@PathVariable Long eventId) {
+        return service.shoppingListPerDish(eventId);
     }
 }

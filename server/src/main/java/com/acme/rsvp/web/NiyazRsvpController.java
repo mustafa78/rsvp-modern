@@ -1,5 +1,8 @@
 package com.acme.rsvp.web;
 
+import java.util.List;
+
+import com.acme.rsvp.dto.RsvpDtos.NiyazRsvpDetailDto;
 import com.acme.rsvp.dto.RsvpDtos.NiyazRsvpDto;
 import com.acme.rsvp.model.Person;
 import com.acme.rsvp.service.NiyazService;
@@ -48,5 +51,11 @@ public class NiyazRsvpController {
     @GetMapping("/totals/kids")
     public long kids(@PathVariable Long eventId) {
         return service.totalKids(eventId);
+    }
+
+    // Admin: Get all RSVPs with person details
+    @GetMapping("/all")
+    public List<NiyazRsvpDetailDto> getAllRsvps(@PathVariable Long eventId) {
+        return service.getRsvpsByEvent(eventId);
     }
 }
