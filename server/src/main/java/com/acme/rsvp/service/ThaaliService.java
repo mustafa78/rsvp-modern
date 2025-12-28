@@ -9,7 +9,9 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.acme.rsvp.dto.RsvpDtos.DishShoppingListDto;
 import com.acme.rsvp.dto.RsvpDtos.MenuItemCountDto;
+import com.acme.rsvp.dto.RsvpDtos.PerDishShoppingListDto;
 import com.acme.rsvp.dto.RsvpDtos.ShoppingListItemDto;
 import com.acme.rsvp.dto.RsvpDtos.ThaaliCountReportDto;
 import com.acme.rsvp.dto.RsvpDtos.ThaaliDetailedReportDto;
@@ -165,6 +167,41 @@ public class ThaaliService {
         }
 
         return result;
+    }
+
+    @Transactional(readOnly = true)
+    public PerDishShoppingListDto shoppingListPerDish(Long eventId) {
+        List<Object[]> rows = orderRepo.shoppingListPerDish(eventId);
+
+        // Group by dish
+        Map<Long, DishShoppingListDto> dishMap = new java.util.LinkedHashMap<>();
+
+        for (Object[] row : rows) {
+            Long dishId = ((Number) row[0]).longValue();
+            String dishName = (String) row[1];
+            BigDecimal totalQuarts = (BigDecimal) row[2];
+            Long ingredientId = ((Number) row[3]).longValue();
+            String ingredientName = (String) row[4];
+            String unit = (String) row[5];
+            BigDecimal requiredQty = (BigDecimal) row[6];
+            String defaultStore = (String) row[7];
+            String category = (String) row[8];
+
+            ShoppingListItemDto ingredient = new ShoppingListItemDto(
+                    ingredientId, ingredientName, unit, requiredQty, defaultStore, category);
+
+            if (!dishMap.containsKey(dishId)) {
+                dishMap.put(dishId, new DishShoppingListDto(dishId, dishName, totalQuarts, new ArrayList<>()));
+            }
+
+            // Add ingredient to the dish's list (need to create new list since record is immutable)
+            DishShoppingListDto existing = dishMap.get(dishId);
+            List<ShoppingListItemDto> ingredients = new ArrayList<>(existing.ingredients());
+            ingredients.add(ingredient);
+            dishMap.put(dishId, new DishShoppingListDto(dishId, dishName, totalQuarts, ingredients));
+        }
+
+        return new PerDishShoppingListDto(new ArrayList<>(dishMap.values()));
     }
 
     @Transactional

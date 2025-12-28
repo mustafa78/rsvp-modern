@@ -1,5 +1,8 @@
 package com.acme.rsvp.service;
 
+import java.util.List;
+
+import com.acme.rsvp.dto.RsvpDtos.NiyazRsvpDetailDto;
 import com.acme.rsvp.dto.RsvpDtos.NiyazRsvpDto;
 import com.acme.rsvp.model.NiyazEvent;
 import com.acme.rsvp.model.NiyazRsvp;
@@ -63,5 +66,16 @@ public class NiyazService {
     @Transactional(readOnly = true)
     public long totalKids(Long eventId) {
         return rsvpRepo.totalKids(eventId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<NiyazRsvpDetailDto> getRsvpsByEvent(Long eventId) {
+        return rsvpRepo.findByEventIdWithPerson(eventId).stream()
+                .map(r -> new NiyazRsvpDetailDto(
+                        r.getPerson().getId(),
+                        r.getPerson().getFirstName() + " " + r.getPerson().getLastName(),
+                        r.getAdults(),
+                        r.getKids()))
+                .toList();
     }
 }
