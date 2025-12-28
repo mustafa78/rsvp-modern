@@ -99,4 +99,30 @@ public class RsvpDtos {
 
     public record MessageDto(String message) {
     }
+
+    // Individual Orders Report DTOs (for admin export)
+    public record IndividualOrderItemDto(
+            Long menuItemId,
+            String dishName,
+            MealSize size) {
+    }
+
+    public record IndividualOrderDto(
+            Long orderId,
+            Long personId,
+            String personName,
+            String personPhone,
+            String pickupZoneName,
+            List<IndividualOrderItemDto> items) {
+    }
+
+    public record MenuItemInfo(
+            Long menuItemId,
+            String dishName) {
+    }
+
+    public record IndividualOrdersReportDto(
+            List<MenuItemInfo> menuItems,
+            List<IndividualOrderDto> orders) {
+    }
 }

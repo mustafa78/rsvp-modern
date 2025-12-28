@@ -18,6 +18,15 @@ public interface ThaaliOrderRepository extends JpaRepository<ThaaliOrder, Long> 
     @Query("SELECT o FROM ThaaliOrder o WHERE o.event.id = :eventId")
     List<ThaaliOrder> findByEventId(@Param("eventId") Long eventId);
 
+    @Query("SELECT DISTINCT o FROM ThaaliOrder o " +
+           "LEFT JOIN FETCH o.person " +
+           "LEFT JOIN FETCH o.pickupZone " +
+           "LEFT JOIN FETCH o.items i " +
+           "LEFT JOIN FETCH i.menuItem mi " +
+           "LEFT JOIN FETCH mi.dish " +
+           "WHERE o.event.id = :eventId")
+    List<ThaaliOrder> findByEventIdWithPersonAndItems(@Param("eventId") Long eventId);
+
     // Count orders by size using the new order items structure
     @Query(value = """
             SELECT COUNT(*) FROM thaali_order_items oi

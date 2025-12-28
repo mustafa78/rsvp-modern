@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '../../../api/client';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 type Event = {
   id: number;
@@ -51,6 +52,32 @@ type PerDishShoppingList = {
   dishes: DishShoppingList[];
 };
 
+type IndividualOrderItem = {
+  menuItemId: number;
+  dishName: string;
+  size: 'LARGE' | 'SMALL' | 'BARAKATI';
+};
+
+type IndividualOrder = {
+  orderId: number;
+  personId: number;
+  personName: string;
+  personPhone: string;
+  pickupZoneName: string;
+  items: IndividualOrderItem[];
+};
+
+type MenuItemInfo = {
+  menuItemId: number;
+  dishName: string;
+};
+
+type IndividualOrdersReport = {
+  menuItems: MenuItemInfo[];
+  orders: IndividualOrder[];
+};
+
+type ReportTab = 'summary' | 'individual' | 'shopping';
 type ShoppingViewMode = 'byStore' | 'byDish';
 
 // Group shopping items by store
@@ -63,11 +90,9 @@ function groupByStore(items: ShoppingItem[]): Record<string, ShoppingItem[]> {
     }
     grouped[store].push(item);
   }
-  // Sort items within each group by name
   for (const store in grouped) {
     grouped[store].sort((a, b) => a.ingredientName.localeCompare(b.ingredientName));
   }
-  // Sort stores (put "Other" at the end)
   const sortedStores = Object.keys(grouped).sort((a, b) => {
     if (a === 'Other') return 1;
     if (b === 'Other') return -1;
@@ -80,13 +105,13 @@ function groupByStore(items: ShoppingItem[]): Record<string, ShoppingItem[]> {
   return sortedGrouped;
 }
 
-// Calculate quarts for a dish based on order counts
 function calculateDishQuarts(item: MenuItemCount): number {
   return item.largeCount * 1.0 + item.smallCount * 0.5 + item.barakatiCount * 0.25;
 }
 
 export default function ThaaliOrderReport() {
   const { eventId } = useParams<{ eventId: string }>();
+  const [activeTab, setActiveTab] = useState<ReportTab>('summary');
   const [shoppingViewMode, setShoppingViewMode] = useState<ShoppingViewMode>('byStore');
 
   const { data: event, isLoading: eventLoading } = useQuery<Event>({
@@ -104,13 +129,19 @@ export default function ThaaliOrderReport() {
   const { data: shoppingList, isLoading: shoppingLoading } = useQuery<ShoppingItem[]>({
     queryKey: ['thaali-shopping', eventId],
     queryFn: async () => (await api.get(`/thaali/${eventId}/orders/shopping-list`)).data,
-    enabled: !!eventId && shoppingViewMode === 'byStore',
+    enabled: !!eventId && activeTab === 'shopping' && shoppingViewMode === 'byStore',
   });
 
   const { data: perDishShopping, isLoading: perDishLoading } = useQuery<PerDishShoppingList>({
     queryKey: ['thaali-shopping-per-dish', eventId],
     queryFn: async () => (await api.get(`/thaali/${eventId}/orders/shopping-list-per-dish`)).data,
-    enabled: !!eventId && shoppingViewMode === 'byDish',
+    enabled: !!eventId && activeTab === 'shopping' && shoppingViewMode === 'byDish',
+  });
+
+  const { data: individualOrders, isLoading: individualLoading } = useQuery<IndividualOrdersReport>({
+    queryKey: ['thaali-individual-orders', eventId],
+    queryFn: async () => (await api.get(`/thaali/${eventId}/orders/individual-orders`)).data,
+    enabled: !!eventId && activeTab === 'individual',
   });
 
   if (eventLoading || reportLoading) {
@@ -132,6 +163,76 @@ export default function ThaaliOrderReport() {
 
   const totalOrders = (counts?.large || 0) + (counts?.small || 0) + (counts?.barakati || 0);
 
+  // Export individual orders to Excel
+  const exportToExcel = () => {
+    if (!individualOrders || individualOrders.orders.length === 0) {
+      alert('No orders to export');
+      return;
+    }
+
+    // Build header row
+    const headers = ['#', 'Name', 'Phone', 'Pickup Zone', ...individualOrders.menuItems.map(mi => mi.dishName)];
+
+    // Build data rows
+    const rows = individualOrders.orders.map((order, idx) => {
+      const row: (string | number)[] = [
+        idx + 1,
+        order.personName,
+        order.personPhone || '',
+        order.pickupZoneName || '',
+      ];
+
+      // Add size for each menu item
+      for (const menuItem of individualOrders.menuItems) {
+        const orderItem = order.items.find(i => i.menuItemId === menuItem.menuItemId);
+        if (orderItem) {
+          row.push(orderItem.size === 'LARGE' ? 'L' : orderItem.size === 'SMALL' ? 'S' : 'B');
+        } else {
+          row.push('-');
+        }
+      }
+
+      return row;
+    });
+
+    // Create worksheet
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 5 },  // #
+      { wch: 25 }, // Name
+      { wch: 15 }, // Phone
+      { wch: 20 }, // Pickup Zone
+      ...individualOrders.menuItems.map(() => ({ wch: 12 })),
+    ];
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Orders');
+
+    // Add summary sheet
+    const summaryData = [
+      ['Thaali Orders Report'],
+      [event.title],
+      [event.eventDate],
+      [''],
+      ['Order Summary'],
+      ['Large (1 qt)', counts?.large || 0],
+      ['Small (½ qt)', counts?.small || 0],
+      ['Barakati (¼ qt)', counts?.barakati || 0],
+      ['Total Orders', totalOrders],
+      ['Total Quarts', counts?.totalQuarts?.toFixed(2) || '0.00'],
+    ];
+    const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
+    summaryWs['!cols'] = [{ wch: 20 }, { wch: 15 }];
+    XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+
+    // Download
+    const fileName = `thaali-orders-${event.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+  };
+
   // Export shopping list to PDF using jsPDF
   const exportShoppingListToPDF = () => {
     if (!shoppingList || shoppingList.length === 0) {
@@ -144,13 +245,11 @@ export default function ThaaliOrderReport() {
     const date = new Date().toLocaleDateString();
     let yPos = 20;
 
-    // Title
     doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
     doc.text('Shopping List', 14, yPos);
     yPos += 10;
 
-    // Event info
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100);
@@ -159,23 +258,19 @@ export default function ThaaliOrderReport() {
     doc.text(`Generated: ${date}`, 14, yPos);
     yPos += 6;
 
-    // Order summary
     doc.setTextColor(60);
     doc.text(`Orders: ${counts?.large || 0} Large + ${counts?.small || 0} Small + ${counts?.barakati || 0} Barakati = ${counts?.totalQuarts?.toFixed(2) || '0'} Quarts`, 14, yPos);
     yPos += 6;
     doc.text(`Total Ingredients: ${shoppingList.length}`, 14, yPos);
     yPos += 12;
 
-    // Shopping list by store
     for (const [store, items] of Object.entries(groupedItems)) {
-      // Check if we need a new page
       if (yPos > 250) {
         doc.addPage();
         yPos = 20;
       }
 
-      // Store header
-      doc.setFillColor(37, 99, 235); // Blue-600
+      doc.setFillColor(37, 99, 235);
       doc.rect(14, yPos - 5, 182, 8, 'F');
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
@@ -183,7 +278,6 @@ export default function ThaaliOrderReport() {
       doc.text(`${store} (${items.length} items)`, 16, yPos);
       yPos += 6;
 
-      // Table for this store
       autoTable(doc, {
         startY: yPos,
         head: [['Ingredient', 'Category', 'Qty', 'Unit']],
@@ -195,14 +289,14 @@ export default function ThaaliOrderReport() {
         ]),
         theme: 'striped',
         headStyles: {
-          fillColor: [243, 244, 246], // Gray-100
-          textColor: [75, 85, 99], // Gray-600
+          fillColor: [243, 244, 246],
+          textColor: [75, 85, 99],
           fontStyle: 'bold',
           fontSize: 9,
         },
         bodyStyles: {
           fontSize: 10,
-          textColor: [31, 41, 55], // Gray-800
+          textColor: [31, 41, 55],
         },
         columnStyles: {
           0: { cellWidth: 70 },
@@ -214,19 +308,17 @@ export default function ThaaliOrderReport() {
         tableWidth: 'auto',
       });
 
-      // Get the final Y position after the table
       yPos = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
     }
 
-    // Add summary at the end
     if (yPos > 240) {
       doc.addPage();
       yPos = 20;
     }
 
-    doc.setFillColor(249, 250, 251); // Gray-50
+    doc.setFillColor(249, 250, 251);
     doc.rect(14, yPos - 2, 182, 30, 'F');
-    doc.setDrawColor(229, 231, 235); // Gray-200
+    doc.setDrawColor(229, 231, 235);
     doc.rect(14, yPos - 2, 182, 30, 'S');
 
     doc.setFontSize(11);
@@ -242,16 +334,30 @@ export default function ThaaliOrderReport() {
     doc.setFont('helvetica', 'bold');
     doc.text(`Total Quarts: ${counts?.totalQuarts?.toFixed(2) || '0'}`, 18, yPos + 20);
 
-    // Save the PDF
     const fileName = `shopping-list-${event.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`;
     doc.save(fileName);
   };
 
+  // Get size badge styling
+  const getSizeBadge = (size: string) => {
+    switch (size) {
+      case 'LARGE':
+        return { label: 'L', className: 'bg-purple-100 text-purple-700' };
+      case 'SMALL':
+        return { label: 'S', className: 'bg-blue-100 text-blue-700' };
+      case 'BARAKATI':
+        return { label: 'B', className: 'bg-green-100 text-green-700' };
+      default:
+        return { label: '-', className: 'bg-gray-100 text-gray-400' };
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Thaali Orders Report</h1>
+          <h1 className="text-2xl font-bold">Thaali Registration Report</h1>
           <p className="text-gray-500">{event.title} - {event.eventDate}</p>
         </div>
         <Link to="/admin/events" className="btn bg-gray-500">
@@ -259,220 +365,353 @@ export default function ThaaliOrderReport() {
         </Link>
       </div>
 
-      {/* Order Counts */}
-      <div className="card overflow-hidden p-0">
-        <div className="bg-blue-600 px-6 py-4">
-          <h2 className="text-lg font-semibold text-white">Order Summary</h2>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="bg-purple-50 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold text-purple-600">{counts?.large || 0}</div>
-              <div className="text-sm text-gray-600">Large (1 qt)</div>
-            </div>
-            <div className="bg-blue-50 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold text-blue-600">{counts?.small || 0}</div>
-              <div className="text-sm text-gray-600">Small (½ qt)</div>
-            </div>
-            <div className="bg-green-50 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold text-green-600">{counts?.barakati || 0}</div>
-              <div className="text-sm text-gray-600">Barakati (¼ qt)</div>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold text-gray-700">{totalOrders}</div>
-              <div className="text-sm text-gray-600">Total Orders</div>
-            </div>
-            <div className="bg-orange-50 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold text-orange-600">
-                {counts?.totalQuarts?.toFixed(2) || '0.00'}
-              </div>
-              <div className="text-sm text-gray-600">Total Quarts</div>
-            </div>
-          </div>
-        </div>
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200">
+        <nav className="flex gap-8">
+          <button
+            onClick={() => setActiveTab('summary')}
+            className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'summary'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Summary
+          </button>
+          <button
+            onClick={() => setActiveTab('individual')}
+            className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'individual'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Individual Registrations
+          </button>
+          <button
+            onClick={() => setActiveTab('shopping')}
+            className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'shopping'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Shopping List
+          </button>
+        </nav>
       </div>
 
-      {/* Dish Summary - Quarts per Dish */}
-      {detailedReport?.byMenuItem && detailedReport.byMenuItem.length > 0 && (
-        <div className="card overflow-hidden p-0">
-          <div className="bg-blue-600 px-6 py-4">
-            <h2 className="text-lg font-semibold text-white">Quarts per Dish</h2>
-            <p className="text-sm text-blue-200">How many quarts to cook for each dish</p>
+      {/* Summary Tab */}
+      {activeTab === 'summary' && (
+        <div className="space-y-6">
+          {/* Order Counts */}
+          <div className="card overflow-hidden p-0">
+            <div className="bg-blue-600 px-6 py-4">
+              <h2 className="text-lg font-semibold text-white">Summary</h2>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="bg-purple-50 rounded-lg p-4 text-center">
+                  <div className="text-3xl font-bold text-purple-600">{counts?.large || 0}</div>
+                  <div className="text-sm text-gray-600">Large (1 qt)</div>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-4 text-center">
+                  <div className="text-3xl font-bold text-blue-600">{counts?.small || 0}</div>
+                  <div className="text-sm text-gray-600">Small (½ qt)</div>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4 text-center">
+                  <div className="text-3xl font-bold text-green-600">{counts?.barakati || 0}</div>
+                  <div className="text-sm text-gray-600">Barakati (¼ qt)</div>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                  <div className="text-3xl font-bold text-gray-700">{totalOrders}</div>
+                  <div className="text-sm text-gray-600">Total Registration</div>
+                </div>
+                <div className="bg-orange-50 rounded-lg p-4 text-center">
+                  <div className="text-3xl font-bold text-orange-600">
+                    {counts?.totalQuarts?.toFixed(2) || '0.00'}
+                  </div>
+                  <div className="text-sm text-gray-600">Total Quarts</div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="p-0">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-50 border-b">
-                  <th className="py-3 px-6 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Dish</th>
-                  <th className="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">Large</th>
-                  <th className="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">Small</th>
-                  <th className="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">Barakati</th>
-                  <th className="py-3 px-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">Total Quarts</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {detailedReport.byMenuItem.map((item, idx) => (
-                  <tr key={item.menuItemId} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-                    <td className="py-3 px-6 font-medium text-gray-900">{item.dishName}</td>
-                    <td className="py-3 px-4 text-center text-purple-600 font-medium">{item.largeCount}</td>
-                    <td className="py-3 px-4 text-center text-blue-600 font-medium">{item.smallCount}</td>
-                    <td className="py-3 px-4 text-center text-green-600 font-medium">{item.barakatiCount}</td>
-                    <td className="py-3 px-4 text-right text-lg font-bold text-orange-600">
-                      {calculateDishQuarts(item).toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+          {/* Dish Summary */}
+          {detailedReport?.byMenuItem && detailedReport.byMenuItem.length > 0 && (
+            <div className="card overflow-hidden p-0">
+              <div className="bg-blue-600 px-6 py-4">
+                <h2 className="text-lg font-semibold text-white">Quarts per Dish</h2>
+                <p className="text-sm text-blue-200">How many quarts to cook for each dish</p>
+              </div>
+              <div className="p-0">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-50 border-b">
+                      <th className="py-3 px-6 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Dish</th>
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">Large</th>
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">Small</th>
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">Barakati</th>
+                      <th className="py-3 px-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">Total Quarts</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {detailedReport.byMenuItem.map((item, idx) => (
+                      <tr key={item.menuItemId} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                        <td className="py-3 px-6 font-medium text-gray-900">{item.dishName}</td>
+                        <td className="py-3 px-4 text-center text-purple-600 font-medium">{item.largeCount}</td>
+                        <td className="py-3 px-4 text-center text-blue-600 font-medium">{item.smallCount}</td>
+                        <td className="py-3 px-4 text-center text-green-600 font-medium">{item.barakatiCount}</td>
+                        <td className="py-3 px-4 text-right text-lg font-bold text-orange-600">
+                          {calculateDishQuarts(item).toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button onClick={() => window.print()} className="btn bg-blue-600 hover:bg-blue-700">
+              Print Report
+            </button>
           </div>
         </div>
       )}
 
-      {/* Shopping List */}
-      <div className="card overflow-hidden p-0">
-        <div className="bg-blue-600 px-6 py-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-white">Shopping List</h2>
-            <p className="text-sm text-blue-200">Ingredients needed based on orders</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {shoppingViewMode === 'byStore' && shoppingList && shoppingList.length > 0 && (
-              <button
-                onClick={exportShoppingListToPDF}
-                className="px-3 py-1.5 text-sm font-medium rounded-md bg-white text-blue-700 hover:bg-blue-50 transition-colors"
-              >
-                Export to PDF
-              </button>
+      {/* Individual Orders Tab */}
+      {activeTab === 'individual' && (
+        <div className="space-y-6">
+          <div className="card overflow-hidden p-0">
+            <div className="bg-blue-600 px-6 py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Individual Registrations</h2>
+                <p className="text-sm text-blue-200">Who registered what dish and size</p>
+              </div>
+              {individualOrders && individualOrders.orders.length > 0 && (
+                <button
+                  onClick={exportToExcel}
+                  className="px-4 py-2 text-sm font-medium rounded-md bg-white text-blue-700 hover:bg-blue-50 transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Export to Excel
+                </button>
+              )}
+            </div>
+
+            {individualLoading ? (
+              <div className="p-6 text-gray-500">Loading orders...</div>
+            ) : !individualOrders || individualOrders.orders.length === 0 ? (
+              <div className="p-6 text-gray-500">No orders found for this event.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 border-b">
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-10">#</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[180px]">Name</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[120px]">Phone</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[140px]">Pickup Zone</th>
+                      {individualOrders.menuItems.map((mi) => (
+                        <th key={mi.menuItemId} className="py-3 px-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[80px]">
+                          {mi.dishName}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {individualOrders.orders.map((order, idx) => (
+                      <tr key={order.orderId} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                        <td className="py-3 px-4 text-gray-500">{idx + 1}</td>
+                        <td className="py-3 px-4 font-medium text-gray-900">{order.personName}</td>
+                        <td className="py-3 px-4 text-gray-600">{order.personPhone || '-'}</td>
+                        <td className="py-3 px-4 text-gray-600">{order.pickupZoneName || '-'}</td>
+                        {individualOrders.menuItems.map((mi) => {
+                          const orderItem = order.items.find(i => i.menuItemId === mi.menuItemId);
+                          const badge = orderItem ? getSizeBadge(orderItem.size) : getSizeBadge('');
+                          return (
+                            <td key={mi.menuItemId} className="py-3 px-3 text-center">
+                              <span className={`inline-flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold ${badge.className}`}>
+                                {badge.label}
+                              </span>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
-            <div className="flex gap-1 bg-blue-700 rounded-lg p-1">
-            <button
-              onClick={() => setShoppingViewMode('byStore')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                shoppingViewMode === 'byStore'
-                  ? 'bg-white text-blue-700'
-                  : 'text-blue-200 hover:text-white'
-              }`}
-            >
-              By Store
-            </button>
-            <button
-              onClick={() => setShoppingViewMode('byDish')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                shoppingViewMode === 'byDish'
-                  ? 'bg-white text-blue-700'
-                  : 'text-blue-200 hover:text-white'
-              }`}
-            >
-              By Dish
-            </button>
+          </div>
+
+          {/* Legend */}
+          {individualOrders && individualOrders.orders.length > 0 && (
+            <div className="flex items-center gap-6 text-sm text-gray-600">
+              <span className="font-medium">Legend:</span>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-purple-100 text-purple-700 text-xs font-bold">L</span>
+                <span>Large (1 qt)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-blue-100 text-blue-700 text-xs font-bold">S</span>
+                <span>Small (½ qt)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-green-100 text-green-700 text-xs font-bold">B</span>
+                <span>Barakati (¼ qt)</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Shopping List Tab */}
+      {activeTab === 'shopping' && (
+        <div className="space-y-6">
+          <div className="card overflow-hidden p-0">
+            <div className="bg-blue-600 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-lg font-semibold text-white">Shopping List</h2>
+                <p className="text-sm text-blue-200">Ingredients needed based on registrations</p>
+              </div>
+              <div className="flex items-center gap-3 flex-shrink-0">
+                {shoppingViewMode === 'byStore' && shoppingList && shoppingList.length > 0 && (
+                  <button
+                    onClick={exportShoppingListToPDF}
+                    className="px-3 py-1.5 text-sm font-medium rounded-md bg-white text-blue-700 hover:bg-blue-50 transition-colors"
+                  >
+                    Export to PDF
+                  </button>
+                )}
+                <div className="flex gap-1 bg-blue-700 rounded-lg p-1">
+                  <button
+                    onClick={() => setShoppingViewMode('byStore')}
+                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      shoppingViewMode === 'byStore'
+                        ? 'bg-white text-blue-700'
+                        : 'text-blue-200 hover:text-white'
+                    }`}
+                  >
+                    By Store
+                  </button>
+                  <button
+                    onClick={() => setShoppingViewMode('byDish')}
+                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      shoppingViewMode === 'byDish'
+                        ? 'bg-white text-blue-700'
+                        : 'text-blue-200 hover:text-white'
+                    }`}
+                  >
+                    By Dish
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="p-6">
+              {/* By Store View */}
+              {shoppingViewMode === 'byStore' && (
+                <>
+                  {shoppingLoading ? (
+                    <p className="text-gray-500">Loading shopping list...</p>
+                  ) : !shoppingList || shoppingList.length === 0 ? (
+                    <p className="text-gray-500">No ingredients calculated. Make sure the event has a menu with dishes that have ingredients.</p>
+                  ) : (
+                    <div className="space-y-6">
+                      {Object.entries(groupByStore(shoppingList)).map(([store, items]) => (
+                        <div key={store} className="border rounded-lg overflow-hidden">
+                          <div className="bg-blue-50 px-4 py-3 border-b flex items-center justify-between">
+                            <h3 className="text-md font-semibold text-blue-900">{store}</h3>
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm font-medium">
+                              {items.length} items
+                            </span>
+                          </div>
+                          <table className="w-full text-left">
+                            <thead>
+                              <tr className="border-b bg-gray-50">
+                                <th className="py-2 px-4 font-medium text-sm text-gray-600">Ingredient</th>
+                                <th className="py-2 px-4 font-medium text-sm text-gray-600">Category</th>
+                                <th className="py-2 px-4 font-medium text-sm text-gray-600 text-right">Qty</th>
+                                <th className="py-2 px-4 font-medium text-sm text-gray-600">Unit</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {items.map((item) => (
+                                <tr key={item.ingredientId} className="border-b last:border-0 hover:bg-gray-50">
+                                  <td className="py-2 px-4 font-medium">{item.ingredientName}</td>
+                                  <td className="py-2 px-4 text-gray-500 text-sm">{item.category || '-'}</td>
+                                  <td className="py-2 px-4 text-right text-lg font-semibold text-blue-600">
+                                    {typeof item.requiredQty === 'number'
+                                      ? item.requiredQty.toFixed(2)
+                                      : item.requiredQty}
+                                  </td>
+                                  <td className="py-2 px-4 text-gray-600">{item.unit}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* By Dish View */}
+              {shoppingViewMode === 'byDish' && (
+                <>
+                  {perDishLoading ? (
+                    <p className="text-gray-500">Loading shopping list...</p>
+                  ) : !perDishShopping || perDishShopping.dishes.length === 0 ? (
+                    <p className="text-gray-500">No ingredients calculated. Make sure the event has a menu with dishes that have ingredients.</p>
+                  ) : (
+                    <div className="space-y-6">
+                      {perDishShopping.dishes.map((dish) => (
+                        <div key={dish.dishId} className="border rounded-lg overflow-hidden">
+                          <div className="bg-blue-50 px-4 py-3 border-b flex items-center justify-between">
+                            <h3 className="text-md font-semibold text-blue-900">{dish.dishName}</h3>
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm font-medium">
+                              {dish.totalQuarts?.toFixed(2)} quarts
+                            </span>
+                          </div>
+                          <table className="w-full text-left">
+                            <thead>
+                              <tr className="border-b bg-gray-50">
+                                <th className="py-2 px-4 font-medium text-sm text-gray-600">Ingredient</th>
+                                <th className="py-2 px-4 font-medium text-sm text-gray-600">Store</th>
+                                <th className="py-2 px-4 font-medium text-sm text-gray-600 text-right">Qty</th>
+                                <th className="py-2 px-4 font-medium text-sm text-gray-600">Unit</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {dish.ingredients.map((item) => (
+                                <tr key={item.ingredientId} className="border-b last:border-0 hover:bg-gray-50">
+                                  <td className="py-2 px-4 font-medium">{item.ingredientName}</td>
+                                  <td className="py-2 px-4 text-gray-500 text-sm">{item.defaultStore || '-'}</td>
+                                  <td className="py-2 px-4 text-right text-lg font-semibold text-blue-600">
+                                    {typeof item.requiredQty === 'number'
+                                      ? item.requiredQty.toFixed(2)
+                                      : item.requiredQty}
+                                  </td>
+                                  <td className="py-2 px-4 text-gray-600">{item.unit}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
-        <div className="p-6">
-          {/* By Store View */}
-          {shoppingViewMode === 'byStore' && (
-            <>
-              {shoppingLoading ? (
-                <p className="text-gray-500">Loading shopping list...</p>
-              ) : !shoppingList || shoppingList.length === 0 ? (
-                <p className="text-gray-500">No ingredients calculated. Make sure the event has a menu with dishes that have ingredients.</p>
-              ) : (
-                <div className="space-y-6">
-                  {Object.entries(groupByStore(shoppingList)).map(([store, items]) => (
-                    <div key={store} className="border rounded-lg overflow-hidden">
-                      <div className="bg-blue-50 px-4 py-3 border-b flex items-center justify-between">
-                        <h3 className="text-md font-semibold text-blue-900">{store}</h3>
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm font-medium">
-                          {items.length} items
-                        </span>
-                      </div>
-                      <table className="w-full text-left">
-                        <thead>
-                          <tr className="border-b bg-gray-50">
-                            <th className="py-2 px-4 font-medium text-sm text-gray-600">Ingredient</th>
-                            <th className="py-2 px-4 font-medium text-sm text-gray-600">Category</th>
-                            <th className="py-2 px-4 font-medium text-sm text-gray-600 text-right">Qty</th>
-                            <th className="py-2 px-4 font-medium text-sm text-gray-600">Unit</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {items.map((item) => (
-                            <tr key={item.ingredientId} className="border-b last:border-0 hover:bg-gray-50">
-                              <td className="py-2 px-4 font-medium">{item.ingredientName}</td>
-                              <td className="py-2 px-4 text-gray-500 text-sm">{item.category || '-'}</td>
-                              <td className="py-2 px-4 text-right text-lg font-semibold text-blue-600">
-                                {typeof item.requiredQty === 'number'
-                                  ? item.requiredQty.toFixed(2)
-                                  : item.requiredQty}
-                              </td>
-                              <td className="py-2 px-4 text-gray-600">{item.unit}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-
-          {/* By Dish View */}
-          {shoppingViewMode === 'byDish' && (
-            <>
-              {perDishLoading ? (
-                <p className="text-gray-500">Loading shopping list...</p>
-              ) : !perDishShopping || perDishShopping.dishes.length === 0 ? (
-                <p className="text-gray-500">No ingredients calculated. Make sure the event has a menu with dishes that have ingredients.</p>
-              ) : (
-                <div className="space-y-6">
-                  {perDishShopping.dishes.map((dish) => (
-                    <div key={dish.dishId} className="border rounded-lg overflow-hidden">
-                      <div className="bg-blue-50 px-4 py-3 border-b flex items-center justify-between">
-                        <h3 className="text-md font-semibold text-blue-900">{dish.dishName}</h3>
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm font-medium">
-                          {dish.totalQuarts?.toFixed(2)} quarts
-                        </span>
-                      </div>
-                      <table className="w-full text-left">
-                        <thead>
-                          <tr className="border-b bg-gray-50">
-                            <th className="py-2 px-4 font-medium text-sm text-gray-600">Ingredient</th>
-                            <th className="py-2 px-4 font-medium text-sm text-gray-600">Store</th>
-                            <th className="py-2 px-4 font-medium text-sm text-gray-600 text-right">Qty</th>
-                            <th className="py-2 px-4 font-medium text-sm text-gray-600">Unit</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {dish.ingredients.map((item) => (
-                            <tr key={item.ingredientId} className="border-b last:border-0 hover:bg-gray-50">
-                              <td className="py-2 px-4 font-medium">{item.ingredientName}</td>
-                              <td className="py-2 px-4 text-gray-500 text-sm">{item.defaultStore || '-'}</td>
-                              <td className="py-2 px-4 text-right text-lg font-semibold text-blue-600">
-                                {typeof item.requiredQty === 'number'
-                                  ? item.requiredQty.toFixed(2)
-                                  : item.requiredQty}
-                              </td>
-                              <td className="py-2 px-4 text-gray-600">{item.unit}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Print Button */}
-      <div className="flex gap-3">
-        <button onClick={() => window.print()} className="btn bg-blue-600 hover:bg-blue-700">
-          Print Report
-        </button>
-      </div>
+      )}
     </div>
   );
 }

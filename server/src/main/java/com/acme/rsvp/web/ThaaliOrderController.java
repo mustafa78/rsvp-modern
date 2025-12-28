@@ -77,4 +77,10 @@ public class ThaaliOrderController {
     public PerDishShoppingListDto shoppingListPerDish(@PathVariable Long eventId) {
         return service.shoppingListPerDish(eventId);
     }
+
+    // Admin: Get individual orders report (who ordered what)
+    @GetMapping("/individual-orders")
+    public IndividualOrdersReportDto individualOrders(@PathVariable Long eventId) {
+        return service.individualOrdersReport(eventId);
+    }
 }

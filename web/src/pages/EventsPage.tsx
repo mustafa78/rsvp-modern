@@ -4,6 +4,264 @@ import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import type { Event } from '../types/models';
 
+// Types for RSVP/Order status
+type NiyazRsvp = {
+  eventId: number;
+  personId: number;
+  adults: number;
+  kids: number;
+};
+
+type ThaaliOrderItem = {
+  menuItemId: number;
+  dishName: string;
+  size: 'LARGE' | 'SMALL' | 'BARAKATI';
+};
+
+type ThaaliOrder = {
+  id: number;
+  eventId: number;
+  personId: number;
+  pickupZoneId: number;
+  pickupZoneName: string;
+  notes: string | null;
+  items: ThaaliOrderItem[];
+};
+
+// Custom hook to fetch user's event status
+function useEventStatus(event: Event) {
+  const { data: niyazRsvp, isLoading: niyazLoading } = useQuery<NiyazRsvp | null>({
+    queryKey: ['my-niyaz-rsvp', event.id],
+    queryFn: async () => {
+      try {
+        const response = await api.get(`/niyaz/${event.id}/rsvp/my`);
+        return response.data;
+      } catch {
+        return null;
+      }
+    },
+    enabled: event.type === 'NIYAZ',
+    retry: false,
+  });
+
+  const { data: thaaliOrder, isLoading: thaaliLoading } = useQuery<ThaaliOrder | null>({
+    queryKey: ['my-thaali-order', event.id],
+    queryFn: async () => {
+      try {
+        const response = await api.get(`/thaali/${event.id}/orders/my`);
+        return response.data;
+      } catch {
+        return null;
+      }
+    },
+    enabled: event.type === 'THAALI',
+    retry: false,
+  });
+
+  const isLoading = (event.type === 'NIYAZ' && niyazLoading) || (event.type === 'THAALI' && thaaliLoading);
+
+  const hasRegistered = event.type === 'NIYAZ'
+    ? !!(niyazRsvp && (niyazRsvp.adults > 0 || niyazRsvp.kids > 0))
+    : !!(thaaliOrder && thaaliOrder.items && thaaliOrder.items.length > 0);
+
+  return { niyazRsvp, thaaliOrder, isLoading, hasRegistered };
+}
+
+// Component to display user's RSVP/Order status for an event
+function UserEventStatus({
+  event,
+  isPast,
+  niyazRsvp,
+  thaaliOrder,
+  isLoading
+}: {
+  event: Event;
+  isPast: boolean;
+  niyazRsvp: NiyazRsvp | null | undefined;
+  thaaliOrder: ThaaliOrder | null | undefined;
+  isLoading: boolean;
+}) {
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 bg-gray-300 rounded-full animate-pulse" />
+        <span className="text-xs text-gray-400">Loading...</span>
+      </div>
+    );
+  }
+
+  // Niyaz RSVP status
+  if (event.type === 'NIYAZ') {
+    if (niyazRsvp && (niyazRsvp.adults > 0 || niyazRsvp.kids > 0)) {
+      return (
+        <div className={`inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg ${isPast ? 'bg-gray-100' : 'bg-purple-50 border border-purple-200'}`}>
+          <div className={`w-5 h-5 rounded-full flex items-center justify-center ${isPast ? 'bg-gray-400' : 'bg-purple-500'}`}>
+            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div className="text-xs">
+            <span className={`font-semibold ${isPast ? 'text-gray-600' : 'text-purple-700'}`}>{niyazRsvp.adults}</span>
+            <span className={isPast ? 'text-gray-500' : 'text-purple-600'}> adult{niyazRsvp.adults !== 1 ? 's' : ''}</span>
+            {niyazRsvp.kids > 0 && (
+              <>
+                <span className={isPast ? 'text-gray-400' : 'text-purple-400'}>, </span>
+                <span className={`font-semibold ${isPast ? 'text-gray-600' : 'text-purple-700'}`}>{niyazRsvp.kids}</span>
+                <span className={isPast ? 'text-gray-500' : 'text-purple-600'}> child{niyazRsvp.kids !== 1 ? 'ren' : ''}</span>
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 text-gray-500 text-xs">
+        <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+        Not RSVP'd
+      </span>
+    );
+  }
+
+  // Thaali Order status
+  if (event.type === 'THAALI') {
+    if (thaaliOrder && thaaliOrder.items && thaaliOrder.items.length > 0) {
+      const getSizeInfo = (size: string) => {
+        switch (size) {
+          case 'LARGE': return { label: 'L', color: isPast ? 'bg-gray-200 text-gray-600' : 'bg-blue-100 text-blue-700' };
+          case 'SMALL': return { label: 'S', color: isPast ? 'bg-gray-200 text-gray-600' : 'bg-green-100 text-green-700' };
+          case 'BARAKATI': return { label: 'B', color: isPast ? 'bg-gray-200 text-gray-600' : 'bg-amber-100 text-amber-700' };
+          default: return { label: size[0], color: 'bg-gray-100 text-gray-700' };
+        }
+      };
+
+      return (
+        <div className={`inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg ${isPast ? 'bg-gray-100' : 'bg-blue-50 border border-blue-200'}`}>
+          <div className={`w-5 h-5 rounded-full flex items-center justify-center ${isPast ? 'bg-gray-400' : 'bg-blue-500'}`}>
+            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {thaaliOrder.items.slice(0, 2).map((item, idx) => {
+              const sizeInfo = getSizeInfo(item.size);
+              return (
+                <div key={idx} className="flex items-center gap-1">
+                  <span className={`inline-flex items-center justify-center w-4 h-4 rounded text-[10px] font-bold ${sizeInfo.color}`}>
+                    {sizeInfo.label}
+                  </span>
+                  <span className={`text-xs truncate max-w-[80px] ${isPast ? 'text-gray-600' : 'text-gray-700'}`} title={item.dishName}>
+                    {item.dishName}
+                  </span>
+                </div>
+              );
+            })}
+            {thaaliOrder.items.length > 2 && (
+              <span className="text-xs text-gray-400 font-medium">+{thaaliOrder.items.length - 2}</span>
+            )}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 text-gray-500 text-xs">
+        <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+        Not Registered
+      </span>
+    );
+  }
+
+  return null;
+}
+
+// Row component to use the hook and share status between cells
+function EventRow({ event, isPast, idx }: { event: Event; isPast: boolean; idx: number }) {
+  const isNiyaz = event.type === 'NIYAZ';
+  const { niyazRsvp, thaaliOrder, isLoading, hasRegistered } = useEventStatus(event);
+
+  // Determine button text
+  const buttonText = hasRegistered
+    ? 'Update'
+    : (isNiyaz ? 'RSVP' : 'Order');
+
+  return (
+    <tr className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${isPast ? 'opacity-75' : ''}`}>
+      {/* Date Column */}
+      <td className="py-3 px-4 w-28">
+        <div className="text-sm font-medium text-gray-900">
+          {formatDate(event.eventDate)}
+        </div>
+        {event.startTime && (
+          <div className="text-xs text-gray-500">
+            {formatTime(event.startTime)}
+          </div>
+        )}
+      </td>
+
+      {/* Type Badge */}
+      <td className="py-3 px-2 w-20">
+        <span
+          className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded ${
+            isNiyaz
+              ? 'bg-purple-100 text-purple-700'
+              : 'bg-blue-100 text-blue-700'
+          }`}
+        >
+          {isNiyaz ? 'Niyaz' : 'Thaali'}
+        </span>
+      </td>
+
+      {/* Event Details */}
+      <td className="py-3 px-4">
+        <div className="font-medium text-gray-900">{event.title}</div>
+        {isNiyaz && event.miqaatName && event.miqaatName !== event.title && (
+          <div className="text-xs text-purple-600">{event.miqaatName}</div>
+        )}
+        {event.description && (
+          <div className="text-xs text-gray-500 line-clamp-1 max-w-md">
+            {event.description}
+          </div>
+        )}
+      </td>
+
+      {/* My Status */}
+      <td className="py-3 px-4">
+        <UserEventStatus
+          event={event}
+          isPast={isPast}
+          niyazRsvp={niyazRsvp}
+          thaaliOrder={thaaliOrder}
+          isLoading={isLoading}
+        />
+      </td>
+
+      {/* Actions */}
+      <td className="py-3 px-4 w-32 text-right">
+        <div className="flex items-center justify-end gap-2">
+          <Link
+            to={`/events/${event.id}`}
+            className="text-sm text-gray-600 hover:text-gray-900"
+          >
+            Details
+          </Link>
+          {!isPast && (
+            <Link
+              to={`/events/${event.id}/rsvp`}
+              className={`text-sm text-white px-3 py-1 rounded ${
+                hasRegistered
+                  ? 'bg-green-600 hover:bg-green-700'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+            >
+              {buttonText}
+            </Link>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 // Parse date string as local date to avoid timezone issues
 function parseLocalDate(dateStr: string): Date {
   const [year, month, day] = dateStr.split('-').map(Number);
@@ -241,75 +499,14 @@ export default function EventsPage() {
               <div className="card overflow-hidden p-0">
                 <table className="w-full">
                   <tbody className="divide-y divide-gray-100">
-                    {group.events.map((event, idx) => {
-                      const isNiyaz = event.type === 'NIYAZ';
-                      const isPast = activeTab === 'past';
-
-                      return (
-                        <tr
-                          key={event.id}
-                          className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${isPast ? 'opacity-75' : ''}`}
-                        >
-                          {/* Date Column */}
-                          <td className="py-3 px-4 w-28">
-                            <div className="text-sm font-medium text-gray-900">
-                              {formatDate(event.eventDate)}
-                            </div>
-                            {event.startTime && (
-                              <div className="text-xs text-gray-500">
-                                {formatTime(event.startTime)}
-                              </div>
-                            )}
-                          </td>
-
-                          {/* Type Badge */}
-                          <td className="py-3 px-2 w-20">
-                            <span
-                              className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded ${
-                                isNiyaz
-                                  ? 'bg-purple-100 text-purple-700'
-                                  : 'bg-blue-100 text-blue-700'
-                              }`}
-                            >
-                              {isNiyaz ? 'Niyaz' : 'Thaali'}
-                            </span>
-                          </td>
-
-                          {/* Event Details */}
-                          <td className="py-3 px-4">
-                            <div className="font-medium text-gray-900">{event.title}</div>
-                            {isNiyaz && event.miqaatName && event.miqaatName !== event.title && (
-                              <div className="text-xs text-purple-600">{event.miqaatName}</div>
-                            )}
-                            {event.description && (
-                              <div className="text-xs text-gray-500 line-clamp-1 max-w-md">
-                                {event.description}
-                              </div>
-                            )}
-                          </td>
-
-                          {/* Actions */}
-                          <td className="py-3 px-4 w-36 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Link
-                                to={`/events/${event.id}`}
-                                className="text-sm text-gray-600 hover:text-gray-900"
-                              >
-                                Details
-                              </Link>
-                              {!isPast && (
-                                <Link
-                                  to={`/events/${event.id}/rsvp`}
-                                  className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-                                >
-                                  {isNiyaz ? 'RSVP' : 'Order'}
-                                </Link>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {group.events.map((event, idx) => (
+                      <EventRow
+                        key={event.id}
+                        event={event}
+                        isPast={activeTab === 'past'}
+                        idx={idx}
+                      />
+                    ))}
                   </tbody>
                 </table>
               </div>

@@ -303,7 +303,7 @@ export default function EventList() {
                                 to={`/admin/reports/orders/${event.id}`}
                                 className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700"
                               >
-                                Orders
+                                Signups
                               </Link>
                             )}
                             {event.type === 'NIYAZ' && (

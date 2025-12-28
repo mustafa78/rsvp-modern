@@ -165,7 +165,7 @@ export default function AdminLayout() {
   }, [user?.roles]);
 
   return (
-    <div className="flex min-h-[calc(100vh-3rem)]">
+    <div className="flex min-h-[calc(100vh-7rem)]">
       {/* Sidebar */}
       <aside className="w-60 bg-gray-900 text-white flex-shrink-0">
         <div className="p-4 border-b border-gray-700">
