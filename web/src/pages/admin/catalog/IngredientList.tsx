@@ -147,7 +147,7 @@ export default function IngredientList() {
           </div>
           <input
             type="text"
-            className="input pl-10"
+            className="w-full rounded-xl border py-2 pl-10 pr-10"
             placeholder="Search ingredients by name, unit, category, or store..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
