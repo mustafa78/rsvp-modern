@@ -230,7 +230,7 @@ export default function DishList() {
           </div>
           <input
             type="text"
-            className="input pl-10"
+            className="w-full rounded-xl border py-2 pl-10 pr-10"
             placeholder="Search dishes by name, description, or ingredient..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
