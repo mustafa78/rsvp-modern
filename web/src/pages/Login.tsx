@@ -49,8 +49,13 @@ export default function Login() {
           {loading ? 'Please wait...' : 'Login'}
         </button>
       </form>
-      <div className="mt-3 text-sm">
-        <a href="/forgot-password" className="underline">Forgot password?</a>
+      <div className="mt-3 text-sm space-y-1">
+        <div>
+          <a href="/forgot-password" className="text-blue-600 hover:underline">Forgot password?</a>
+        </div>
+        <div>
+          <a href="/change-password-public" className="text-blue-600 hover:underline">Change password</a>
+        </div>
       </div>
       {msg && (
         <div className={`mt-4 text-sm ${msg === 'Logged in!' ? 'text-green-600' : 'text-red-600'}`}>
