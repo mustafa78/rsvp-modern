@@ -83,4 +83,36 @@ public class ThaaliOrderController {
     public IndividualOrdersReportDto individualOrders(@PathVariable Long eventId) {
         return service.individualOrdersReport(eventId);
     }
+
+    // Admin: Get users without orders (for adding new orders)
+    @GetMapping("/users-without-orders")
+    public List<PersonBasicDto> getUsersWithoutOrders(@PathVariable Long eventId) {
+        return service.getUsersWithoutOrders(eventId);
+    }
+
+    // Admin: Create order for any user (bypasses registration window)
+    @PostMapping("/admin")
+    public ThaaliOrderDto createOrderAdmin(
+            @PathVariable Long eventId,
+            @Valid @RequestBody AdminOrderRequest request) {
+        return service.createOrderAdmin(eventId, request);
+    }
+
+    // Admin: Update any order (bypasses registration window)
+    @PutMapping("/admin/{orderId}")
+    public ThaaliOrderDto updateOrderAdmin(
+            @PathVariable Long eventId,
+            @PathVariable Long orderId,
+            @Valid @RequestBody AdminOrderRequest request) {
+        return service.updateOrderAdmin(eventId, orderId, request);
+    }
+
+    // Admin: Delete any order (bypasses registration window)
+    @DeleteMapping("/admin/{orderId}")
+    public ResponseEntity<Void> deleteOrderAdmin(
+            @PathVariable Long eventId,
+            @PathVariable Long orderId) {
+        service.deleteOrderAdmin(eventId, orderId);
+        return ResponseEntity.noContent().build();
+    }
 }
