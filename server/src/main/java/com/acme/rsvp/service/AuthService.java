@@ -15,6 +15,7 @@ import com.acme.rsvp.dto.auth.LoginRequest;
 import com.acme.rsvp.dto.auth.PasswordChangeRequest;
 import com.acme.rsvp.dto.auth.PasswordConfirmRequest;
 import com.acme.rsvp.dto.auth.RegisterRequest;
+import com.acme.rsvp.dto.auth.UnauthPasswordChangeRequest;
 import com.acme.rsvp.model.PasswordResetToken;
 import com.acme.rsvp.model.Person;
 import com.acme.rsvp.model.SessionToken;
@@ -100,6 +101,17 @@ public class AuthService {
 		}
 		current.setPasswordHash(encoder.encode(req.newPassword()));
 		personRepo.save(current);
+	}
+
+	@Transactional
+	public void changePasswordUnauthenticated(UnauthPasswordChangeRequest req) {
+		Person p = findByItsNumber(req.itsNumber())
+				.orElseThrow(() -> new BadCredentialsException("Invalid ITS number or password"));
+		if (p.getPasswordHash() == null || !encoder.matches(req.currentPassword(), p.getPasswordHash())) {
+			throw new BadCredentialsException("Invalid ITS number or password");
+		}
+		p.setPasswordHash(encoder.encode(req.newPassword()));
+		personRepo.save(p);
 	}
 
 	@Transactional

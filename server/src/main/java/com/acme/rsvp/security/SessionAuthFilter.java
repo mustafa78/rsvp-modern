@@ -37,6 +37,7 @@ public class SessionAuthFilter extends OncePerRequestFilter {
 		"/api/auth/register",
 		"/api/auth/password/reset/request",
 		"/api/auth/password/reset/confirm",
+		"/api/auth/password/change-unauthenticated",
 		"/api/auth/pickup-zones",
 		"/api/events/public"
 	);

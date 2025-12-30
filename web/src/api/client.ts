@@ -38,6 +38,9 @@ export const api = {
   changePassword: (currentPassword: string, newPassword: string) =>
     jsonFetch('/api/auth/password/change', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) }),
 
+  changePasswordUnauthenticated: (itsNumber: string, currentPassword: string, newPassword: string) =>
+    jsonFetch('/api/auth/password/change-unauthenticated', { method: 'POST', body: JSON.stringify({ itsNumber, currentPassword, newPassword }) }),
+
   requestReset: (itsNumberOrEmail: string) =>
     jsonFetch('/api/auth/password/reset/request', { method: 'POST', body: JSON.stringify({ itsNumberOrEmail }) }),
 

@@ -23,6 +23,7 @@ import com.acme.rsvp.dto.auth.PasswordChangeRequest;
 import com.acme.rsvp.dto.auth.PasswordConfirmRequest;
 import com.acme.rsvp.dto.auth.PasswordResetRequest;
 import com.acme.rsvp.dto.auth.RegisterRequest;
+import com.acme.rsvp.dto.auth.UnauthPasswordChangeRequest;
 import com.acme.rsvp.model.Person;
 import com.acme.rsvp.model.SessionToken;
 import com.acme.rsvp.repository.PickupZoneRepository;
@@ -117,6 +118,16 @@ public class AuthController {
 			return ResponseEntity.status(401).build();
 		auth.changePassword(me, req);
 		return ResponseEntity.ok(Map.of("ok", true));
+	}
+
+	@PostMapping("/password/change-unauthenticated")
+	public ResponseEntity<?> changePasswordUnauthenticated(@Valid @RequestBody UnauthPasswordChangeRequest req) {
+		try {
+			auth.changePasswordUnauthenticated(req);
+			return ResponseEntity.ok(Map.of("ok", true));
+		} catch (BadCredentialsException e) {
+			return ResponseEntity.status(401).body(Map.of("error", "invalid_credentials"));
+		}
 	}
 
 	@PostMapping("/password/reset/request")

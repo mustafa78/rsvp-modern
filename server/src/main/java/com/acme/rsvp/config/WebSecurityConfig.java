@@ -36,7 +36,8 @@ public class WebSecurityConfig {
 	    	            "/api/auth/login",
 	    	            "/api/auth/register",
 	    	            "/api/auth/password/reset/request",
-	    	            "/api/auth/password/reset/confirm").permitAll()
+	    	            "/api/auth/password/reset/confirm",
+	    	            "/api/auth/password/change-unauthenticated").permitAll()
 	    	        .requestMatchers(HttpMethod.GET,
 	    	            "/api/auth/pickup-zones",
 	    	            "/api/events/public",

@@ -14,7 +14,7 @@ type User = {
 };
 
 // Public routes that don't require authentication
-const PUBLIC_ROUTES = ['/login', '/forgot-password', '/reset-password'];
+const PUBLIC_ROUTES = ['/login', '/forgot-password', '/reset-password', '/change-password-public'];
 
 export default function App() {
   const navigate = useNavigate();
