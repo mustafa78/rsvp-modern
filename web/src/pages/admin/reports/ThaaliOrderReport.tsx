@@ -79,6 +79,8 @@ type IndividualOrdersReport = {
 
 type ReportTab = 'summary' | 'individual' | 'shopping';
 type ShoppingViewMode = 'byStore' | 'byDish';
+type SortColumn = 'name' | 'pickupZone';
+type SortDirection = 'asc' | 'desc';
 
 // Group shopping items by store
 function groupByStore(items: ShoppingItem[]): Record<string, ShoppingItem[]> {
@@ -113,6 +115,8 @@ export default function ThaaliOrderReport() {
   const { eventId } = useParams<{ eventId: string }>();
   const [activeTab, setActiveTab] = useState<ReportTab>('summary');
   const [shoppingViewMode, setShoppingViewMode] = useState<ShoppingViewMode>('byStore');
+  const [sortColumn, setSortColumn] = useState<SortColumn>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const { data: event, isLoading: eventLoading } = useQuery<Event>({
     queryKey: ['event', eventId],
@@ -143,6 +147,156 @@ export default function ThaaliOrderReport() {
     queryFn: async () => (await api.get(`/thaali/${eventId}/orders/individual-orders`)).data,
     enabled: !!eventId && activeTab === 'individual',
   });
+
+  // Sort handler
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sort icon component
+  const SortIcon = ({ column }: { column: SortColumn }) => {
+    if (sortColumn !== column) {
+      return (
+        <svg className="w-4 h-4 text-gray-400 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+        </svg>
+      );
+    }
+    return sortDirection === 'asc' ? (
+      <svg className="w-4 h-4 text-blue-600 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+      </svg>
+    ) : (
+      <svg className="w-4 h-4 text-blue-600 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      </svg>
+    );
+  };
+
+  // Sorted orders
+  const sortedOrders = individualOrders?.orders ? [...individualOrders.orders].sort((a, b) => {
+    let comparison = 0;
+    if (sortColumn === 'name') {
+      comparison = a.personName.localeCompare(b.personName);
+    } else if (sortColumn === 'pickupZone') {
+      comparison = (a.pickupZoneName || '').localeCompare(b.pickupZoneName || '');
+    }
+    return sortDirection === 'asc' ? comparison : -comparison;
+  }) : [];
+
+  // Generate Avery 5136 labels PDF (1" x 2-5/8", 30 labels per sheet, 3 columns x 10 rows)
+  const generateLabels = () => {
+    if (!individualOrders || individualOrders.orders.length === 0) {
+      alert('No orders to generate labels for');
+      return;
+    }
+
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'in',
+      format: 'letter', // 8.5" x 11"
+    });
+
+    // Avery 5136 specifications
+    const labelWidth = 2.625;
+    const labelHeight = 1.0;
+    const columns = 3;
+    const rows = 10;
+    const topMargin = 0.5;
+    const leftMargin = 0.1875; // (8.5 - 3*2.625 - 2*0.125) / 2 ≈ 0.1875
+    const horizontalGap = 0.125;
+    const verticalGap = 0;
+
+    // Collect labels (one per person with all their dishes)
+    type LabelData = { name: string; dishLines: string[]; zoneAndDate: string };
+    const labels: LabelData[] = [];
+
+    for (const order of sortedOrders) {
+      // Format each dish on its own line with full size name
+      const dishLines = order.items.map(item => {
+        const sizeName = item.size === 'LARGE' ? 'Large' : item.size === 'SMALL' ? 'Small' : 'Barakati';
+        return `${sizeName} ${item.dishName || 'Unknown'}`;
+      });
+
+      labels.push({
+        name: order.personName,
+        dishLines,
+        zoneAndDate: `${order.pickupZoneName || 'N/A'} (${event?.eventDate || ''})`,
+      });
+    }
+
+    let labelIndex = 0;
+    const labelsPerPage = columns * rows;
+
+    while (labelIndex < labels.length) {
+      if (labelIndex > 0 && labelIndex % labelsPerPage === 0) {
+        doc.addPage();
+      }
+
+      const pageIndex = labelIndex % labelsPerPage;
+      const col = pageIndex % columns;
+      const row = Math.floor(pageIndex / columns);
+
+      const x = leftMargin + col * (labelWidth + horizontalGap);
+      const y = topMargin + row * (labelHeight + verticalGap);
+
+      const label = labels[labelIndex];
+
+      // Padding inside label
+      const padding = 0.06;
+      const contentX = x + padding;
+      const contentWidth = labelWidth - 2 * padding;
+
+      // Calculate font size for name based on length (auto-shrink for long names)
+      let nameFontSize = 10;
+      if (label.name.length > 25) {
+        nameFontSize = 8;
+      } else if (label.name.length > 20) {
+        nameFontSize = 9;
+      }
+
+      // Person name (bold)
+      doc.setFontSize(nameFontSize);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0);
+      const nameY = y + 0.14;
+      doc.text(label.name, contentX, nameY, { maxWidth: contentWidth });
+
+      // Dishes - each on its own line
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(0);
+      const lineHeight = 0.11;
+      const maxDishLines = 4; // Max dishes that fit
+      const startDishY = nameY + 0.14;
+
+      label.dishLines.slice(0, maxDishLines).forEach((dish, i) => {
+        // Truncate long dish names to fit
+        let displayDish = dish;
+        if (dish.length > 35) {
+          displayDish = dish.substring(0, 32) + '...';
+        }
+        doc.text(displayDish, contentX, startDishY + (i * lineHeight));
+      });
+
+      // Zone (Date) at bottom
+      doc.setFontSize(7);
+      doc.setTextColor(100);
+      doc.text(label.zoneAndDate, contentX, y + labelHeight - 0.08, { maxWidth: contentWidth });
+      doc.setTextColor(0);
+
+      labelIndex++;
+    }
+
+    // Generate filename and save
+    const fileName = `thaali-labels-${event?.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+  };
 
   if (eventLoading || reportLoading) {
     return <div className="text-gray-500">Loading...</div>;
@@ -491,15 +645,26 @@ export default function ThaaliOrderReport() {
                 <p className="text-sm text-blue-200">Who registered what dish and size</p>
               </div>
               {individualOrders && individualOrders.orders.length > 0 && (
-                <button
-                  onClick={exportToExcel}
-                  className="px-4 py-2 text-sm font-medium rounded-md bg-white text-blue-700 hover:bg-blue-50 transition-colors flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Export to Excel
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={generateLabels}
+                    className="px-4 py-2 text-sm font-medium rounded-md bg-green-500 text-white hover:bg-green-600 transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                    Generate Labels
+                  </button>
+                  <button
+                    onClick={exportToExcel}
+                    className="px-4 py-2 text-sm font-medium rounded-md bg-white text-blue-700 hover:bg-blue-50 transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Export to Excel
+                  </button>
+                </div>
               )}
             </div>
 
@@ -513,9 +678,25 @@ export default function ThaaliOrderReport() {
                   <thead>
                     <tr className="bg-gray-50 border-b">
                       <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-10">#</th>
-                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[180px]">Name</th>
+                      <th
+                        className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[180px] cursor-pointer hover:bg-gray-100 select-none"
+                        onClick={() => handleSort('name')}
+                      >
+                        <div className="flex items-center">
+                          Name
+                          <SortIcon column="name" />
+                        </div>
+                      </th>
                       <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[120px]">Phone</th>
-                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[140px]">Pickup Zone</th>
+                      <th
+                        className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[140px] cursor-pointer hover:bg-gray-100 select-none"
+                        onClick={() => handleSort('pickupZone')}
+                      >
+                        <div className="flex items-center">
+                          Pickup Zone
+                          <SortIcon column="pickupZone" />
+                        </div>
+                      </th>
                       {individualOrders.menuItems.map((mi) => (
                         <th key={mi.menuItemId} className="py-3 px-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[80px]">
                           {mi.dishName}
@@ -524,7 +705,7 @@ export default function ThaaliOrderReport() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {individualOrders.orders.map((order, idx) => (
+                    {sortedOrders.map((order, idx) => (
                       <tr key={order.orderId} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
                         <td className="py-3 px-4 text-gray-500">{idx + 1}</td>
                         <td className="py-3 px-4 font-medium text-gray-900">{order.personName}</td>
