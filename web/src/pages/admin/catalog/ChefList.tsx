@@ -158,35 +158,41 @@ export default function ChefList() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Chefs & Cooking Groups</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Chefs & Cooking Groups</h1>
+          <p className="text-gray-500 mt-1">Manage cooking groups, individual chefs, and external vendors</p>
+        </div>
         {!showForm && (
-          <button onClick={() => setShowForm(true)} className="btn">
+          <button onClick={() => setShowForm(true)} className="btn bg-blue-600 hover:bg-blue-700">
             + Add Chef/Group
           </button>
         )}
       </div>
 
       {error && (
-        <div className="bg-red-100 text-red-700 px-4 py-2 rounded">{error}</div>
+        <div className="bg-red-100 text-red-700 px-4 py-3 rounded-lg">{error}</div>
       )}
 
       {/* Create/Edit Form */}
       {showForm && (
-        <div className="card">
-          <h2 className="text-lg font-semibold mb-4">
-            {editingId ? 'Edit Chef/Group' : 'New Chef/Group'}
-          </h2>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+        <div className="card overflow-hidden p-0">
+          <div className="bg-blue-600 px-6 py-4">
+            <h2 className="text-lg font-semibold text-white">
+              {editingId ? 'Edit Chef/Group' : 'New Chef/Group'}
+            </h2>
+          </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="block text-sm font-medium mb-1">Name *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Name *</label>
                 <input className="input" {...register('name')} placeholder="e.g., Jamaat Kitchen" />
                 {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Type *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Type *</label>
                 <select className="input" {...register('type')}>
                   <option value="GROUP">Group</option>
                   <option value="PERSON">Individual</option>
@@ -194,14 +200,14 @@ export default function ChefList() {
                 </select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="block text-sm font-medium mb-1">Email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                 <input type="email" className="input" {...register('email')} placeholder="contact@example.com" />
                 {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Phone</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone</label>
                 <input
                   className="input"
                   value={phoneValue || ''}
@@ -211,18 +217,18 @@ export default function ChefList() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Notes</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Notes</label>
               <textarea className="input" rows={2} {...register('notes')} placeholder="Optional notes" />
             </div>
             <div className="flex items-center gap-2">
               <input type="checkbox" id="active" {...register('active')} className="rounded" />
-              <label htmlFor="active" className="text-sm">Active</label>
+              <label htmlFor="active" className="text-sm text-gray-700">Active</label>
             </div>
-            <div className="flex gap-2">
-              <button type="submit" className="btn" disabled={isSubmitting}>
+            <div className="flex gap-3 pt-2">
+              <button type="submit" className="btn bg-blue-600 hover:bg-blue-700" disabled={isSubmitting}>
                 {isSubmitting ? 'Saving...' : editingId ? 'Update' : 'Create'}
               </button>
-              <button type="button" className="btn bg-gray-500" onClick={cancelEdit}>
+              <button type="button" className="btn bg-gray-500 hover:bg-gray-600" onClick={cancelEdit}>
                 Cancel
               </button>
             </div>
@@ -231,68 +237,76 @@ export default function ChefList() {
       )}
 
       {/* Chefs Table */}
-      <div className="card">
+      <div className="card overflow-hidden p-0">
+        <div className="bg-gray-50 px-6 py-4 border-b">
+          <h2 className="text-lg font-semibold text-gray-800">All Chefs & Groups</h2>
+          <p className="text-sm text-gray-500 mt-0.5">{chefs?.length || 0} total</p>
+        </div>
         {!chefs || chefs.length === 0 ? (
-          <p className="text-gray-500">No chefs/groups yet. Create your first one above.</p>
+          <div className="p-6">
+            <p className="text-gray-500">No chefs/groups yet. Click "Add Chef/Group" to create your first one.</p>
+          </div>
         ) : (
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b">
-                <th className="pb-2 font-medium">Name</th>
-                <th className="pb-2 font-medium">Type</th>
-                <th className="pb-2 font-medium">Contact</th>
-                <th className="pb-2 font-medium">Status</th>
-                <th className="pb-2 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {chefs.map((chef) => (
-                <tr key={chef.id} className="border-b last:border-0">
-                  <td className="py-3">
-                    <div className="font-medium">{chef.name}</div>
-                    {chef.notes && (
-                      <div className="text-sm text-gray-500 truncate max-w-xs">{chef.notes}</div>
-                    )}
-                  </td>
-                  <td className="py-3">
-                    <span
-                      className={`text-xs px-2 py-1 rounded ${
-                        chef.type === 'GROUP'
-                          ? 'bg-blue-100 text-blue-700'
-                          : chef.type === 'PERSON'
-                          ? 'bg-purple-100 text-purple-700'
-                          : 'bg-orange-100 text-orange-700'
-                      }`}
-                    >
-                      {chefTypeLabels[chef.type]}
-                    </span>
-                  </td>
-                  <td className="py-3 text-sm text-gray-600">
-                    {chef.email && <div>{chef.email}</div>}
-                    {chef.phone && <div>{chef.phone}</div>}
-                    {!chef.email && !chef.phone && <span className="text-gray-400">-</span>}
-                  </td>
-                  <td className="py-3">
-                    <span
-                      className={`text-xs px-2 py-1 rounded ${
-                        chef.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                      }`}
-                    >
-                      {chef.active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="py-3">
-                    <button
-                      onClick={() => startEdit(chef)}
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      Edit
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b">
+                  <th className="py-3 px-6 font-semibold text-gray-600 uppercase tracking-wider text-xs">Name</th>
+                  <th className="py-3 px-4 font-semibold text-gray-600 uppercase tracking-wider text-xs">Type</th>
+                  <th className="py-3 px-4 font-semibold text-gray-600 uppercase tracking-wider text-xs">Contact</th>
+                  <th className="py-3 px-4 font-semibold text-gray-600 uppercase tracking-wider text-xs">Status</th>
+                  <th className="py-3 px-4 font-semibold text-gray-600 uppercase tracking-wider text-xs">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {chefs.map((chef, idx) => (
+                  <tr key={chef.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                    <td className="py-4 px-6">
+                      <div className="font-medium text-gray-900">{chef.name}</div>
+                      {chef.notes && (
+                        <div className="text-sm text-gray-500 truncate max-w-xs mt-0.5">{chef.notes}</div>
+                      )}
+                    </td>
+                    <td className="py-4 px-4">
+                      <span
+                        className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                          chef.type === 'GROUP'
+                            ? 'bg-blue-100 text-blue-700'
+                            : chef.type === 'PERSON'
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-orange-100 text-orange-700'
+                        }`}
+                      >
+                        {chefTypeLabels[chef.type]}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4 text-gray-600">
+                      {chef.email && <div>{chef.email}</div>}
+                      {chef.phone && <div className="mt-0.5">{chef.phone}</div>}
+                      {!chef.email && !chef.phone && <span className="text-gray-400">—</span>}
+                    </td>
+                    <td className="py-4 px-4">
+                      <span
+                        className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                          chef.active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
+                        }`}
+                      >
+                        {chef.active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <button
+                        onClick={() => startEdit(chef)}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
