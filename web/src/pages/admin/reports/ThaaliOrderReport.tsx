@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../../../api/client';
 import jsPDF from 'jspdf';
@@ -63,6 +63,7 @@ type IndividualOrder = {
   personId: number;
   personName: string;
   personPhone: string;
+  pickupZoneId: number | null;
   pickupZoneName: string;
   items: IndividualOrderItem[];
 };
@@ -81,6 +82,33 @@ type ReportTab = 'summary' | 'individual' | 'shopping';
 type ShoppingViewMode = 'byStore' | 'byDish';
 type SortColumn = 'name' | 'pickupZone';
 type SortDirection = 'asc' | 'desc';
+
+type PersonBasic = {
+  id: number;
+  itsNumber: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+};
+
+type PickupZone = {
+  id: number;
+  name: string;
+};
+
+type MealSize = 'LARGE' | 'SMALL' | 'BARAKATI';
+
+type OrderFormData = {
+  personId: number | null;
+  pickupZoneId: number | null;
+  notes: string;
+  items: { menuItemId: number; size: MealSize }[];
+};
+
+type User = {
+  personId: number;
+  roles: string[];
+};
 
 // Group shopping items by store
 function groupByStore(items: ShoppingItem[]): Record<string, ShoppingItem[]> {
@@ -113,10 +141,35 @@ function calculateDishQuarts(item: MenuItemCount): number {
 
 export default function ThaaliOrderReport() {
   const { eventId } = useParams<{ eventId: string }>();
+  const queryClient = useQueryClient();
+
+  // Get current user to check roles
+  const { data: currentUser } = useQuery<User>({
+    queryKey: ['me'],
+    queryFn: () => api.me() as Promise<User>,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Check if user can see Individual Registrations tab (SHOPPING_COORDINATOR cannot)
+  const canSeeIndividualRegistrations = !currentUser?.roles?.includes('SHOPPING_COORDINATOR');
+
   const [activeTab, setActiveTab] = useState<ReportTab>('summary');
   const [shoppingViewMode, setShoppingViewMode] = useState<ShoppingViewMode>('byStore');
   const [sortColumn, setSortColumn] = useState<SortColumn>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  // Modal state
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<IndividualOrder | null>(null);
+  const [formData, setFormData] = useState<OrderFormData>({
+    personId: null,
+    pickupZoneId: null,
+    notes: '',
+    items: [],
+  });
+  const [formError, setFormError] = useState<string | null>(null);
 
   const { data: event, isLoading: eventLoading } = useQuery<Event>({
     queryKey: ['event', eventId],
@@ -147,6 +200,139 @@ export default function ThaaliOrderReport() {
     queryFn: async () => (await api.get(`/thaali/${eventId}/orders/individual-orders`)).data,
     enabled: !!eventId && activeTab === 'individual',
   });
+
+  // Additional queries for admin order management
+  const { data: usersWithoutOrders } = useQuery<PersonBasic[]>({
+    queryKey: ['thaali-users-without-orders', eventId],
+    queryFn: async () => (await api.get(`/thaali/${eventId}/orders/users-without-orders`)).data,
+    enabled: !!eventId && showAddModal,
+  });
+
+  // Always fetch pickup zones when on individual tab (needed for edit modal)
+  const { data: pickupZones } = useQuery<PickupZone[]>({
+    queryKey: ['pickup-zones'],
+    queryFn: async () => (await api.get('/pickup-zones')).data,
+    enabled: activeTab === 'individual',
+  });
+
+  // Use menu items from individualOrders (already loaded with the report)
+  // This contains the menuItemId and dishName for each dish in the event
+  const menuItemsForForm = individualOrders?.menuItems;
+
+  // Mutations for admin order management
+  const createOrderMutation = useMutation({
+    mutationFn: async (data: { personId: number; pickupZoneId: number; notes: string; items: { menuItemId: number; size: MealSize }[] }) =>
+      api.post(`/thaali/${eventId}/orders/admin`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['thaali-individual-orders', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['thaali-detailed-report', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['thaali-users-without-orders', eventId] });
+      setShowAddModal(false);
+      resetForm();
+    },
+    onError: (err: any) => setFormError(err.message),
+  });
+
+  const updateOrderMutation = useMutation({
+    mutationFn: async ({ orderId, data }: { orderId: number; data: { personId: number; pickupZoneId: number; notes: string; items: { menuItemId: number; size: MealSize }[] } }) =>
+      api.put(`/thaali/${eventId}/orders/admin/${orderId}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['thaali-individual-orders', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['thaali-detailed-report', eventId] });
+      setShowEditModal(false);
+      resetForm();
+    },
+    onError: (err: any) => setFormError(err.message),
+  });
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (orderId: number) => api.delete(`/thaali/${eventId}/orders/admin/${orderId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['thaali-individual-orders', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['thaali-detailed-report', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['thaali-users-without-orders', eventId] });
+      setShowDeleteModal(false);
+      setSelectedOrder(null);
+    },
+    onError: (err: any) => setFormError(err.message),
+  });
+
+  // Form helpers
+  const resetForm = () => {
+    setFormData({ personId: null, pickupZoneId: null, notes: '', items: [] });
+    setFormError(null);
+    setSelectedOrder(null);
+  };
+
+  const openAddModal = () => {
+    resetForm();
+    setShowAddModal(true);
+  };
+
+  const openEditModal = (order: IndividualOrder) => {
+    setSelectedOrder(order);
+    setFormData({
+      personId: order.personId,
+      pickupZoneId: order.pickupZoneId,
+      notes: '',
+      items: order.items.map(item => ({
+        menuItemId: item.menuItemId,
+        size: item.size,
+      })),
+    });
+    setFormError(null);
+    setShowEditModal(true);
+  };
+
+  const openDeleteModal = (order: IndividualOrder) => {
+    setSelectedOrder(order);
+    setShowDeleteModal(true);
+  };
+
+  const handleFormItemChange = (menuItemId: number, size: MealSize | null) => {
+    setFormData(prev => {
+      const filtered = prev.items.filter(i => i.menuItemId !== menuItemId);
+      if (size) {
+        return { ...prev, items: [...filtered, { menuItemId, size }] };
+      }
+      return { ...prev, items: filtered };
+    });
+  };
+
+  const handleSubmitAdd = () => {
+    if (!formData.personId || !formData.pickupZoneId || formData.items.length === 0) {
+      setFormError('Please select a person, pickup zone, and at least one dish.');
+      return;
+    }
+    createOrderMutation.mutate({
+      personId: formData.personId,
+      pickupZoneId: formData.pickupZoneId,
+      notes: formData.notes,
+      items: formData.items,
+    });
+  };
+
+  const handleSubmitEdit = () => {
+    if (!selectedOrder || !formData.pickupZoneId || formData.items.length === 0) {
+      setFormError('Please select a pickup zone and at least one dish.');
+      return;
+    }
+    updateOrderMutation.mutate({
+      orderId: selectedOrder.orderId,
+      data: {
+        personId: selectedOrder.personId,
+        pickupZoneId: formData.pickupZoneId,
+        notes: formData.notes,
+        items: formData.items,
+      },
+    });
+  };
+
+  const handleConfirmDelete = () => {
+    if (selectedOrder) {
+      deleteOrderMutation.mutate(selectedOrder.orderId);
+    }
+  };
 
   // Sort handler
   const handleSort = (column: SortColumn) => {
@@ -532,16 +718,18 @@ export default function ThaaliOrderReport() {
           >
             Summary
           </button>
-          <button
-            onClick={() => setActiveTab('individual')}
-            className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'individual'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Individual Registrations
-          </button>
+          {canSeeIndividualRegistrations && (
+            <button
+              onClick={() => setActiveTab('individual')}
+              className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'individual'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Individual Registrations
+            </button>
+          )}
           <button
             onClick={() => setActiveTab('shopping')}
             className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
@@ -636,7 +824,7 @@ export default function ThaaliOrderReport() {
       )}
 
       {/* Individual Orders Tab */}
-      {activeTab === 'individual' && (
+      {activeTab === 'individual' && canSeeIndividualRegistrations && (
         <div className="space-y-6">
           <div className="card overflow-hidden p-0">
             <div className="bg-blue-600 px-6 py-4 flex items-center justify-between">
@@ -644,28 +832,39 @@ export default function ThaaliOrderReport() {
                 <h2 className="text-lg font-semibold text-white">Individual Registrations</h2>
                 <p className="text-sm text-blue-200">Who registered what dish and size</p>
               </div>
-              {individualOrders && individualOrders.orders.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={generateLabels}
-                    className="px-4 py-2 text-sm font-medium rounded-md bg-green-500 text-white hover:bg-green-600 transition-colors flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                    </svg>
-                    Generate Labels
-                  </button>
-                  <button
-                    onClick={exportToExcel}
-                    className="px-4 py-2 text-sm font-medium rounded-md bg-white text-blue-700 hover:bg-blue-50 transition-colors flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Export to Excel
-                  </button>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={openAddModal}
+                  className="px-4 py-2 text-sm font-medium rounded-md bg-green-500 text-white hover:bg-green-600 transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add Thaali
+                </button>
+                {individualOrders && individualOrders.orders.length > 0 && (
+                  <>
+                    <button
+                      onClick={generateLabels}
+                      className="px-4 py-2 text-sm font-medium rounded-md bg-orange-500 text-white hover:bg-orange-600 transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                      Labels
+                    </button>
+                    <button
+                      onClick={exportToExcel}
+                      className="px-4 py-2 text-sm font-medium rounded-md bg-white text-blue-700 hover:bg-blue-50 transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Excel
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
             {individualLoading ? (
@@ -702,6 +901,7 @@ export default function ThaaliOrderReport() {
                           {mi.dishName}
                         </th>
                       ))}
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[100px]">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -722,6 +922,24 @@ export default function ThaaliOrderReport() {
                             </td>
                           );
                         })}
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => openEditModal(order)}
+                              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                              title="Edit order"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => openDeleteModal(order)}
+                              className="text-red-600 hover:text-red-800 text-sm font-medium"
+                              title="Delete order"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -889,6 +1107,255 @@ export default function ThaaliOrderReport() {
                   )}
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Thaali Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="bg-blue-600 px-6 py-4 rounded-t-lg">
+              <h3 className="text-lg font-semibold text-white">Add Thaali</h3>
+              <p className="text-sm text-blue-200">Register a thaali for a user who hasn't registered yet</p>
+            </div>
+            <div className="p-6 space-y-4">
+              {formError && (
+                <div className="bg-red-100 text-red-700 px-4 py-2 rounded text-sm">{formError}</div>
+              )}
+
+              {/* Person Select */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Select Person *</label>
+                <select
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  value={formData.personId || ''}
+                  onChange={(e) => setFormData({ ...formData, personId: e.target.value ? Number(e.target.value) : null })}
+                >
+                  <option value="">Select a person...</option>
+                  {usersWithoutOrders?.map((person) => (
+                    <option key={person.id} value={person.id}>
+                      {person.firstName} {person.lastName} ({person.itsNumber})
+                    </option>
+                  ))}
+                </select>
+                {usersWithoutOrders?.length === 0 && (
+                  <p className="text-sm text-gray-500 mt-1">All users have already registered for this event.</p>
+                )}
+              </div>
+
+              {/* Pickup Zone Select */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Zone *</label>
+                <select
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  value={formData.pickupZoneId || ''}
+                  onChange={(e) => setFormData({ ...formData, pickupZoneId: e.target.value ? Number(e.target.value) : null })}
+                >
+                  <option value="">Select pickup zone...</option>
+                  {pickupZones?.map((zone) => (
+                    <option key={zone.id} value={zone.id}>{zone.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Menu Items */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Dishes *</label>
+                <div className="space-y-2">
+                  {menuItemsForForm?.map((mi) => {
+                    const currentItem = formData.items.find(i => i.menuItemId === mi.menuItemId);
+                    return (
+                      <div key={mi.menuItemId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <span className="flex-1 text-sm font-medium">{mi.dishName || 'Unknown'}</span>
+                        <div className="flex gap-1">
+                          {(['LARGE', 'SMALL', 'BARAKATI'] as MealSize[]).map((size) => (
+                            <button
+                              key={size}
+                              type="button"
+                              onClick={() => handleFormItemChange(mi.menuItemId, currentItem?.size === size ? null : size)}
+                              className={`px-3 py-1 text-xs font-bold rounded ${
+                                currentItem?.size === size
+                                  ? size === 'LARGE' ? 'bg-purple-600 text-white' :
+                                    size === 'SMALL' ? 'bg-blue-600 text-white' :
+                                    'bg-green-600 text-white'
+                                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                              }`}
+                            >
+                              {size === 'LARGE' ? 'L' : size === 'SMALL' ? 'S' : 'B'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+                <textarea
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  rows={2}
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder="Optional notes..."
+                />
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3 rounded-b-lg">
+              <button
+                onClick={() => { setShowAddModal(false); resetForm(); }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitAdd}
+                disabled={createOrderMutation.isPending}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+              >
+                {createOrderMutation.isPending ? 'Creating...' : 'Add Thaali'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Thaali Modal */}
+      {showEditModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="bg-blue-600 px-6 py-4 rounded-t-lg">
+              <h3 className="text-lg font-semibold text-white">Edit Thaali</h3>
+              <p className="text-sm text-blue-200">Editing thaali for {selectedOrder.personName}</p>
+            </div>
+            <div className="p-6 space-y-4">
+              {formError && (
+                <div className="bg-red-100 text-red-700 px-4 py-2 rounded text-sm">{formError}</div>
+              )}
+
+              {/* Person (readonly) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Person</label>
+                <div className="w-full rounded-md border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-600">
+                  {selectedOrder.personName}
+                </div>
+              </div>
+
+              {/* Pickup Zone Select */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Zone *</label>
+                <select
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  value={formData.pickupZoneId || ''}
+                  onChange={(e) => setFormData({ ...formData, pickupZoneId: e.target.value ? Number(e.target.value) : null })}
+                >
+                  <option value="">Select pickup zone...</option>
+                  {pickupZones?.map((zone) => (
+                    <option key={zone.id} value={zone.id}>{zone.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Menu Items */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Dishes *</label>
+                <div className="space-y-2">
+                  {menuItemsForForm?.map((mi) => {
+                    const currentItem = formData.items.find(i => i.menuItemId === mi.menuItemId);
+                    return (
+                      <div key={mi.menuItemId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <span className="flex-1 text-sm font-medium">{mi.dishName || 'Unknown'}</span>
+                        <div className="flex gap-1">
+                          {(['LARGE', 'SMALL', 'BARAKATI'] as MealSize[]).map((size) => (
+                            <button
+                              key={size}
+                              type="button"
+                              onClick={() => handleFormItemChange(mi.menuItemId, currentItem?.size === size ? null : size)}
+                              className={`px-3 py-1 text-xs font-bold rounded ${
+                                currentItem?.size === size
+                                  ? size === 'LARGE' ? 'bg-purple-600 text-white' :
+                                    size === 'SMALL' ? 'bg-blue-600 text-white' :
+                                    'bg-green-600 text-white'
+                                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                              }`}
+                            >
+                              {size === 'LARGE' ? 'L' : size === 'SMALL' ? 'S' : 'B'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+                <textarea
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  rows={2}
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder="Optional notes..."
+                />
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3 rounded-b-lg">
+              <button
+                onClick={() => { setShowEditModal(false); resetForm(); }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitEdit}
+                disabled={updateOrderMutation.isPending}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+              >
+                {updateOrderMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="bg-red-600 px-6 py-4 rounded-t-lg">
+              <h3 className="text-lg font-semibold text-white">Delete Thaali</h3>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600">
+                Are you sure you want to delete the thaali registration for <strong>{selectedOrder.personName}</strong>?
+                This action cannot be undone.
+              </p>
+              {formError && (
+                <div className="mt-4 bg-red-100 text-red-700 px-4 py-2 rounded text-sm">{formError}</div>
+              )}
+            </div>
+            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3 rounded-b-lg">
+              <button
+                onClick={() => { setShowDeleteModal(false); setSelectedOrder(null); setFormError(null); }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleteOrderMutation.isPending}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteOrderMutation.isPending ? 'Deleting...' : 'Delete Thaali'}
+              </button>
             </div>
           </div>
         </div>

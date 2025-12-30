@@ -9,6 +9,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.acme.rsvp.dto.RsvpDtos.AdminOrderRequest;
 import com.acme.rsvp.dto.RsvpDtos.DishShoppingListDto;
 import com.acme.rsvp.dto.RsvpDtos.IndividualOrderDto;
 import com.acme.rsvp.dto.RsvpDtos.IndividualOrderItemDto;
@@ -16,6 +17,7 @@ import com.acme.rsvp.dto.RsvpDtos.IndividualOrdersReportDto;
 import com.acme.rsvp.dto.RsvpDtos.MenuItemCountDto;
 import com.acme.rsvp.dto.RsvpDtos.MenuItemInfo;
 import com.acme.rsvp.dto.RsvpDtos.PerDishShoppingListDto;
+import com.acme.rsvp.dto.RsvpDtos.PersonBasicDto;
 import com.acme.rsvp.dto.RsvpDtos.ShoppingListItemDto;
 import com.acme.rsvp.dto.RsvpDtos.ThaaliCountReportDto;
 import com.acme.rsvp.dto.RsvpDtos.ThaaliDetailedReportDto;
@@ -214,6 +216,115 @@ public class ThaaliService {
                 .ifPresent(orderRepo::delete);
     }
 
+    // Admin methods - bypass registration window check
+
+    @Transactional
+    public ThaaliOrderDto createOrderAdmin(Long eventId, AdminOrderRequest request) {
+        ThaaliEvent event = eventRepo.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found: " + eventId));
+
+        Person person = personRepo.findById(request.personId())
+                .orElseThrow(() -> new IllegalArgumentException("Person not found: " + request.personId()));
+
+        // Check if order already exists
+        if (orderRepo.findByEventIdAndPersonId(eventId, request.personId()).isPresent()) {
+            throw new IllegalStateException("Order already exists for this person. Use update instead.");
+        }
+
+        PickupZone pickupZone = pickupZoneRepo.findById(request.pickupZoneId())
+                .orElseThrow(() -> new IllegalArgumentException("Pickup zone not found: " + request.pickupZoneId()));
+
+        ThaaliOrder order = new ThaaliOrder();
+        order.setEvent(event);
+        order.setPerson(person);
+        order.setPickupZone(pickupZone);
+        order.setNotes(request.notes());
+
+        for (var itemRequest : request.items()) {
+            MenuItem menuItem = menuItemRepo.findById(itemRequest.menuItemId())
+                    .orElseThrow(() -> new IllegalArgumentException("Menu item not found: " + itemRequest.menuItemId()));
+
+            if (!menuItem.getEvent().getId().equals(eventId)) {
+                throw new IllegalArgumentException("Menu item " + itemRequest.menuItemId() + " does not belong to event " + eventId);
+            }
+
+            ThaaliOrderItem orderItem = new ThaaliOrderItem();
+            orderItem.setMenuItem(menuItem);
+            orderItem.setSize(itemRequest.size());
+            order.addItem(orderItem);
+        }
+
+        order = orderRepo.save(order);
+        return toDto(order);
+    }
+
+    @Transactional
+    public ThaaliOrderDto updateOrderAdmin(Long eventId, Long orderId, AdminOrderRequest request) {
+        ThaaliOrder order = orderRepo.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
+
+        // Verify order belongs to the event
+        if (!order.getEvent().getId().equals(eventId)) {
+            throw new IllegalArgumentException("Order " + orderId + " does not belong to event " + eventId);
+        }
+
+        PickupZone pickupZone = pickupZoneRepo.findById(request.pickupZoneId())
+                .orElseThrow(() -> new IllegalArgumentException("Pickup zone not found: " + request.pickupZoneId()));
+
+        order.setPickupZone(pickupZone);
+        order.setNotes(request.notes());
+        order.clearItems();
+
+        // Flush to ensure deletes are executed before inserts (unique constraint on order_id, menu_item_id)
+        orderRepo.saveAndFlush(order);
+
+        for (var itemRequest : request.items()) {
+            MenuItem menuItem = menuItemRepo.findById(itemRequest.menuItemId())
+                    .orElseThrow(() -> new IllegalArgumentException("Menu item not found: " + itemRequest.menuItemId()));
+
+            if (!menuItem.getEvent().getId().equals(eventId)) {
+                throw new IllegalArgumentException("Menu item " + itemRequest.menuItemId() + " does not belong to event " + eventId);
+            }
+
+            ThaaliOrderItem orderItem = new ThaaliOrderItem();
+            orderItem.setMenuItem(menuItem);
+            orderItem.setSize(itemRequest.size());
+            order.addItem(orderItem);
+        }
+
+        order = orderRepo.save(order);
+        return toDto(order);
+    }
+
+    @Transactional
+    public void deleteOrderAdmin(Long eventId, Long orderId) {
+        ThaaliOrder order = orderRepo.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
+
+        // Verify order belongs to the event
+        if (!order.getEvent().getId().equals(eventId)) {
+            throw new IllegalArgumentException("Order " + orderId + " does not belong to event " + eventId);
+        }
+
+        orderRepo.delete(order);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PersonBasicDto> getUsersWithoutOrders(Long eventId) {
+        // Verify event exists
+        eventRepo.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found: " + eventId));
+
+        return personRepo.findWithoutOrderForEvent(eventId).stream()
+                .map(p -> new PersonBasicDto(
+                        p.getId(),
+                        p.getItsNumber(),
+                        p.getFirstName(),
+                        p.getLastName(),
+                        p.getPhone()))
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public IndividualOrdersReportDto individualOrdersReport(Long eventId) {
         // Get all menu items for this event (for column headers)
@@ -230,6 +341,7 @@ public class ThaaliService {
                     Person person = order.getPerson();
                     String personName = person.getFirstName() + " " + person.getLastName();
                     String personPhone = person.getPhone();
+                    Long pickupZoneId = order.getPickupZone() != null ? order.getPickupZone().getId() : null;
                     String pickupZoneName = order.getPickupZone() != null ? order.getPickupZone().getName() : null;
 
                     List<IndividualOrderItemDto> items = order.getItems().stream()
@@ -244,6 +356,7 @@ public class ThaaliService {
                             person.getId(),
                             personName,
                             personPhone,
+                            pickupZoneId,
                             pickupZoneName,
                             items);
                 })

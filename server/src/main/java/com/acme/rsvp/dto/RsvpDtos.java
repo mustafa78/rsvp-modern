@@ -112,6 +112,7 @@ public class RsvpDtos {
             Long personId,
             String personName,
             String personPhone,
+            Long pickupZoneId,
             String pickupZoneName,
             List<IndividualOrderItemDto> items) {
     }
@@ -124,5 +125,22 @@ public class RsvpDtos {
     public record IndividualOrdersReportDto(
             List<MenuItemInfo> menuItems,
             List<IndividualOrderDto> orders) {
+    }
+
+    // Admin order request DTO (includes personId)
+    public record AdminOrderRequest(
+            @NotNull Long personId,
+            @NotNull Long pickupZoneId,
+            String notes,
+            @NotEmpty List<ThaaliOrderItemRequest> items) {
+    }
+
+    // User without order DTO (for admin to select who to add order for)
+    public record PersonBasicDto(
+            Long id,
+            String itsNumber,
+            String firstName,
+            String lastName,
+            String phone) {
     }
 }

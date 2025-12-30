@@ -25,6 +25,18 @@ export const api = {
 
   put: async (path: string, data: any) => ({ data: await jsonFetch<any>(`/api${path}`, { method: 'PUT', body: JSON.stringify(data) }) }),
 
+  delete: async (path: string) => {
+    const res = await fetch(API_BASE + `/api${path}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(txt || res.statusText);
+    }
+    return { data: undefined };
+  },
+
   login: (itsNumber: string, password: string) =>
     jsonFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ itsNumber, password }) }),
 
