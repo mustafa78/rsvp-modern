@@ -2,8 +2,10 @@ package com.acme.rsvp.web;
 
 import java.util.List;
 
+import com.acme.rsvp.dto.RsvpDtos.AdminNiyazRsvpRequest;
 import com.acme.rsvp.dto.RsvpDtos.NiyazRsvpDetailDto;
 import com.acme.rsvp.dto.RsvpDtos.NiyazRsvpDto;
+import com.acme.rsvp.dto.RsvpDtos.PersonBasicDto;
 import com.acme.rsvp.model.Person;
 import com.acme.rsvp.service.NiyazService;
 import jakarta.validation.Valid;
@@ -57,5 +59,37 @@ public class NiyazRsvpController {
     @GetMapping("/all")
     public List<NiyazRsvpDetailDto> getAllRsvps(@PathVariable Long eventId) {
         return service.getRsvpsByEvent(eventId);
+    }
+
+    // Admin: Get users without RSVPs (for adding new RSVPs)
+    @GetMapping("/users-without-rsvps")
+    public List<PersonBasicDto> getUsersWithoutRsvps(@PathVariable Long eventId) {
+        return service.getUsersWithoutRsvps(eventId);
+    }
+
+    // Admin: Create RSVP for any user (bypasses registration window)
+    @PostMapping("/admin")
+    public NiyazRsvpDto createRsvpAdmin(
+            @PathVariable Long eventId,
+            @Valid @RequestBody AdminNiyazRsvpRequest request) {
+        return service.createRsvpAdmin(eventId, request);
+    }
+
+    // Admin: Update any RSVP (bypasses registration window)
+    @PutMapping("/admin/{rsvpId}")
+    public NiyazRsvpDto updateRsvpAdmin(
+            @PathVariable Long eventId,
+            @PathVariable Long rsvpId,
+            @Valid @RequestBody AdminNiyazRsvpRequest request) {
+        return service.updateRsvpAdmin(eventId, rsvpId, request);
+    }
+
+    // Admin: Delete any RSVP (bypasses registration window)
+    @DeleteMapping("/admin/{rsvpId}")
+    public ResponseEntity<Void> deleteRsvpAdmin(
+            @PathVariable Long eventId,
+            @PathVariable Long rsvpId) {
+        service.deleteRsvpAdmin(eventId, rsvpId);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -15,4 +15,7 @@ public interface PersonRepository extends JpaRepository<Person, Long> {
 
   @Query("SELECT p FROM Person p WHERE p.id NOT IN (SELECT o.person.id FROM ThaaliOrder o WHERE o.event.id = :eventId) ORDER BY p.firstName, p.lastName")
   List<Person> findWithoutOrderForEvent(@Param("eventId") Long eventId);
+
+  @Query("SELECT p FROM Person p WHERE p.id NOT IN (SELECT r.person.id FROM NiyazRsvp r WHERE r.event.id = :eventId) ORDER BY p.firstName, p.lastName")
+  List<Person> findWithoutRsvpForEvent(@Param("eventId") Long eventId);
 }
