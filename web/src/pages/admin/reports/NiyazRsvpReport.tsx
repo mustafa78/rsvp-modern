@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../../../api/client';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 type Event = {
   id: number;
@@ -196,6 +198,171 @@ export default function NiyazRsvpReport() {
     }
   };
 
+  // Export to PDF
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    const date = new Date().toLocaleDateString();
+    let yPos = 20;
+
+    const totalAttendees = (adults || 0) + (kids || 0);
+    const equivalentServings = (adults || 0) + (kids || 0) * 0.5;
+    const numberOfThaal = equivalentServings / 8;
+
+    // Title
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Niyaz RSVP Report', 14, yPos);
+    yPos += 10;
+
+    // Event info
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100);
+    doc.text(`${event?.title} - ${event?.eventDate}`, 14, yPos);
+    yPos += 6;
+    doc.text(`Generated: ${date}`, 14, yPos);
+    yPos += 12;
+
+    // Attendance Summary section
+    doc.setFillColor(147, 51, 234); // purple-600
+    doc.rect(14, yPos - 5, 182, 8, 'F');
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255);
+    doc.text('Attendance Summary', 16, yPos);
+    yPos += 10;
+
+    const summaryData = [
+      ['Adults', String(adults || 0)],
+      ['Children', String(kids || 0)],
+      ['Total Attendees', String(totalAttendees)],
+      ['Total RSVPs (Families)', String(rsvps?.length || 0)],
+    ];
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Category', 'Count']],
+      body: summaryData,
+      theme: 'striped',
+      headStyles: {
+        fillColor: [243, 244, 246],
+        textColor: [75, 85, 99],
+        fontStyle: 'bold',
+        fontSize: 10,
+      },
+      bodyStyles: {
+        fontSize: 10,
+        textColor: [31, 41, 55],
+      },
+      columnStyles: {
+        0: { cellWidth: 100 },
+        1: { cellWidth: 50, halign: 'right', fontStyle: 'bold' },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    yPos = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15;
+
+    // Planning Notes section
+    doc.setFillColor(234, 179, 8); // yellow-500
+    doc.rect(14, yPos - 5, 182, 8, 'F');
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0);
+    doc.text('Planning Notes', 16, yPos);
+    yPos += 10;
+
+    const planningData = [
+      ['Expected adult servings', String(adults || 0)],
+      ['Expected child servings (½ portion)', String(kids || 0)],
+      ['Equivalent full servings', equivalentServings.toFixed(1)],
+      ['Number of Thaals (8 persons/thaal)', numberOfThaal.toFixed(1)],
+    ];
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Item', 'Value']],
+      body: planningData,
+      theme: 'striped',
+      headStyles: {
+        fillColor: [254, 249, 195], // yellow-100
+        textColor: [75, 85, 99],
+        fontStyle: 'bold',
+        fontSize: 10,
+      },
+      bodyStyles: {
+        fontSize: 10,
+        textColor: [31, 41, 55],
+      },
+      columnStyles: {
+        0: { cellWidth: 120 },
+        1: { cellWidth: 50, halign: 'right', fontStyle: 'bold' },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    yPos = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15;
+
+    // RSVP List section
+    if (rsvps && rsvps.length > 0) {
+      doc.setFillColor(147, 51, 234); // purple-600
+      doc.rect(14, yPos - 5, 182, 8, 'F');
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255);
+      doc.text(`RSVP List (${rsvps.length} families)`, 16, yPos);
+      yPos += 10;
+
+      const rsvpData = rsvps.map((rsvp, idx) => [
+        String(idx + 1),
+        rsvp.personName,
+        rsvp.personPhone || '-',
+        String(rsvp.adults),
+        String(rsvp.kids),
+        String(rsvp.adults + rsvp.kids),
+      ]);
+
+      // Add total row
+      rsvpData.push(['', 'Total', '', String(adults || 0), String(kids || 0), String(totalAttendees)]);
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['#', 'Name', 'Phone', 'Adults', 'Children', 'Total']],
+        body: rsvpData,
+        theme: 'striped',
+        headStyles: {
+          fillColor: [243, 244, 246],
+          textColor: [75, 85, 99],
+          fontStyle: 'bold',
+          fontSize: 9,
+        },
+        bodyStyles: {
+          fontSize: 9,
+          textColor: [31, 41, 55],
+        },
+        columnStyles: {
+          0: { cellWidth: 12, halign: 'center' },
+          1: { cellWidth: 55 },
+          2: { cellWidth: 35 },
+          3: { cellWidth: 22, halign: 'center' },
+          4: { cellWidth: 22, halign: 'center' },
+          5: { cellWidth: 22, halign: 'center', fontStyle: 'bold' },
+        },
+        margin: { left: 14, right: 14 },
+        didParseCell: (data) => {
+          // Style the total row
+          if (data.row.index === rsvpData.length - 1) {
+            data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.fillColor = [243, 244, 246];
+          }
+        },
+      });
+    }
+
+    const fileName = `niyaz-rsvp-${event?.title?.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+  };
+
   if (eventLoading || adultsLoading || kidsLoading || rsvpsLoading) {
     return <div className="text-gray-500">Loading...</div>;
   }
@@ -344,9 +511,12 @@ export default function NiyazRsvpReport() {
         </div>
       </div>
 
-      {/* Print Button */}
+      {/* Export Buttons */}
       <div className="flex gap-3">
-        <button onClick={() => window.print()} className="btn bg-purple-600 hover:bg-purple-700">
+        <button onClick={exportToPDF} className="btn bg-purple-600 hover:bg-purple-700">
+          Export to PDF
+        </button>
+        <button onClick={() => window.print()} className="btn bg-gray-500 hover:bg-gray-600">
           Print Report
         </button>
       </div>
