@@ -573,6 +573,125 @@ export default function ThaaliOrderReport() {
     XLSX.writeFile(wb, fileName);
   };
 
+  // Export summary to PDF
+  const exportSummaryToPDF = () => {
+    if (!detailedReport) {
+      alert('No report data to export');
+      return;
+    }
+
+    const doc = new jsPDF();
+    const date = new Date().toLocaleDateString();
+    let yPos = 20;
+
+    // Title
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Thaali Registration Summary', 14, yPos);
+    yPos += 10;
+
+    // Event info
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100);
+    doc.text(`${event?.title} - ${event?.eventDate}`, 14, yPos);
+    yPos += 6;
+    doc.text(`Generated: ${date}`, 14, yPos);
+    yPos += 12;
+
+    // Summary section
+    doc.setFillColor(37, 99, 235);
+    doc.rect(14, yPos - 5, 182, 8, 'F');
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255);
+    doc.text('Order Summary', 16, yPos);
+    yPos += 10;
+
+    doc.setTextColor(0);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+
+    const summaryData = [
+      ['Large (1 qt)', String(counts?.large || 0)],
+      ['Small (½ qt)', String(counts?.small || 0)],
+      ['Barakati (¼ qt)', String(counts?.barakati || 0)],
+      ['Total Registrations', String(totalOrders)],
+      ['Total Quarts', counts?.totalQuarts?.toFixed(2) || '0.00'],
+    ];
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Category', 'Count']],
+      body: summaryData,
+      theme: 'striped',
+      headStyles: {
+        fillColor: [243, 244, 246],
+        textColor: [75, 85, 99],
+        fontStyle: 'bold',
+        fontSize: 10,
+      },
+      bodyStyles: {
+        fontSize: 10,
+        textColor: [31, 41, 55],
+      },
+      columnStyles: {
+        0: { cellWidth: 100 },
+        1: { cellWidth: 50, halign: 'right', fontStyle: 'bold' },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    yPos = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15;
+
+    // Quarts per Dish section
+    if (detailedReport.byMenuItem && detailedReport.byMenuItem.length > 0) {
+      doc.setFillColor(37, 99, 235);
+      doc.rect(14, yPos - 5, 182, 8, 'F');
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255);
+      doc.text('Quarts per Dish', 16, yPos);
+      yPos += 10;
+
+      const dishData = detailedReport.byMenuItem.map(item => [
+        item.dishName,
+        String(item.largeCount),
+        String(item.smallCount),
+        String(item.barakatiCount),
+        calculateDishQuarts(item).toFixed(2),
+      ]);
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Dish', 'Large', 'Small', 'Barakati', 'Total Quarts']],
+        body: dishData,
+        theme: 'striped',
+        headStyles: {
+          fillColor: [243, 244, 246],
+          textColor: [75, 85, 99],
+          fontStyle: 'bold',
+          fontSize: 9,
+        },
+        bodyStyles: {
+          fontSize: 10,
+          textColor: [31, 41, 55],
+        },
+        columnStyles: {
+          0: { cellWidth: 70 },
+          1: { cellWidth: 25, halign: 'center' },
+          2: { cellWidth: 25, halign: 'center' },
+          3: { cellWidth: 25, halign: 'center' },
+          4: { cellWidth: 35, halign: 'right', fontStyle: 'bold', textColor: [234, 88, 12] },
+        },
+        margin: { left: 14, right: 14 },
+      });
+    }
+
+    const fileName = `thaali-summary-${event?.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+  };
+
   // Export shopping list to PDF using jsPDF
   const exportShoppingListToPDF = () => {
     if (!shoppingList || shoppingList.length === 0) {
@@ -816,7 +935,10 @@ export default function ThaaliOrderReport() {
           )}
 
           <div className="flex gap-3">
-            <button onClick={() => window.print()} className="btn bg-blue-600 hover:bg-blue-700">
+            <button onClick={exportSummaryToPDF} className="btn bg-blue-600 hover:bg-blue-700">
+              Export to PDF
+            </button>
+            <button onClick={() => window.print()} className="btn bg-gray-500 hover:bg-gray-600">
               Print Report
             </button>
           </div>
