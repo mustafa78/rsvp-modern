@@ -17,10 +17,19 @@ public class RsvpDtos {
 
     // Niyaz RSVP with person details for reports
     public record NiyazRsvpDetailDto(
+            Long rsvpId,
             Long personId,
             String personName,
+            String personPhone,
             int adults,
             int kids) {
+    }
+
+    // Admin RSVP request DTO (includes personId)
+    public record AdminNiyazRsvpRequest(
+            @NotNull Long personId,
+            @Min(0) int adults,
+            @Min(0) int kids) {
     }
 
     // Thaali Order DTOs - new structure with order items

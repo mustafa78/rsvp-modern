@@ -2,8 +2,10 @@ package com.acme.rsvp.service;
 
 import java.util.List;
 
+import com.acme.rsvp.dto.RsvpDtos.AdminNiyazRsvpRequest;
 import com.acme.rsvp.dto.RsvpDtos.NiyazRsvpDetailDto;
 import com.acme.rsvp.dto.RsvpDtos.NiyazRsvpDto;
+import com.acme.rsvp.dto.RsvpDtos.PersonBasicDto;
 import com.acme.rsvp.model.NiyazEvent;
 import com.acme.rsvp.model.NiyazRsvp;
 import com.acme.rsvp.model.Person;
@@ -72,10 +74,83 @@ public class NiyazService {
     public List<NiyazRsvpDetailDto> getRsvpsByEvent(Long eventId) {
         return rsvpRepo.findByEventIdWithPerson(eventId).stream()
                 .map(r -> new NiyazRsvpDetailDto(
+                        r.getId(),
                         r.getPerson().getId(),
                         r.getPerson().getFirstName() + " " + r.getPerson().getLastName(),
+                        r.getPerson().getPhone(),
                         r.getAdults(),
                         r.getKids()))
+                .toList();
+    }
+
+    // Admin methods - bypass registration window check
+
+    @Transactional
+    public NiyazRsvpDto createRsvpAdmin(Long eventId, AdminNiyazRsvpRequest request) {
+        NiyazEvent event = eventRepo.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found: " + eventId));
+
+        Person person = personRepo.findById(request.personId())
+                .orElseThrow(() -> new IllegalArgumentException("Person not found: " + request.personId()));
+
+        // Check if RSVP already exists
+        if (rsvpRepo.findByEventIdAndPersonId(eventId, request.personId()).isPresent()) {
+            throw new IllegalStateException("RSVP already exists for this person. Use update instead.");
+        }
+
+        NiyazRsvp rsvp = new NiyazRsvp();
+        rsvp.setEvent(event);
+        rsvp.setPerson(person);
+        rsvp.setAdults(request.adults());
+        rsvp.setKids(request.kids());
+
+        rsvp = rsvpRepo.save(rsvp);
+        return new NiyazRsvpDto(eventId, request.personId(), request.adults(), request.kids());
+    }
+
+    @Transactional
+    public NiyazRsvpDto updateRsvpAdmin(Long eventId, Long rsvpId, AdminNiyazRsvpRequest request) {
+        NiyazRsvp rsvp = rsvpRepo.findById(rsvpId)
+                .orElseThrow(() -> new IllegalArgumentException("RSVP not found: " + rsvpId));
+
+        // Verify RSVP belongs to the event
+        if (!rsvp.getEvent().getId().equals(eventId)) {
+            throw new IllegalArgumentException("RSVP " + rsvpId + " does not belong to event " + eventId);
+        }
+
+        rsvp.setAdults(request.adults());
+        rsvp.setKids(request.kids());
+
+        rsvp = rsvpRepo.save(rsvp);
+        return new NiyazRsvpDto(eventId, rsvp.getPerson().getId(), request.adults(), request.kids());
+    }
+
+    @Transactional
+    public void deleteRsvpAdmin(Long eventId, Long rsvpId) {
+        NiyazRsvp rsvp = rsvpRepo.findById(rsvpId)
+                .orElseThrow(() -> new IllegalArgumentException("RSVP not found: " + rsvpId));
+
+        // Verify RSVP belongs to the event
+        if (!rsvp.getEvent().getId().equals(eventId)) {
+            throw new IllegalArgumentException("RSVP " + rsvpId + " does not belong to event " + eventId);
+        }
+
+        rsvpRepo.delete(rsvp);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PersonBasicDto> getUsersWithoutRsvps(Long eventId) {
+        // Verify event exists
+        eventRepo.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found: " + eventId));
+
+        return personRepo.findWithoutRsvpForEvent(eventId).stream()
+                .map(p -> new PersonBasicDto(
+                        p.getId(),
+                        p.getItsNumber(),
+                        p.getFirstName(),
+                        p.getLastName(),
+                        p.getPhone()))
                 .toList();
     }
 }
