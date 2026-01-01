@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../../api/client';
@@ -21,6 +21,7 @@ type User = {
 };
 
 type StatusFilter = 'ALL' | 'DRAFT' | 'PUBLISHED' | 'CANCELLED';
+type TimeFilter = 'upcoming' | 'past';
 
 // Format date as "Wed, Dec 31"
 function formatDate(dateStr: string): string {
@@ -57,9 +58,19 @@ const isAdmin = (roles: string[]) => hasRole(roles, 'ADMIN');
 const isNiyazCoordinator = (roles: string[]) => hasRole(roles, 'NIYAZ_COORDINATOR');
 const isThaaliCoordinator = (roles: string[]) => hasRole(roles, 'THAALI_COORDINATOR');
 
+// Check if event date is in the past (compare dates only, not time)
+function isEventPast(eventDate: string): boolean {
+  const [year, month, day] = eventDate.split('-').map(Number);
+  const eventDateObj = new Date(year, month - 1, day);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return eventDateObj < today;
+}
+
 export default function EventList() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('upcoming');
   const queryClient = useQueryClient();
 
   const { data: user } = useQuery<User>({
@@ -99,15 +110,35 @@ export default function EventList() {
     },
   });
 
-  const filteredEvents = events?.filter((e) => {
-    // Role-based type filtering
-    if (e.type === 'THAALI' && !canSeeThaali) return false;
-    if (e.type === 'NIYAZ' && !canSeeNiyaz) return false;
-    // User-selected filters
-    if (statusFilter !== 'ALL' && e.status !== statusFilter) return false;
-    if (typeFilter !== 'ALL' && e.type !== typeFilter) return false;
-    return true;
-  }) || [];
+  // Split events into upcoming and past, then apply filters
+  const { upcomingEvents, pastEvents } = useMemo(() => {
+    const upcoming: Event[] = [];
+    const past: Event[] = [];
+
+    events?.forEach((e) => {
+      // Role-based type filtering
+      if (e.type === 'THAALI' && !canSeeThaali) return;
+      if (e.type === 'NIYAZ' && !canSeeNiyaz) return;
+      // User-selected filters
+      if (statusFilter !== 'ALL' && e.status !== statusFilter) return;
+      if (typeFilter !== 'ALL' && e.type !== typeFilter) return;
+
+      if (isEventPast(e.eventDate)) {
+        past.push(e);
+      } else {
+        upcoming.push(e);
+      }
+    });
+
+    // Sort upcoming by nearest date first
+    upcoming.sort((a, b) => a.eventDate.localeCompare(b.eventDate));
+    // Sort past by most recent first
+    past.sort((a, b) => b.eventDate.localeCompare(a.eventDate));
+
+    return { upcomingEvents: upcoming, pastEvents: past };
+  }, [events, canSeeThaali, canSeeNiyaz, statusFilter, typeFilter]);
+
+  const displayedEvents = timeFilter === 'upcoming' ? upcomingEvents : pastEvents;
 
   // Determine page title based on role
   const pageTitle = canSeeAllTypes
@@ -152,47 +183,90 @@ export default function EventList() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Tabs and Filters */}
       <div className="card">
-        <div className="flex gap-4 items-center">
-          <div>
-            <label className="text-sm text-gray-500 mr-2">Status:</label>
-            <select
-              className="input w-auto"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          {/* Tabs */}
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+            <button
+              onClick={() => setTimeFilter('upcoming')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                timeFilter === 'upcoming'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
             >
-              <option value="ALL">All</option>
-              <option value="DRAFT">Draft</option>
-              <option value="PUBLISHED">Published</option>
-              <option value="CANCELLED">Cancelled</option>
-            </select>
+              Upcoming
+              <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${
+                timeFilter === 'upcoming'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-gray-200 text-gray-600'
+              }`}>
+                {upcomingEvents.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setTimeFilter('past')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                timeFilter === 'past'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Past
+              <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${
+                timeFilter === 'past'
+                  ? 'bg-gray-600 text-white'
+                  : 'bg-gray-200 text-gray-600'
+              }`}>
+                {pastEvents.length}
+              </span>
+            </button>
           </div>
-          {/* Only show type filter if user can see both types */}
-          {canSeeAllTypes && (
+
+          {/* Divider */}
+          <div className="hidden sm:block w-px h-8 bg-gray-200" />
+
+          {/* Filters */}
+          <div className="flex gap-4 items-center flex-wrap">
             <div>
-              <label className="text-sm text-gray-500 mr-2">Type:</label>
+              <label className="text-sm text-gray-500 mr-2">Status:</label>
               <select
                 className="input w-auto"
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
               >
                 <option value="ALL">All</option>
-                <option value="THAALI">Thaali</option>
-                <option value="NIYAZ">Niyaz</option>
+                <option value="DRAFT">Draft</option>
+                <option value="PUBLISHED">Published</option>
+                <option value="CANCELLED">Cancelled</option>
               </select>
             </div>
-          )}
-          <div className="text-sm text-gray-500">
-            Showing {filteredEvents.length} events
+            {/* Only show type filter if user can see both types */}
+            {canSeeAllTypes && (
+              <div>
+                <label className="text-sm text-gray-500 mr-2">Type:</label>
+                <select
+                  className="input w-auto"
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                >
+                  <option value="ALL">All</option>
+                  <option value="THAALI">Thaali</option>
+                  <option value="NIYAZ">Niyaz</option>
+                </select>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Events Table */}
       <div className="card overflow-hidden p-0">
-        {filteredEvents.length === 0 ? (
-          <p className="text-gray-500 p-6">No events found</p>
+        {displayedEvents.length === 0 ? (
+          <p className="text-gray-500 p-6">
+            {timeFilter === 'upcoming' ? 'No upcoming events' : 'No past events'}
+          </p>
         ) : (
           <table className="w-full">
             <thead>
@@ -205,28 +279,39 @@ export default function EventList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredEvents.map((event, idx) => {
+              {displayedEvents.map((event, idx) => {
                 const isNiyaz = event.type === 'NIYAZ';
+                const isPast = isEventPast(event.eventDate);
                 return (
-                  <tr key={event.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                  <tr key={event.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} ${isPast ? 'opacity-75' : ''}`}>
                     {/* Event Info */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <span
                           className={`flex-shrink-0 w-2 h-10 rounded-full ${
-                            isNiyaz ? 'bg-purple-500' : 'bg-blue-500'
+                            isPast
+                              ? 'bg-gray-400'
+                              : isNiyaz
+                              ? 'bg-purple-500'
+                              : 'bg-blue-500'
                           }`}
                         />
                         <div className="min-w-0">
                           <Link
                             to={`/admin/events/${event.id}`}
-                            className="font-medium text-gray-900 hover:text-blue-600 block truncate"
+                            className={`font-medium block truncate ${
+                              isPast ? 'text-gray-600 hover:text-gray-800' : 'text-gray-900 hover:text-blue-600'
+                            }`}
                           >
                             {event.title}
                           </Link>
                           <span
                             className={`inline-flex items-center text-xs font-medium ${
-                              isNiyaz ? 'text-purple-600' : 'text-blue-600'
+                              isPast
+                                ? 'text-gray-500'
+                                : isNiyaz
+                                ? 'text-purple-600'
+                                : 'text-blue-600'
                             }`}
                           >
                             {isNiyaz ? 'Niyaz' : 'Thaali'}
@@ -237,7 +322,7 @@ export default function EventList() {
 
                     {/* Date */}
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
+                      <div className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-900'}`}>
                         {formatDate(event.eventDate)}
                         {event.startTime && (
                           <span className="text-gray-500"> · {formatTime(event.startTime)}</span>
@@ -248,34 +333,45 @@ export default function EventList() {
                     {/* Registration Period */}
                     <td className="px-4 py-4">
                       <div className="text-xs text-gray-600">
-                        <span className="text-green-600">{formatShortDate(event.registrationOpenAt)}</span>
+                        <span className={isPast ? 'text-gray-500' : 'text-green-600'}>
+                          {formatShortDate(event.registrationOpenAt)}
+                        </span>
                         <span className="text-gray-400 mx-1">-</span>
-                        <span className="text-red-600">{formatShortDate(event.registrationCloseAt)}</span>
+                        <span className={isPast ? 'text-gray-500' : 'text-red-600'}>
+                          {formatShortDate(event.registrationCloseAt)}
+                        </span>
                       </div>
                     </td>
 
                     {/* Status */}
                     <td className="px-4 py-4 text-center">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          event.status === 'PUBLISHED'
-                            ? 'bg-green-100 text-green-800'
-                            : event.status === 'DRAFT'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {event.status === 'PUBLISHED' && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5" />
-                        )}
-                        {event.status === 'DRAFT' && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5" />
-                        )}
-                        {event.status === 'CANCELLED' && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5" />
-                        )}
-                        {event.status.charAt(0) + event.status.slice(1).toLowerCase()}
-                      </span>
+                      {isPast && event.status === 'PUBLISHED' ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                          <span className="w-1.5 h-1.5 rounded-full bg-gray-500 mr-1.5" />
+                          Completed
+                        </span>
+                      ) : (
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            event.status === 'PUBLISHED'
+                              ? 'bg-green-100 text-green-800'
+                              : event.status === 'DRAFT'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}
+                        >
+                          {event.status === 'PUBLISHED' && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5" />
+                          )}
+                          {event.status === 'DRAFT' && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5" />
+                          )}
+                          {event.status === 'CANCELLED' && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5" />
+                          )}
+                          {event.status.charAt(0) + event.status.slice(1).toLowerCase()}
+                        </span>
+                      )}
                     </td>
 
                     {/* Actions */}
@@ -287,41 +383,57 @@ export default function EventList() {
                         >
                           Details
                         </Link>
-                        {event.status === 'DRAFT' && (
-                          <button
-                            onClick={() => handlePublish(event.id)}
-                            className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700"
-                            disabled={publishMutation.isPending}
-                          >
-                            Publish
-                          </button>
-                        )}
-                        {event.status === 'PUBLISHED' && (
+
+                        {/* Upcoming event actions */}
+                        {!isPast && (
                           <>
-                            {event.type === 'THAALI' && (
-                              <Link
-                                to={`/admin/reports/orders/${event.id}`}
-                                className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700"
+                            {event.status === 'DRAFT' && (
+                              <button
+                                onClick={() => handlePublish(event.id)}
+                                className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700"
+                                disabled={publishMutation.isPending}
                               >
-                                Signups
-                              </Link>
+                                Publish
+                              </button>
                             )}
-                            {event.type === 'NIYAZ' && (
-                              <Link
-                                to={`/admin/reports/rsvps/${event.id}`}
-                                className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-white bg-purple-600 rounded hover:bg-purple-700"
-                              >
-                                RSVPs
-                              </Link>
+                            {event.status === 'PUBLISHED' && (
+                              <>
+                                {event.type === 'THAALI' && (
+                                  <Link
+                                    to={`/admin/reports/orders/${event.id}`}
+                                    className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700"
+                                  >
+                                    Signups
+                                  </Link>
+                                )}
+                                {event.type === 'NIYAZ' && (
+                                  <Link
+                                    to={`/admin/reports/rsvps/${event.id}`}
+                                    className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-white bg-purple-600 rounded hover:bg-purple-700"
+                                  >
+                                    RSVPs
+                                  </Link>
+                                )}
+                                <button
+                                  onClick={() => handleCancel(event.id)}
+                                  className="text-xs text-red-600 hover:text-red-800 hover:underline ml-1"
+                                  disabled={cancelMutation.isPending}
+                                >
+                                  Cancel
+                                </button>
+                              </>
                             )}
-                            <button
-                              onClick={() => handleCancel(event.id)}
-                              className="text-xs text-red-600 hover:text-red-800 hover:underline ml-1"
-                              disabled={cancelMutation.isPending}
-                            >
-                              Cancel
-                            </button>
                           </>
+                        )}
+
+                        {/* Past event actions */}
+                        {isPast && event.status === 'PUBLISHED' && (
+                          <Link
+                            to={event.type === 'THAALI' ? `/admin/reports/orders/${event.id}` : `/admin/reports/rsvps/${event.id}`}
+                            className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded hover:bg-gray-200"
+                          >
+                            Summary
+                          </Link>
                         )}
                       </div>
                     </td>

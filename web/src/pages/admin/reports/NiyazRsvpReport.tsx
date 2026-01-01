@@ -36,6 +36,15 @@ type RsvpFormData = {
   kids: number;
 };
 
+// Check if event date is in the past
+function isEventPast(eventDate: string): boolean {
+  const [year, month, day] = eventDate.split('-').map(Number);
+  const eventDateObj = new Date(year, month - 1, day);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return eventDateObj < today;
+}
+
 export default function NiyazRsvpReport() {
   const { eventId } = useParams<{ eventId: string }>();
   const queryClient = useQueryClient();
@@ -381,6 +390,7 @@ export default function NiyazRsvpReport() {
   const totalAttendees = (adults || 0) + (kids || 0);
   const equivalentServings = (adults || 0) + (kids || 0) * 0.5;
   const numberOfThaal = equivalentServings / 8;
+  const isPast = isEventPast(event.eventDate);
 
   return (
     <div className="space-y-6">
@@ -434,20 +444,22 @@ export default function NiyazRsvpReport() {
 
       {/* RSVP List */}
       <div className="card overflow-hidden p-0">
-        <div className="bg-purple-600 px-6 py-4 flex items-center justify-between">
+        <div className={`${isPast ? 'bg-gray-600' : 'bg-purple-600'} px-6 py-4 flex items-center justify-between`}>
           <div>
             <h2 className="text-lg font-semibold text-white">RSVP List</h2>
-            <p className="text-sm text-purple-200">{rsvps?.length || 0} families have responded</p>
+            <p className={`text-sm ${isPast ? 'text-gray-300' : 'text-purple-200'}`}>{rsvps?.length || 0} families have responded</p>
           </div>
-          <button
-            onClick={openAddModal}
-            className="px-4 py-2 text-sm font-medium rounded-md bg-green-500 text-white hover:bg-green-600 transition-colors flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add RSVP
-          </button>
+          {!isPast && (
+            <button
+              onClick={openAddModal}
+              className="px-4 py-2 text-sm font-medium rounded-md bg-green-500 text-white hover:bg-green-600 transition-colors flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add RSVP
+            </button>
+          )}
         </div>
         <div className="p-0">
           {rsvps && rsvps.length > 0 ? (
@@ -460,7 +472,9 @@ export default function NiyazRsvpReport() {
                   <th className="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">Adults</th>
                   <th className="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">Children</th>
                   <th className="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">Total</th>
-                  <th className="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">Actions</th>
+                  {!isPast && (
+                    <th className="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -472,24 +486,26 @@ export default function NiyazRsvpReport() {
                     <td className="py-3 px-4 text-center text-blue-600 font-medium">{rsvp.adults}</td>
                     <td className="py-3 px-4 text-center text-green-600 font-medium">{rsvp.kids}</td>
                     <td className="py-3 px-4 text-center font-bold text-purple-600">{rsvp.adults + rsvp.kids}</td>
-                    <td className="py-3 px-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => openEditModal(rsvp)}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                          title="Edit RSVP"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => openDeleteModal(rsvp)}
-                          className="text-red-600 hover:text-red-800 text-sm font-medium"
-                          title="Delete RSVP"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
+                    {!isPast && (
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => openEditModal(rsvp)}
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                            title="Edit RSVP"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => openDeleteModal(rsvp)}
+                            className="text-red-600 hover:text-red-800 text-sm font-medium"
+                            title="Delete RSVP"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -501,7 +517,7 @@ export default function NiyazRsvpReport() {
                   <td className="py-3 px-4 text-center font-bold text-blue-600">{adults || 0}</td>
                   <td className="py-3 px-4 text-center font-bold text-green-600">{kids || 0}</td>
                   <td className="py-3 px-4 text-center font-bold text-purple-600">{totalAttendees}</td>
-                  <td className="py-3 px-4"></td>
+                  {!isPast && <td className="py-3 px-4"></td>}
                 </tr>
               </tfoot>
             </table>
