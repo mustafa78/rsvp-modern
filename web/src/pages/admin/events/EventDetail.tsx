@@ -50,6 +50,15 @@ function formatDateTime(dateTimeStr: string): string {
   });
 }
 
+// Check if event date is in the past
+function isEventPast(eventDate: string): boolean {
+  const [year, month, day] = eventDate.split('-').map(Number);
+  const eventDateObj = new Date(year, month - 1, day);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return eventDateObj < today;
+}
+
 export default function EventDetail() {
   const { id } = useParams<{ id: string }>();
 
@@ -77,6 +86,7 @@ export default function EventDetail() {
 
   const isNiyaz = event.type === 'NIYAZ';
   const isThaali = event.type === 'THAALI';
+  const isPast = isEventPast(event.eventDate);
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -91,7 +101,9 @@ export default function EventDetail() {
         <div className="flex gap-2 items-center">
           <span
             className={`text-xs font-medium px-3 py-1 rounded-full ${
-              isNiyaz
+              isPast
+                ? 'bg-gray-100 text-gray-600'
+                : isNiyaz
                 ? 'bg-purple-100 text-purple-700'
                 : 'bg-blue-100 text-blue-700'
             }`}
@@ -100,14 +112,16 @@ export default function EventDetail() {
           </span>
           <span
             className={`text-xs font-medium px-3 py-1 rounded-full ${
-              event.status === 'PUBLISHED'
+              isPast && event.status === 'PUBLISHED'
+                ? 'bg-gray-100 text-gray-700'
+                : event.status === 'PUBLISHED'
                 ? 'bg-green-100 text-green-700'
                 : event.status === 'DRAFT'
                 ? 'bg-amber-100 text-amber-700'
                 : 'bg-red-100 text-red-700'
             }`}
           >
-            {event.status}
+            {isPast && event.status === 'PUBLISHED' ? 'Completed' : event.status}
           </span>
         </div>
       </div>
@@ -200,24 +214,32 @@ export default function EventDetail() {
       <div className="card">
         <h2 className="text-lg font-semibold mb-4">Actions</h2>
         <div className="flex gap-3 flex-wrap">
-          {isNiyaz && (
+          {/* Edit button - only for upcoming events */}
+          {!isPast && isNiyaz && (
             <Link to={`/admin/events/edit/niyaz/${event.id}`} className="btn">
               Edit Event
             </Link>
           )}
-          {isThaali && (
+          {!isPast && isThaali && (
             <Link to={`/admin/events/edit/thaali/${event.id}`} className="btn">
               Edit Event
             </Link>
           )}
+          {/* View reports - different styling for past vs upcoming */}
           {isThaali && event.status === 'PUBLISHED' && (
-            <Link to={`/admin/reports/orders/${event.id}`} className="btn bg-blue-600 hover:bg-blue-700">
-              View Orders
+            <Link
+              to={`/admin/reports/orders/${event.id}`}
+              className={`btn ${isPast ? 'bg-gray-500 hover:bg-gray-600' : 'bg-blue-600 hover:bg-blue-700'}`}
+            >
+              {isPast ? 'View Summary' : 'View Signups'}
             </Link>
           )}
           {isNiyaz && event.status === 'PUBLISHED' && (
-            <Link to={`/admin/reports/rsvps/${event.id}`} className="btn bg-purple-600 hover:bg-purple-700">
-              View RSVPs
+            <Link
+              to={`/admin/reports/rsvps/${event.id}`}
+              className={`btn ${isPast ? 'bg-gray-500 hover:bg-gray-600' : 'bg-purple-600 hover:bg-purple-700'}`}
+            >
+              {isPast ? 'View Summary' : 'View RSVPs'}
             </Link>
           )}
           <Link to="/admin/events" className="btn bg-gray-500 hover:bg-gray-600">
