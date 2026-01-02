@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 
 export default function Login() {
@@ -6,6 +6,16 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Check for expired parameter on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('expired') === '1') {
+      setMsg('Your account has expired. Please contact an administrator to extend your access.');
+      // Clean up the URL
+      window.history.replaceState({}, '', '/login');
+    }
+  }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +32,8 @@ export default function Login() {
         const parsed = JSON.parse(e.message);
         if (parsed.error === 'invalid_credentials') {
           errorMsg = 'Invalid ITS number or password. Please try again.';
+        } else if (parsed.error === 'account_expired') {
+          errorMsg = parsed.message || 'Your account has expired. Please contact an administrator to extend your access.';
         } else if (parsed.error) {
           errorMsg = parsed.error;
         }

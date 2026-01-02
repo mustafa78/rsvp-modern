@@ -1,5 +1,7 @@
 package com.acme.rsvp.service;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -9,11 +11,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.acme.rsvp.dto.AdminUserDtos.CreateUserRequest;
+import com.acme.rsvp.dto.AdminUserDtos.ExtendExpirationRequest;
 import com.acme.rsvp.dto.AdminUserDtos.UpdateRolesRequest;
 import com.acme.rsvp.dto.AdminUserDtos.UpdateStatusRequest;
+import com.acme.rsvp.dto.AdminUserDtos.UpdateUserTypeRequest;
 import com.acme.rsvp.dto.AdminUserDtos.UserListDto;
 import com.acme.rsvp.model.AccountStatus;
 import com.acme.rsvp.model.Person;
+import com.acme.rsvp.model.UserType;
 import com.acme.rsvp.repository.PersonRepository;
 import com.acme.rsvp.repository.PickupZoneRepository;
 
@@ -73,6 +78,16 @@ public class AdminUserService {
                     .ifPresent(person::setPickupZone);
         }
 
+        // Set user type and expiration
+        UserType userType = request.userType() != null ? request.userType() : UserType.REGISTERED;
+        person.setUserType(userType);
+
+        if (request.accountExpiresAt() != null) {
+            person.setAccountExpiresAt(request.accountExpiresAt());
+        } else {
+            person.setAccountExpiresAt(calculateDefaultExpiration(userType));
+        }
+
         return toDto(personRepository.save(person));
     }
 
@@ -102,6 +117,46 @@ public class AdminUserService {
         return toDto(personRepository.save(person));
     }
 
+    @Transactional
+    public UserListDto updateUserType(Long id, UpdateUserTypeRequest request) {
+        Person person = personRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + id));
+        person.setUserType(request.userType());
+
+        if (request.accountExpiresAt() != null) {
+            person.setAccountExpiresAt(request.accountExpiresAt());
+        } else {
+            person.setAccountExpiresAt(calculateDefaultExpiration(request.userType()));
+        }
+
+        return toDto(personRepository.save(person));
+    }
+
+    @Transactional
+    public UserListDto extendExpiration(Long id, ExtendExpirationRequest request) {
+        Person person = personRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + id));
+        person.setAccountExpiresAt(request.newExpiresAt());
+        return toDto(personRepository.save(person));
+    }
+
+    @Transactional
+    public UserListDto convertToRegistered(Long id) {
+        Person person = personRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + id));
+        person.setUserType(UserType.REGISTERED);
+        person.setAccountExpiresAt(null);
+        return toDto(personRepository.save(person));
+    }
+
+    private Instant calculateDefaultExpiration(UserType userType) {
+        return switch (userType) {
+            case STUDENT -> Instant.now().plus(60, ChronoUnit.DAYS);
+            case MEHMAAN -> Instant.now().plus(30, ChronoUnit.DAYS);
+            case REGISTERED -> null;
+        };
+    }
+
     private UserListDto toDto(Person p) {
         return new UserListDto(
                 p.getId(),
@@ -112,6 +167,9 @@ public class AdminUserService {
                 p.getPhone(),
                 p.getRoles(),
                 p.getAccountStatus(),
+                p.getUserType(),
+                p.getAccountExpiresAt(),
+                p.isExpired(),
                 p.getPickupZone() != null ? p.getPickupZone().getName() : null,
                 p.getLastLoginAt());
     }

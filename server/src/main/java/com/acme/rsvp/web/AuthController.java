@@ -27,6 +27,7 @@ import com.acme.rsvp.dto.auth.UnauthPasswordChangeRequest;
 import com.acme.rsvp.model.Person;
 import com.acme.rsvp.model.SessionToken;
 import com.acme.rsvp.repository.PickupZoneRepository;
+import com.acme.rsvp.exception.AccountExpiredException;
 import com.acme.rsvp.security.CookieUtil;
 import com.acme.rsvp.security.SessionAuthFilter;
 import com.acme.rsvp.service.AuthService;
@@ -78,6 +79,11 @@ public class AuthController {
 			CookieUtil.addSessionCookie(httpResp, SessionAuthFilter.COOKIE_NAME, t.getId().toString(), 7 * 24 * 3600,
 					secure);
 			return ResponseEntity.ok(Map.of("ok", true));
+		} catch (AccountExpiredException e) {
+			// account has expired
+			return ResponseEntity.status(403).body(Map.of(
+					"error", "account_expired",
+					"message", e.getMessage()));
 		} catch (BadCredentialsException e) {
 			// invalid user/pass
 			return ResponseEntity.status(401).body(Map.of("error", "invalid_credentials"));

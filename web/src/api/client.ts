@@ -11,6 +11,17 @@ async function jsonFetch<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const txt = await res.text();
+    // Check for account_expired error and redirect to login
+    try {
+      const parsed = JSON.parse(txt);
+      if (parsed.error === 'account_expired' && res.status === 401) {
+        // Session expired due to account expiration, redirect to login
+        window.location.href = '/login?expired=1';
+        return undefined as any;
+      }
+    } catch {
+      // Not JSON, proceed with normal error handling
+    }
     throw new Error(txt || res.statusText);
   }
   return res.headers.get('content-type')?.includes('application/json')
