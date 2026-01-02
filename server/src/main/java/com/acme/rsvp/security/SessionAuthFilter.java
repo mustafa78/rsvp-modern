@@ -77,6 +77,18 @@ public class SessionAuthFilter extends OncePerRequestFilter {
 				Optional<SessionToken> tok = sessions.findActive(id, OffsetDateTime.now());
 				if (tok.isPresent()) {
 					Person user = tok.get().getPerson();
+
+					// Check if account has expired
+					if (user.isExpired()) {
+						// Clear the session cookie
+						boolean secure = "https".equalsIgnoreCase(req.getHeader("X-Forwarded-Proto")) || req.isSecure();
+						CookieUtil.clearCookie(resp, COOKIE_NAME, secure);
+						resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+						resp.setContentType("application/json");
+						resp.getWriter().write("{\"error\":\"account_expired\",\"message\":\"Your account has expired. Please contact an administrator to extend your access.\"}");
+						return;
+					}
+
 					var auth = new UsernamePasswordAuthenticationToken(user, null, List.of());
 					SecurityContextHolder.getContext().setAuthentication(auth);
 				}

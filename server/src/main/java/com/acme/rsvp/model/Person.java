@@ -60,6 +60,13 @@ public class Person extends Auditable {
 	@Column(name = "account_status", nullable = false, length = 16)
 	private AccountStatus accountStatus = AccountStatus.ACTIVE;
 
+	@Enumerated(EnumType.STRING)
+	@Column(name = "user_type", nullable = false, length = 20)
+	private UserType userType = UserType.REGISTERED;
+
+	@Column(name = "account_expires_at")
+	private java.time.Instant accountExpiresAt;
+
 	@Column(name = "reset_token", length = 100)
 	private String resetToken;
 
@@ -179,5 +186,33 @@ public class Person extends Auditable {
 
 	public void setLastLoginAt(java.time.Instant lastLoginAt) {
 		this.lastLoginAt = lastLoginAt;
+	}
+
+	public UserType getUserType() {
+		return userType;
+	}
+
+	public void setUserType(UserType userType) {
+		this.userType = userType;
+	}
+
+	public java.time.Instant getAccountExpiresAt() {
+		return accountExpiresAt;
+	}
+
+	public void setAccountExpiresAt(java.time.Instant accountExpiresAt) {
+		this.accountExpiresAt = accountExpiresAt;
+	}
+
+	/**
+	 * Check if the account has expired.
+	 * REGISTERED users never expire (accountExpiresAt is null).
+	 * STUDENT and MEHMAAN users expire when current time is past accountExpiresAt.
+	 */
+	public boolean isExpired() {
+		if (userType == UserType.REGISTERED || accountExpiresAt == null) {
+			return false;
+		}
+		return java.time.Instant.now().isAfter(accountExpiresAt);
 	}
 }

@@ -16,8 +16,11 @@ import com.acme.rsvp.dto.auth.PasswordChangeRequest;
 import com.acme.rsvp.dto.auth.PasswordConfirmRequest;
 import com.acme.rsvp.dto.auth.RegisterRequest;
 import com.acme.rsvp.dto.auth.UnauthPasswordChangeRequest;
+import com.acme.rsvp.exception.AccountExpiredException;
+import com.acme.rsvp.model.AccountStatus;
 import com.acme.rsvp.model.PasswordResetToken;
 import com.acme.rsvp.model.Person;
+import com.acme.rsvp.model.UserType;
 import com.acme.rsvp.model.SessionToken;
 import com.acme.rsvp.repository.PasswordResetTokenRepository;
 import com.acme.rsvp.repository.PersonRepository;
@@ -68,6 +71,9 @@ public class AuthService {
 		p.setEmail(req.email());
 		p.setPickupZone(zone);
 		p.setPasswordHash(encoder.encode(req.password()));
+		// Self-registration always creates REGISTERED users with no expiration
+		p.setUserType(UserType.REGISTERED);
+		p.setAccountExpiresAt(null);
 		personRepo.save(p);
 		return toAuthResponse(p);
 	}
@@ -76,9 +82,20 @@ public class AuthService {
 	public SessionToken login(LoginRequest req) {
 		Person p = findByItsNumber(req.itsNumber())
 				.orElseThrow(() -> new BadCredentialsException("bad credentials"));
-		
+
+		// Check if account has expired (Student/Mehmaan past expiration date)
+		if (p.isExpired()) {
+			throw new AccountExpiredException(
+					"Your account has expired. Please contact an administrator to extend your access.");
+		}
+
+		// Check if account is active (not LOCKED or DISABLED)
+		if (p.getAccountStatus() != AccountStatus.ACTIVE) {
+			throw new BadCredentialsException("Account is " + p.getAccountStatus().name().toLowerCase());
+		}
+
 		if (p.getPasswordHash() == null || !encoder.matches(req.password(), p.getPasswordHash())) {
-			throw new BadCredentialsException("bad credentials 123");
+			throw new BadCredentialsException("bad credentials");
 		}
 		var now = OffsetDateTime.now(ZoneOffset.UTC);
 		SessionToken t = new SessionToken(UUID.randomUUID(), p, now, now.plusDays(7));
