@@ -111,6 +111,52 @@ sudo iptables -A INPUT -p tcp --dport 5173 -j ACCEPT
 sudo iptables -A INPUT -p tcp --dport 8080 -j ACCEPT
 ```
 
+### Step 6: Configure CORS for Domain Access
+
+When accessing the application via a domain name (instead of localhost), you need to configure CORS (Cross-Origin Resource Sharing) to allow the frontend to communicate with the backend.
+
+#### Option A: Set Environment Variable (Recommended)
+
+Add the CORS origins to your `.env.dev` file:
+
+```bash
+# Edit your environment file
+nano .env.dev
+
+# Add this line (replace with your actual domain)
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://yourdomain.com:5173
+```
+
+Example for domain `fmbqa.dcjamaat.com`:
+```
+POSTGRES_USER=rsvp
+POSTGRES_PASSWORD=rsvp
+POSTGRES_DB=rsvp
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://fmbqa.dcjamaat.com:5173
+```
+
+Then start the application:
+```bash
+docker compose --env-file ./.env.dev -f docker-compose.dev.yml up -d --build
+```
+
+#### Option B: Inline Environment Variable
+
+Pass the CORS origins directly when starting:
+
+```bash
+CORS_ALLOWED_ORIGINS="http://localhost:5173,http://yourdomain.com:5173" \
+docker compose --env-file ./.env.dev -f docker-compose.dev.yml up -d --build
+```
+
+#### CORS Configuration Notes
+
+- Multiple origins can be specified, separated by commas
+- Always include `http://localhost:5173` for local development
+- The origin must match exactly (including protocol and port)
+- For HTTPS, use `https://` instead of `http://`
+- If you see "Invalid CORS request" error on login, check this configuration
+
 ---
 
 ## Part 2: Data Migration
@@ -345,6 +391,28 @@ docker volume prune
 sudo chown -R $USER:$USER ~/rsvp-modern
 ```
 
+### CORS Errors on Login
+
+If you see "Invalid CORS request" when trying to log in:
+
+```bash
+# 1. Check current CORS configuration
+docker compose -f docker-compose.dev.yml exec server env | grep CORS
+
+# 2. Update .env.dev with your domain
+echo 'CORS_ALLOWED_ORIGINS=http://localhost:5173,http://yourdomain.com:5173' >> .env.dev
+
+# 3. Restart with new configuration
+docker compose -f docker-compose.dev.yml down
+docker compose --env-file ./.env.dev -f docker-compose.dev.yml up -d --build
+```
+
+Common CORS issues:
+- Missing port in origin (use `http://domain.com:5173` not `http://domain.com`)
+- Protocol mismatch (`http` vs `https`)
+- Typo in domain name
+- Environment variable not being passed to container
+
 ---
 
 ## Part 6: Production Considerations
@@ -381,6 +449,7 @@ nano .env
 POSTGRES_USER=rsvp
 POSTGRES_PASSWORD=<STRONG_PASSWORD_HERE>
 POSTGRES_DB=rsvp
+CORS_ALLOWED_ORIGINS=https://yourdomain.com
 ```
 
 ### 4. Set Up Automatic Backups
@@ -482,4 +551,4 @@ For issues or questions:
 
 ---
 
-*Last updated: January 2, 2026*
+*Last updated: January 3, 2026*
