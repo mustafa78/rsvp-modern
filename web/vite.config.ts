@@ -5,6 +5,12 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    host: '0.0.0.0', // Allow external connections
+    allowedHosts: [
+      'localhost',
+      'fmbqa.dcjamaat.com',
+      '.dcjamaat.com', // Allow all subdomains
+    ],
     proxy: {
       '/api': {
         // Use localhost for local dev, Docker service name is resolved inside container
