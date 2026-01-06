@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../api/client';
 
@@ -134,6 +134,7 @@ export default function UserList() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
+  const formRef = useRef<HTMLDivElement>(null);
 
   const isEditing = editingUserId !== null;
 
@@ -271,6 +272,10 @@ export default function UserList() {
     });
     setShowForm(true);
     setError(null);
+    // Scroll to form after state update
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
   };
 
   const handleUserTypeChange = (newType: UserType) => {
@@ -425,7 +430,7 @@ export default function UserList() {
 
       {/* Create/Edit User Form */}
       {showForm && (
-        <div className="card">
+        <div ref={formRef} className="card">
           <h2 className="text-lg font-semibold mb-4">
             {isEditing ? `Edit User: ${editingUser?.firstName} ${editingUser?.lastName}` : 'Create New User'}
           </h2>
@@ -697,31 +702,31 @@ export default function UserList() {
       </div>
 
       {/* Users Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
         {!filteredUsers || filteredUsers.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             {searchTerm ? 'No users match your search.' : 'No users found.'}
           </div>
         ) : (
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="w-[22%] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   User
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="w-[20%] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Contact
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="w-[18%] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Account
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="w-[15%] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Roles
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="w-[17%] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Zone
                 </th>
-                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="w-[8%] px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -736,38 +741,38 @@ export default function UserList() {
                   `}
                 >
                   {/* User Info: Name + ITS */}
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-medium text-sm">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-medium text-xs flex-shrink-0">
                         {user.firstName.charAt(0)}{user.lastName.charAt(0)}
                       </div>
                       <div>
                         <div className="font-medium text-gray-900">
                           {user.firstName} {user.lastName}
                         </div>
-                        <div className="text-sm text-gray-500">
-                          ITS: {user.itsNumber}
+                        <div className="text-xs text-gray-500">
+                          {user.itsNumber}
                         </div>
                       </div>
                     </div>
                   </td>
 
                   {/* Contact: Email + Phone */}
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">{user.email}</div>
+                  <td className="px-4 py-3">
+                    <div className="text-sm text-gray-900 truncate" title={user.email}>{user.email}</div>
                     {user.phone && (
-                      <div className="text-sm text-gray-500">{user.phone}</div>
+                      <div className="text-xs text-gray-500">{user.phone}</div>
                     )}
                   </td>
 
                   {/* Account: Type + Status + Expiration */}
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${userTypeColors[user.userType]}`}>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${userTypeColors[user.userType]}`}>
                           {userTypeLabels[user.userType]}
                         </span>
-                        <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[user.accountStatus]}`}>
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[user.accountStatus]}`}>
                           {statusLabels[user.accountStatus]}
                         </span>
                       </div>
@@ -777,7 +782,7 @@ export default function UserList() {
                             <span className="text-red-600 font-medium">Expired</span>
                           ) : (
                             <span className="text-gray-500">
-                              Expires: {formatDate(user.accountExpiresAt)}
+                              {formatDate(user.accountExpiresAt)}
                             </span>
                           )}
                         </div>
@@ -786,12 +791,12 @@ export default function UserList() {
                   </td>
 
                   {/* Roles */}
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1.5">
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
                       {user.roles.map((role) => (
                         <span
                           key={role}
-                          className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${getRoleColor(role)}`}
+                          className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium ${getRoleColor(role)}`}
                         >
                           {formatRoleName(role)}
                         </span>
@@ -800,23 +805,21 @@ export default function UserList() {
                   </td>
 
                   {/* Zone */}
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-gray-600">
-                      {user.pickupZoneName ? (
-                        user.pickupZoneName.length > 20
-                          ? user.pickupZoneName.substring(0, 20) + '...'
-                          : user.pickupZoneName
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </span>
+                  <td className="px-4 py-3">
+                    {user.pickupZoneName ? (
+                      <span className="text-sm text-gray-600 truncate block" title={user.pickupZoneName}>
+                        {user.pickupZoneName}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
                   </td>
 
                   {/* Actions */}
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-4 py-3 text-right">
                     <button
                       onClick={() => startEdit(user)}
-                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-md transition-colors"
+                      className="text-sm font-medium text-blue-600 hover:text-blue-800"
                     >
                       Edit
                     </button>
