@@ -16,3 +16,7 @@ web/package-lock.json
 .env.dev
 CLAUDE.md
 rsvp-modern-session.md
+
+# Database backups - never commit these
+db_backup*.sql
+*.dump
