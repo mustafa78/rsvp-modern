@@ -24,6 +24,7 @@ public class AdminUserDtos {
             UserType userType,
             Instant accountExpiresAt,
             boolean isExpired,
+            Long pickupZoneId,
             String pickupZoneName,
             Instant lastLoginAt) {
     }
@@ -54,5 +55,13 @@ public class AdminUserDtos {
 
     public record ExtendExpirationRequest(
             @NotNull Instant newExpiresAt) {
+    }
+
+    public record UpdateUserInfoRequest(
+            @NotBlank String firstName,
+            @NotBlank String lastName,
+            @NotBlank @Email String email,
+            String phone,
+            Long pickupZoneId) {
     }
 }
