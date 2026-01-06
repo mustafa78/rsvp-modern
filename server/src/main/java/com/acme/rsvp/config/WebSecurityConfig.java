@@ -1,7 +1,9 @@
 package com.acme.rsvp.config;
 
+import java.util.Arrays;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -20,6 +22,9 @@ import com.acme.rsvp.security.SessionAuthFilter;
 public class WebSecurityConfig {
 
 	private final SessionAuthFilter sessionAuthFilter;
+
+	@Value("${cors.allowed-origins:http://localhost:5173}")
+	private String allowedOrigins;
 
 	public WebSecurityConfig(SessionAuthFilter sessionAuthFilter) {
 		this.sessionAuthFilter = sessionAuthFilter;
@@ -53,7 +58,11 @@ public class WebSecurityConfig {
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration cfg = new CorsConfiguration();
 		// IMPORTANT: with credentials=true, do NOT use "*" here.
-		cfg.setAllowedOrigins(List.of("http://localhost:5173", "http://127.0.0.1:5173"));
+		// Parse comma-separated origins from environment variable
+		List<String> origins = Arrays.stream(allowedOrigins.split(","))
+				.map(String::trim)
+				.toList();
+		cfg.setAllowedOrigins(origins);
 		cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 		cfg.setAllowedHeaders(List.of("*"));
 		cfg.setAllowCredentials(true);

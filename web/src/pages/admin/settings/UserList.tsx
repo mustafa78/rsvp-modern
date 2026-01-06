@@ -17,6 +17,7 @@ type User = {
   userType: UserType;
   accountExpiresAt: string | null;
   isExpired: boolean;
+  pickupZoneId: number | null;
   pickupZoneName: string | null;
   lastLoginAt: string | null;
 };
@@ -98,7 +99,21 @@ const getDefaultExpirationDate = (userType: UserType): string => {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
-const initialCreateForm = {
+type FormData = {
+  itsNumber: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  password: string;
+  pickupZoneId: string;
+  roles: string[];
+  userType: UserType;
+  accountExpiresAt: string;
+  accountStatus: AccountStatus;
+};
+
+const initialFormData: FormData = {
   itsNumber: '',
   firstName: '',
   lastName: '',
@@ -106,22 +121,21 @@ const initialCreateForm = {
   phone: '',
   password: '',
   pickupZoneId: '',
-  roles: ['USER'] as string[],
-  userType: 'REGISTERED' as UserType,
+  roles: ['USER'],
+  userType: 'REGISTERED',
   accountExpiresAt: '',
+  accountStatus: 'ACTIVE',
 };
 
 export default function UserList() {
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [editRoles, setEditRoles] = useState<string[]>([]);
-  const [editStatus, setEditStatus] = useState<AccountStatus>('ACTIVE');
-  const [editUserType, setEditUserType] = useState<UserType>('REGISTERED');
-  const [editExpiresAt, setEditExpiresAt] = useState('');
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createForm, setCreateForm] = useState(initialCreateForm);
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState<FormData>(initialFormData);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
+
+  const isEditing = editingUserId !== null;
 
   const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ['admin-users'],
@@ -139,19 +153,39 @@ export default function UserList() {
   });
 
   const createUserMutation = useMutation({
-    mutationFn: async (data: typeof createForm) => {
+    mutationFn: async (data: FormData) => {
       const payload = {
-        ...data,
+        itsNumber: data.itsNumber,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone || null,
+        password: data.password,
         pickupZoneId: data.pickupZoneId ? Number(data.pickupZoneId) : null,
+        roles: data.roles,
+        userType: data.userType,
         accountExpiresAt: data.accountExpiresAt ? new Date(data.accountExpiresAt).toISOString() : null,
       };
       return api.post('/admin/users', payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      setShowCreateForm(false);
-      setCreateForm(initialCreateForm);
-      setError(null);
+      resetForm();
+    },
+    onError: (err: any) => setError(err.message),
+  });
+
+  const updateUserInfoMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: FormData }) =>
+      api.put(`/admin/users/${id}/info`, {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone || null,
+        pickupZoneId: data.pickupZoneId ? Number(data.pickupZoneId) : null,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     },
     onError: (err: any) => setError(err.message),
   });
@@ -161,8 +195,6 @@ export default function UserList() {
       api.put(`/admin/users/${id}/roles`, { roles }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      setEditingUser(null);
-      setError(null);
     },
     onError: (err: any) => setError(err.message),
   });
@@ -172,19 +204,18 @@ export default function UserList() {
       api.put(`/admin/users/${id}/status`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      setEditingUser(null);
-      setError(null);
     },
     onError: (err: any) => setError(err.message),
   });
 
   const updateUserTypeMutation = useMutation({
     mutationFn: async ({ id, userType, accountExpiresAt }: { id: number; userType: UserType; accountExpiresAt: string | null }) =>
-      api.put(`/admin/users/${id}/user-type`, { userType, accountExpiresAt: accountExpiresAt ? new Date(accountExpiresAt).toISOString() : null }),
+      api.put(`/admin/users/${id}/user-type`, {
+        userType,
+        accountExpiresAt: accountExpiresAt ? new Date(accountExpiresAt).toISOString() : null,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      setEditingUser(null);
-      setError(null);
     },
     onError: (err: any) => setError(err.message),
   });
@@ -194,8 +225,7 @@ export default function UserList() {
       api.put(`/admin/users/${id}/extend`, { newExpiresAt: new Date(newExpiresAt).toISOString() }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      setEditingUser(null);
-      setError(null);
+      resetForm();
     },
     onError: (err: any) => setError(err.message),
   });
@@ -205,103 +235,133 @@ export default function UserList() {
       api.post(`/admin/users/${id}/convert-to-registered`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      setEditingUser(null);
-      setError(null);
+      resetForm();
     },
     onError: (err: any) => setError(err.message),
   });
 
-  const startEdit = (user: User) => {
-    setEditingUser(user);
-    setEditStatus(user.accountStatus);
-
-    // Handle userType - default to REGISTERED if not set
-    const userType = user.userType || 'REGISTERED';
-    setEditUserType(userType);
-
-    // For Student/Mehmaan, force roles to just USER (same logic as onChange)
-    if (userType !== 'REGISTERED') {
-      setEditRoles(['USER']);
-      // Convert ISO date to YYYY-MM-DD for the date input
-      setEditExpiresAt(user.accountExpiresAt ? user.accountExpiresAt.split('T')[0] : '');
-    } else {
-      setEditRoles([...user.roles]);
-      setEditExpiresAt(''); // Registered users don't have expiration
-    }
-
+  const resetForm = () => {
+    setShowForm(false);
+    setEditingUserId(null);
+    setFormData(initialFormData);
     setError(null);
   };
 
-  const cancelEdit = () => {
-    setEditingUser(null);
+  const startCreate = () => {
+    setEditingUserId(null);
+    setFormData(initialFormData);
+    setShowForm(true);
     setError(null);
+  };
+
+  const startEdit = (user: User) => {
+    setEditingUserId(user.id);
+    setFormData({
+      itsNumber: user.itsNumber,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone || '',
+      password: '', // Not used for editing
+      pickupZoneId: user.pickupZoneId ? String(user.pickupZoneId) : '',
+      roles: user.userType !== 'REGISTERED' ? ['USER'] : [...user.roles],
+      userType: user.userType || 'REGISTERED',
+      accountExpiresAt: user.accountExpiresAt ? user.accountExpiresAt.split('T')[0] : '',
+      accountStatus: user.accountStatus,
+    });
+    setShowForm(true);
+    setError(null);
+  };
+
+  const handleUserTypeChange = (newType: UserType) => {
+    setFormData({
+      ...formData,
+      userType: newType,
+      // Clear expiration when switching to Registered
+      accountExpiresAt: newType === 'REGISTERED' ? '' : formData.accountExpiresAt,
+      // Reset roles to just USER for Student/Mehmaan
+      roles: newType === 'REGISTERED' ? formData.roles : ['USER'],
+    });
   };
 
   const toggleRole = (role: string) => {
-    if (editRoles.includes(role)) {
-      // Don't allow removing USER role - it's required
-      if (role === 'USER') return;
-      setEditRoles(editRoles.filter((r) => r !== role));
+    if (role === 'USER') return; // USER role is required
+    if (formData.roles.includes(role)) {
+      setFormData({ ...formData, roles: formData.roles.filter((r) => r !== role) });
     } else {
-      setEditRoles([...editRoles, role]);
+      setFormData({ ...formData, roles: [...formData.roles, role] });
     }
   };
 
-  const toggleCreateRole = (role: string) => {
-    if (createForm.roles.includes(role)) {
-      // Don't allow removing USER role - it's required
-      if (role === 'USER') return;
-      setCreateForm({ ...createForm, roles: createForm.roles.filter((r) => r !== role) });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (isEditing && editingUserId) {
+      // Get original user data for comparison
+      const originalUser = users?.find(u => u.id === editingUserId);
+      if (!originalUser) return;
+
+      const promises: Promise<any>[] = [];
+
+      // Check what changed and call appropriate endpoints
+      const infoChanged =
+        formData.firstName !== originalUser.firstName ||
+        formData.lastName !== originalUser.lastName ||
+        formData.email !== originalUser.email ||
+        formData.phone !== (originalUser.phone || '') ||
+        formData.pickupZoneId !== (originalUser.pickupZoneId ? String(originalUser.pickupZoneId) : '');
+
+      const rolesChanged = JSON.stringify([...formData.roles].sort()) !== JSON.stringify([...originalUser.roles].sort());
+      const statusChanged = formData.accountStatus !== originalUser.accountStatus;
+      const userTypeChanged = formData.userType !== originalUser.userType;
+      const expiresAtChanged = formData.accountExpiresAt !== (originalUser.accountExpiresAt?.split('T')[0] || '');
+
+      if (infoChanged) {
+        promises.push(updateUserInfoMutation.mutateAsync({ id: editingUserId, data: formData }));
+      }
+      if (rolesChanged) {
+        promises.push(updateRolesMutation.mutateAsync({ id: editingUserId, roles: formData.roles }));
+      }
+      if (statusChanged) {
+        promises.push(updateStatusMutation.mutateAsync({ id: editingUserId, status: formData.accountStatus }));
+      }
+      if (userTypeChanged || expiresAtChanged) {
+        promises.push(updateUserTypeMutation.mutateAsync({
+          id: editingUserId,
+          userType: formData.userType,
+          accountExpiresAt: formData.accountExpiresAt || null,
+        }));
+      }
+
+      if (promises.length > 0) {
+        try {
+          await Promise.all(promises);
+          resetForm();
+        } catch {
+          // Error is handled by individual mutations
+        }
+      } else {
+        resetForm();
+      }
     } else {
-      setCreateForm({ ...createForm, roles: [...createForm.roles, role] });
-    }
-  };
-
-  const saveChanges = () => {
-    if (!editingUser) return;
-
-    const rolesChanged = JSON.stringify([...editRoles].sort()) !== JSON.stringify([...editingUser.roles].sort());
-    const statusChanged = editStatus !== editingUser.accountStatus;
-    const userTypeChanged = editUserType !== editingUser.userType;
-    const expiresAtChanged = editExpiresAt !== (editingUser.accountExpiresAt?.split('T')[0] || '');
-
-    if (rolesChanged) {
-      updateRolesMutation.mutate({ id: editingUser.id, roles: editRoles });
-    }
-    if (statusChanged) {
-      updateStatusMutation.mutate({ id: editingUser.id, status: editStatus });
-    }
-    if (userTypeChanged || expiresAtChanged) {
-      updateUserTypeMutation.mutate({
-        id: editingUser.id,
-        userType: editUserType,
-        accountExpiresAt: editExpiresAt || null,
-      });
-    }
-    if (!rolesChanged && !statusChanged && !userTypeChanged && !expiresAtChanged) {
-      setEditingUser(null);
+      createUserMutation.mutate(formData);
     }
   };
 
   const extendByDays = (days: number) => {
-    if (!editingUser) return;
+    if (!editingUserId) return;
     const newDate = new Date();
     newDate.setDate(newDate.getDate() + days);
     extendExpirationMutation.mutate({
-      id: editingUser.id,
+      id: editingUserId,
       newExpiresAt: newDate.toISOString().split('T')[0],
     });
   };
 
   const handleConvertToRegistered = () => {
-    if (!editingUser) return;
-    convertToRegisteredMutation.mutate(editingUser.id);
-  };
-
-  const handleCreateSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    createUserMutation.mutate(createForm);
+    if (!editingUserId) return;
+    convertToRegisteredMutation.mutate(editingUserId);
   };
 
   const filteredUsers = users?.filter((user) => {
@@ -313,6 +373,15 @@ export default function UserList() {
       user.itsNumber.toLowerCase().includes(term)
     );
   });
+
+  const isSaving = createUserMutation.isPending ||
+    updateUserInfoMutation.isPending ||
+    updateRolesMutation.isPending ||
+    updateStatusMutation.isPending ||
+    updateUserTypeMutation.isPending;
+
+  // Get original user for showing expired warning
+  const editingUser = editingUserId ? users?.find(u => u.id === editingUserId) : null;
 
   if (isLoading) {
     return (
@@ -336,9 +405,9 @@ export default function UserList() {
           <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
             {users?.length || 0} users
           </span>
-          {!showCreateForm && (
+          {!showForm && (
             <button
-              onClick={() => setShowCreateForm(true)}
+              onClick={startCreate}
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -350,45 +419,65 @@ export default function UserList() {
         </div>
       </div>
 
-      {error && (
+      {error && !showForm && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">{error}</div>
       )}
 
-      {/* Create User Form */}
-      {showCreateForm && (
+      {/* Create/Edit User Form */}
+      {showForm && (
         <div className="card">
-          <h2 className="text-lg font-semibold mb-4">Create New User</h2>
-          <form onSubmit={handleCreateSubmit} className="space-y-4">
+          <h2 className="text-lg font-semibold mb-4">
+            {isEditing ? `Edit User: ${editingUser?.firstName} ${editingUser?.lastName}` : 'Create New User'}
+          </h2>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">{error}</div>
+          )}
+
+          {isEditing && editingUser?.isExpired && (
+            <div className="bg-red-100 text-red-700 px-4 py-2 rounded mb-4">
+              This user's account has expired and they cannot log in.
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* ITS Number and Email - ITS only for create */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">ITS Number *</label>
-                <input
-                  className="input"
-                  value={createForm.itsNumber}
-                  onChange={(e) => setCreateForm({ ...createForm, itsNumber: e.target.value })}
-                  placeholder="e.g., 30702040"
-                  required
-                />
+                {isEditing ? (
+                  <div className="input bg-gray-50 text-gray-600">{formData.itsNumber}</div>
+                ) : (
+                  <input
+                    className="input"
+                    value={formData.itsNumber}
+                    onChange={(e) => setFormData({ ...formData, itsNumber: e.target.value })}
+                    placeholder="e.g., 30702040"
+                    required
+                  />
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Email *</label>
                 <input
                   type="email"
                   className="input"
-                  value={createForm.email}
-                  onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="user@example.com"
                   required
                 />
               </div>
             </div>
+
+            {/* First Name and Last Name */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">First Name *</label>
                 <input
                   className="input"
-                  value={createForm.firstName}
-                  onChange={(e) => setCreateForm({ ...createForm, firstName: e.target.value })}
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                   placeholder="First name"
                   required
                 />
@@ -397,85 +486,133 @@ export default function UserList() {
                 <label className="block text-sm font-medium mb-1">Last Name *</label>
                 <input
                   className="input"
-                  value={createForm.lastName}
-                  onChange={(e) => setCreateForm({ ...createForm, lastName: e.target.value })}
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                   placeholder="Last name"
                   required
                 />
               </div>
             </div>
+
+            {/* Phone and Password */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Phone</label>
                 <input
                   className="input"
-                  value={createForm.phone}
-                  onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="(555) 123-4567"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Password *</label>
-                <input
-                  type="password"
-                  className="input"
-                  value={createForm.password}
-                  onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-                  placeholder="Initial password"
-                  required
-                />
-              </div>
+              {!isEditing && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Password *</label>
+                  <input
+                    type="password"
+                    className="input"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Initial password"
+                    required
+                  />
+                </div>
+              )}
+              {isEditing && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Account Status</label>
+                  <select
+                    className="input"
+                    value={formData.accountStatus}
+                    onChange={(e) => setFormData({ ...formData, accountStatus: e.target.value as AccountStatus })}
+                  >
+                    <option value="ACTIVE">Active</option>
+                    <option value="LOCKED">Locked</option>
+                    <option value="DISABLED">Disabled</option>
+                  </select>
+                </div>
+              )}
             </div>
-            <div className={`grid gap-4 ${createForm.userType === 'REGISTERED' ? 'grid-cols-1' : 'grid-cols-2'}`}>
+
+            {/* User Type and Expires At */}
+            <div className={`grid gap-4 ${formData.userType === 'REGISTERED' ? 'grid-cols-1' : 'grid-cols-2'}`}>
               <div>
                 <label className="block text-sm font-medium mb-1">User Type *</label>
                 <select
                   className="input"
-                  value={createForm.userType}
-                  onChange={(e) => {
-                    const newType = e.target.value as UserType;
-                    setCreateForm({
-                      ...createForm,
-                      userType: newType,
-                      // Clear expiration when switching to Registered
-                      accountExpiresAt: newType === 'REGISTERED' ? '' : createForm.accountExpiresAt,
-                      // Reset roles to just USER for Student/Mehmaan
-                      roles: newType === 'REGISTERED' ? createForm.roles : ['USER'],
-                    });
-                  }}
+                  value={formData.userType}
+                  onChange={(e) => handleUserTypeChange(e.target.value as UserType)}
                 >
                   <option value="REGISTERED">Registered (Permanent)</option>
                   <option value="STUDENT">Student (60 days default)</option>
                   <option value="MEHMAAN">Mehmaan (30 days default)</option>
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  {createForm.userType === 'REGISTERED' && 'Permanent member with no expiration'}
-                  {createForm.userType === 'STUDENT' && 'Temporary access - expires in 60 days by default'}
-                  {createForm.userType === 'MEHMAAN' && 'Guest access - expires in 30 days by default'}
+                  {formData.userType === 'REGISTERED' && 'Permanent member with no expiration'}
+                  {formData.userType === 'STUDENT' && 'Temporary access - expires in 60 days by default'}
+                  {formData.userType === 'MEHMAAN' && 'Guest access - expires in 30 days by default'}
                 </p>
               </div>
-              {createForm.userType !== 'REGISTERED' && (
+              {formData.userType !== 'REGISTERED' && (
                 <div>
                   <label className="block text-sm font-medium mb-1">Expires At</label>
                   <input
                     type="date"
                     className="input"
-                    value={createForm.accountExpiresAt}
-                    onChange={(e) => setCreateForm({ ...createForm, accountExpiresAt: e.target.value })}
+                    value={formData.accountExpiresAt}
+                    onChange={(e) => setFormData({ ...formData, accountExpiresAt: e.target.value })}
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Leave empty for default: {getDefaultExpirationDate(createForm.userType)}
+                    Leave empty for default: {getDefaultExpirationDate(formData.userType)}
                   </p>
                 </div>
               )}
             </div>
+
+            {/* Quick Actions for Student/Mehmaan (Edit mode only) */}
+            {isEditing && formData.userType !== 'REGISTERED' && (
+              <div className="bg-gray-50 rounded-lg p-4">
+                <label className="block text-sm font-medium mb-2">Quick Actions</label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => extendByDays(30)}
+                    className="px-3 py-1.5 bg-green-100 text-green-700 rounded text-sm hover:bg-green-200 transition-colors"
+                    disabled={extendExpirationMutation.isPending}
+                  >
+                    +30 Days
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => extendByDays(60)}
+                    className="px-3 py-1.5 bg-green-100 text-green-700 rounded text-sm hover:bg-green-200 transition-colors"
+                    disabled={extendExpirationMutation.isPending}
+                  >
+                    +60 Days
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConvertToRegistered}
+                    className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200 transition-colors"
+                    disabled={convertToRegisteredMutation.isPending}
+                  >
+                    Convert to Registered
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Quick actions save immediately without needing to click Save
+                </p>
+              </div>
+            )}
+
+            {/* Pickup Zone and Roles */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Pickup Zone</label>
                 <select
                   className="input"
-                  value={createForm.pickupZoneId}
-                  onChange={(e) => setCreateForm({ ...createForm, pickupZoneId: e.target.value })}
+                  value={formData.pickupZoneId}
+                  onChange={(e) => setFormData({ ...formData, pickupZoneId: e.target.value })}
                 >
                   <option value="">-- No zone --</option>
                   {zones?.filter(z => z.active).map((zone) => (
@@ -485,17 +622,17 @@ export default function UserList() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Roles</label>
-                {createForm.userType === 'REGISTERED' ? (
+                {formData.userType === 'REGISTERED' ? (
                   <>
                     <div className="flex flex-wrap gap-2 mt-1">
                       {availableRoles?.map((role) => (
                         <button
                           key={role.name}
                           type="button"
-                          onClick={() => toggleCreateRole(role.name)}
+                          onClick={() => toggleRole(role.name)}
                           disabled={role.name === 'USER'}
                           className={`px-3 py-1 rounded-full text-sm border transition-colors ${
-                            createForm.roles.includes(role.name)
+                            formData.roles.includes(role.name)
                               ? 'bg-blue-600 text-white border-blue-600'
                               : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
                           } ${role.name === 'USER' ? 'opacity-75 cursor-not-allowed' : ''}`}
@@ -515,28 +652,26 @@ export default function UserList() {
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
-                      {createForm.userType === 'STUDENT' ? 'Students' : 'Mehmaan'} can only have the User role
+                      {formData.userType === 'STUDENT' ? 'Students' : 'Mehmaan'} can only have the User role
                     </p>
                   </>
                 )}
               </div>
             </div>
-            <div className="flex gap-2">
+
+            {/* Form Actions */}
+            <div className="flex gap-2 pt-4">
               <button
                 type="submit"
                 className="btn"
-                disabled={createUserMutation.isPending}
+                disabled={isSaving}
               >
-                {createUserMutation.isPending ? 'Creating...' : 'Create User'}
+                {isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Create User')}
               </button>
               <button
                 type="button"
                 className="btn bg-gray-500"
-                onClick={() => {
-                  setShowCreateForm(false);
-                  setCreateForm(initialCreateForm);
-                  setError(null);
-                }}
+                onClick={resetForm}
               >
                 Cancel
               </button>
@@ -560,165 +695,6 @@ export default function UserList() {
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
-
-      {/* Edit Modal */}
-      {editingUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-semibold mb-4">
-              Edit User: {editingUser.firstName} {editingUser.lastName}
-            </h2>
-
-            {editingUser.isExpired && (
-              <div className="bg-red-100 text-red-700 px-4 py-2 rounded mb-4">
-                This user's account has expired and they cannot log in.
-              </div>
-            )}
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Roles</label>
-                {editUserType === 'REGISTERED' ? (
-                  <>
-                    <div className="flex flex-wrap gap-2">
-                      {availableRoles?.map((role) => (
-                        <button
-                          key={role.name}
-                          type="button"
-                          onClick={() => toggleRole(role.name)}
-                          disabled={role.name === 'USER'}
-                          className={`px-3 py-1 rounded-full text-sm border transition-colors ${
-                            editRoles.includes(role.name)
-                              ? 'bg-blue-600 text-white border-blue-600'
-                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-                          } ${role.name === 'USER' ? 'opacity-75 cursor-not-allowed' : ''}`}
-                          title={role.name === 'USER' ? 'User role is required' : role.description || ''}
-                        >
-                          {formatRoleName(role.name)}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">User role is required and cannot be removed</p>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700 border border-gray-300">
-                        User
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {editUserType === 'STUDENT' ? 'Students' : 'Mehmaan'} can only have the User role
-                    </p>
-                  </>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Account Status</label>
-                <select
-                  className="input"
-                  value={editStatus}
-                  onChange={(e) => setEditStatus(e.target.value as AccountStatus)}
-                >
-                  <option value="ACTIVE">Active</option>
-                  <option value="LOCKED">Locked</option>
-                  <option value="DISABLED">Disabled</option>
-                </select>
-              </div>
-
-              <div className="border-t pt-4">
-                <label className="block text-sm font-medium mb-2">User Type</label>
-                <select
-                  className="input"
-                  value={editUserType}
-                  onChange={(e) => {
-                    const newType = e.target.value as UserType;
-                    setEditUserType(newType);
-                    // Clear expiration when switching to Registered
-                    if (newType === 'REGISTERED') {
-                      setEditExpiresAt('');
-                    }
-                    // Reset roles to just USER for Student/Mehmaan
-                    if (newType !== 'REGISTERED') {
-                      setEditRoles(['USER']);
-                    }
-                  }}
-                >
-                  <option value="REGISTERED">Registered (Permanent)</option>
-                  <option value="STUDENT">Student (Temporary)</option>
-                  <option value="MEHMAAN">Mehmaan (Guest)</option>
-                </select>
-              </div>
-
-              {editUserType !== 'REGISTERED' && (
-                <div>
-                  <label className="block text-sm font-medium mb-2">Expires At</label>
-                  <input
-                    type="date"
-                    className="input"
-                    value={editExpiresAt}
-                    onChange={(e) => setEditExpiresAt(e.target.value)}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Leave empty for default: {getDefaultExpirationDate(editUserType)}
-                  </p>
-                </div>
-              )}
-
-              {editUserType !== 'REGISTERED' && (
-                <div className="border-t pt-4">
-                  <label className="block text-sm font-medium mb-2">Quick Actions</label>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => extendByDays(30)}
-                      className="px-3 py-1.5 bg-green-100 text-green-700 rounded text-sm hover:bg-green-200 transition-colors"
-                      disabled={extendExpirationMutation.isPending}
-                    >
-                      +30 Days
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => extendByDays(60)}
-                      className="px-3 py-1.5 bg-green-100 text-green-700 rounded text-sm hover:bg-green-200 transition-colors"
-                      disabled={extendExpirationMutation.isPending}
-                    >
-                      +60 Days
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleConvertToRegistered}
-                      className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200 transition-colors"
-                      disabled={convertToRegisteredMutation.isPending}
-                    >
-                      Convert to Registered
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Quick actions save immediately without needing to click Save Changes
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-2 mt-6">
-              <button
-                onClick={saveChanges}
-                className="btn"
-                disabled={updateRolesMutation.isPending || updateStatusMutation.isPending || updateUserTypeMutation.isPending}
-              >
-                {updateRolesMutation.isPending || updateStatusMutation.isPending || updateUserTypeMutation.isPending
-                  ? 'Saving...'
-                  : 'Save Changes'}
-              </button>
-              <button onClick={cancelEdit} className="btn bg-gray-500">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Users Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">

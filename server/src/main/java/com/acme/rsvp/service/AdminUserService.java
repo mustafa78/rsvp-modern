@@ -14,6 +14,7 @@ import com.acme.rsvp.dto.AdminUserDtos.CreateUserRequest;
 import com.acme.rsvp.dto.AdminUserDtos.ExtendExpirationRequest;
 import com.acme.rsvp.dto.AdminUserDtos.UpdateRolesRequest;
 import com.acme.rsvp.dto.AdminUserDtos.UpdateStatusRequest;
+import com.acme.rsvp.dto.AdminUserDtos.UpdateUserInfoRequest;
 import com.acme.rsvp.dto.AdminUserDtos.UpdateUserTypeRequest;
 import com.acme.rsvp.dto.AdminUserDtos.UserListDto;
 import com.acme.rsvp.model.AccountStatus;
@@ -118,6 +119,32 @@ public class AdminUserService {
     }
 
     @Transactional
+    public UserListDto updateUserInfo(Long id, UpdateUserInfoRequest request) {
+        Person person = personRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + id));
+
+        // Check for duplicate email if changing
+        if (!person.getEmail().equals(request.email()) && personRepository.existsByEmail(request.email())) {
+            throw new IllegalArgumentException("Email already exists: " + request.email());
+        }
+
+        person.setFirstName(request.firstName());
+        person.setLastName(request.lastName());
+        person.setEmail(request.email());
+        person.setPhone(request.phone());
+
+        // Update pickup zone
+        if (request.pickupZoneId() != null) {
+            pickupZoneRepository.findById(request.pickupZoneId())
+                    .ifPresent(person::setPickupZone);
+        } else {
+            person.setPickupZone(null);
+        }
+
+        return toDto(personRepository.save(person));
+    }
+
+    @Transactional
     public UserListDto updateUserType(Long id, UpdateUserTypeRequest request) {
         Person person = personRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + id));
@@ -170,6 +197,7 @@ public class AdminUserService {
                 p.getUserType(),
                 p.getAccountExpiresAt(),
                 p.isExpired(),
+                p.getPickupZone() != null ? p.getPickupZone().getId() : null,
                 p.getPickupZone() != null ? p.getPickupZone().getName() : null,
                 p.getLastLoginAt());
     }

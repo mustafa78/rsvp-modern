@@ -15,6 +15,7 @@ import com.acme.rsvp.dto.AdminUserDtos.CreateUserRequest;
 import com.acme.rsvp.dto.AdminUserDtos.ExtendExpirationRequest;
 import com.acme.rsvp.dto.AdminUserDtos.UpdateRolesRequest;
 import com.acme.rsvp.dto.AdminUserDtos.UpdateStatusRequest;
+import com.acme.rsvp.dto.AdminUserDtos.UpdateUserInfoRequest;
 import com.acme.rsvp.dto.AdminUserDtos.UpdateUserTypeRequest;
 import com.acme.rsvp.dto.AdminUserDtos.UserListDto;
 import com.acme.rsvp.service.AdminUserService;
@@ -56,6 +57,12 @@ public class AdminUserController {
     public ResponseEntity<UserListDto> updateStatus(@PathVariable Long id,
             @Valid @RequestBody UpdateStatusRequest request) {
         return ResponseEntity.ok(adminUserService.updateStatus(id, request));
+    }
+
+    @PutMapping("/{id}/info")
+    public ResponseEntity<UserListDto> updateUserInfo(@PathVariable Long id,
+            @Valid @RequestBody UpdateUserInfoRequest request) {
+        return ResponseEntity.ok(adminUserService.updateUserInfo(id, request));
     }
 
     @PutMapping("/{id}/user-type")
