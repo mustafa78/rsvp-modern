@@ -400,11 +400,15 @@ export default function EventsPage() {
   }, [activeTab, upcomingEvents, pastEvents]);
 
   if (isLoading) {
-    return <div className="text-gray-500">Loading...</div>;
+    return (
+      <div className="max-w-6xl mx-auto px-4 lg:px-6 py-6">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="max-w-6xl mx-auto px-4 lg:px-6 py-6 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Events</h1>
