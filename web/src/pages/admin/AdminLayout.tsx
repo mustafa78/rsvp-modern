@@ -167,7 +167,7 @@ export default function AdminLayout() {
   return (
     <div className="flex min-h-[calc(100vh-7rem)]">
       {/* Sidebar */}
-      <aside className="w-60 bg-gray-900 text-white flex-shrink-0">
+      <aside className="w-56 lg:w-64 bg-gray-900 text-white flex-shrink-0">
         <div className="p-4 border-b border-gray-700">
           <h2 className="text-lg font-semibold">Admin Panel</h2>
         </div>
@@ -179,8 +179,10 @@ export default function AdminLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 bg-gray-50 p-6">
-        <Outlet />
+      <main className="flex-1 bg-gray-50 p-4 lg:p-8 overflow-x-auto">
+        <div className="max-w-[1600px]">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

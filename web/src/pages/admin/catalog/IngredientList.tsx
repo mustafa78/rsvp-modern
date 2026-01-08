@@ -11,18 +11,25 @@ type Ingredient = {
   unit: string;
   category: string | null;
   defaultStore: string | null;
+  storageLocation: string | null;
   notes: string | null;
 };
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   unit: z.string().min(1, 'Unit is required'),
+  category: z.string().optional(),
+  defaultStore: z.string().optional(),
+  storageLocation: z.string().optional(),
   notes: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
 
-const commonUnits = ['g', 'kg', 'lb', 'oz', 'tsp', 'tbsp', 'cup', 'ml', 'l', 'piece', 'bunch'];
+const commonUnits = ['g', 'kg', 'lb', 'oz', 'tsp', 'tbsp', 'cup', 'ml', 'l', 'piece', 'bunch', 'can', 'box', 'bag', 'jar'];
+const categories = ['produce', 'meat', 'dairy', 'non-perishable', 'frozen', 'pantry', 'bread', 'spices', 'beverages'];
+const stores = ['Costco', 'Indian Store', 'Grocery', 'Walmart', 'Target', 'Online'];
+const storageLocations = ['refrigerator', 'freezer', 'pantry', 'spice rack', 'counter', 'dry storage'];
 
 export default function IngredientList() {
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -60,6 +67,9 @@ export default function IngredientList() {
     defaultValues: {
       name: '',
       unit: 'g',
+      category: '',
+      defaultStore: '',
+      storageLocation: '',
       notes: '',
     },
   });
@@ -91,6 +101,9 @@ export default function IngredientList() {
     const payload = {
       name: values.name,
       unit: values.unit,
+      category: values.category || null,
+      defaultStore: values.defaultStore || null,
+      storageLocation: values.storageLocation || null,
       notes: values.notes || null,
     };
 
@@ -107,6 +120,9 @@ export default function IngredientList() {
     reset({
       name: ingredient.name,
       unit: ingredient.unit,
+      category: ingredient.category || '',
+      defaultStore: ingredient.defaultStore || '',
+      storageLocation: ingredient.storageLocation || '',
       notes: ingredient.notes || '',
     });
   };
@@ -117,6 +133,9 @@ export default function IngredientList() {
     reset({
       name: '',
       unit: 'g',
+      category: '',
+      defaultStore: '',
+      storageLocation: '',
       notes: '',
     });
     setError(null);
@@ -194,6 +213,41 @@ export default function IngredientList() {
                 {errors.unit && <p className="text-red-500 text-sm mt-1">{errors.unit.message}</p>}
               </div>
             </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Category</label>
+                <select className="input" {...register('category')}>
+                  <option value="">-- Select Category --</option>
+                  {categories.map((c) => (
+                    <option key={c} value={c}>
+                      {c.charAt(0).toUpperCase() + c.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Default Store</label>
+                <select className="input" {...register('defaultStore')}>
+                  <option value="">-- Select Store --</option>
+                  {stores.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Storage Location</label>
+                <select className="input" {...register('storageLocation')}>
+                  <option value="">-- Select Location --</option>
+                  {storageLocations.map((loc) => (
+                    <option key={loc} value={loc}>
+                      {loc.charAt(0).toUpperCase() + loc.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium mb-1">Notes</label>
               <textarea className="input" rows={2} {...register('notes')} placeholder="Optional notes" />
@@ -220,12 +274,13 @@ export default function IngredientList() {
           <table className="w-full text-left table-fixed">
             <thead>
               <tr className="bg-gray-50 border-b">
-                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[30%]">Name</th>
-                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[10%] text-center">Unit</th>
-                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[15%]">Category</th>
-                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[15%]">Store</th>
-                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[20%]">Notes</th>
-                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[10%] text-center">Actions</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[22%]">Name</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[8%] text-center">Unit</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[14%]">Category</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[12%]">Store</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[14%]">Storage</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[22%]">Notes</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[8%] text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -253,13 +308,20 @@ export default function IngredientList() {
                       <span className="text-sm text-gray-400">-</span>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-gray-500 text-sm truncate">
+                  <td className="py-3 px-4">
+                    {ingredient.storageLocation ? (
+                      <span className="text-sm text-gray-600 capitalize">{ingredient.storageLocation}</span>
+                    ) : (
+                      <span className="text-sm text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-gray-500 text-sm truncate" title={ingredient.notes || ''}>
                     {ingredient.notes || '-'}
                   </td>
                   <td className="py-3 px-4 text-center">
                     <button
                       onClick={() => startEdit(ingredient)}
-                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                      className="text-sm font-medium text-blue-600 hover:text-blue-800"
                     >
                       Edit
                     </button>

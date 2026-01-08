@@ -57,8 +57,10 @@ export default function App() {
             <span className="font-semibold">RSVP System</span>
           </div>
         </header>
-        <main className="max-w-6xl mx-auto px-4 py-6 flex-1">
-          <Outlet />
+        <main className="flex-1 px-4 py-6">
+          <div className="max-w-lg mx-auto">
+            <Outlet />
+          </div>
         </main>
         <footer className="border-t">
           <div className="max-w-6xl mx-auto px-4 py-4 text-center text-sm text-gray-500">
@@ -93,14 +95,15 @@ export default function App() {
   // Authenticated layout
   return (
     <div className="min-h-screen bg-neutral-50 text-black flex flex-col">
-      <header className="border-b">
-        <div className="max-w-6xl mx-auto px-4 h-12 flex items-center justify-between">
+      <header className="border-b bg-white">
+        <div className="px-4 lg:px-6 h-14 flex items-center justify-between">
           <nav className="space-x-6">
-            <Link to="/" className="font-semibold">Events</Link>
+            <Link to="/" className="font-semibold text-gray-900 hover:text-blue-600">Events</Link>
             {(user.roles?.includes('ADMIN') ||
               user.roles?.includes('NIYAZ_COORDINATOR') ||
-              user.roles?.includes('THAALI_COORDINATOR')) && (
-              <Link to="/admin">Admin</Link>
+              user.roles?.includes('THAALI_COORDINATOR') ||
+              user.roles?.includes('SHOPPING_COORDINATOR')) && (
+              <Link to="/admin" className="text-gray-600 hover:text-blue-600">Admin</Link>
             )}
           </nav>
           <nav className="flex items-center space-x-4">
@@ -109,18 +112,18 @@ export default function App() {
             </span>
             <button
               onClick={handleLogout}
-              className="text-sm underline hover:no-underline"
+              className="text-sm text-gray-500 hover:text-gray-700"
             >
               Logout
             </button>
           </nav>
         </div>
       </header>
-      <main className="max-w-6xl mx-auto px-4 py-6 flex-1">
+      <main className="flex-1">
         <Outlet />
       </main>
-      <footer className="border-t">
-        <div className="max-w-6xl mx-auto px-4 py-4 text-center text-sm text-gray-500">
+      <footer className="border-t bg-white">
+        <div className="px-4 py-4 text-center text-sm text-gray-500">
           Copyright © Anjuman-e-Ezzi, Washington DC. All Rights Reserved
         </div>
       </footer>
