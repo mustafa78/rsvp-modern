@@ -57,7 +57,7 @@ export default function ThaaliOrderForm({ eventId }: Props) {
     queryFn: () => api.me(),
   });
 
-  // Initialize selections when event menu loads
+  // Initialize menu selections when event menu loads
   useEffect(() => {
     if (event?.menu) {
       const initialSelections: MenuItemSelection[] = event.menu.map((item) => {
@@ -71,15 +71,21 @@ export default function ThaaliOrderForm({ eventId }: Props) {
       });
       setSelections(initialSelections);
 
-      // Set existing pickup zone and notes
+      // Set notes from existing order
       if (existingOrder) {
-        setPickupZoneId(existingOrder.pickupZoneId);
         setNotes(existingOrder.notes || '');
-      } else if (user?.pickupZoneId) {
-        setPickupZoneId(user.pickupZoneId);
       }
     }
-  }, [event, existingOrder, user]);
+  }, [event, existingOrder]);
+
+  // Set pickup zone: prefer existing order, then user's default
+  useEffect(() => {
+    if (existingOrder) {
+      setPickupZoneId(existingOrder.pickupZoneId);
+    } else if (user?.pickupZoneId && !pickupZoneId) {
+      setPickupZoneId(user.pickupZoneId);
+    }
+  }, [existingOrder, user, pickupZoneId]);
 
   const submitMutation = useMutation({
     mutationFn: async (request: ThaaliOrderRequest) => {
