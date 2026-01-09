@@ -113,8 +113,9 @@ public class AuthController {
 	public ResponseEntity<?> me(@AuthenticationPrincipal Person me) {
 		if (me == null)
 			return ResponseEntity.status(401).build();
+		Long pickupZoneId = me.getPickupZone() != null ? me.getPickupZone().getId() : null;
 		return ResponseEntity.ok(
-				new AuthResponse(me.getId(), me.getItsNumber(), me.getFirstName(), me.getLastName(), me.getEmail(), me.getPhone(), me.getRoles()));
+				new AuthResponse(me.getId(), me.getItsNumber(), me.getFirstName(), me.getLastName(), me.getEmail(), me.getPhone(), me.getRoles(), pickupZoneId));
 	}
 
 	@PostMapping("/password/change")
