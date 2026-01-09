@@ -59,7 +59,7 @@ export default function EventCard({ e }: { e: Event }) {
           className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
           to={`/events/${e.id}/rsvp`}
         >
-          {isNiyaz ? 'RSVP' : 'Order'}
+          {isNiyaz ? 'RSVP' : 'Register'}
         </Link>
       </div>
     </div>

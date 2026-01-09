@@ -567,11 +567,11 @@ export default function ThaaliOrderReport() {
       [event.title],
       [event.eventDate],
       [''],
-      ['Order Summary'],
+      ['Thaali Summary'],
       ['Large (1 qt)', counts?.large || 0],
       ['Small (½ qt)', counts?.small || 0],
       ['Barakati (¼ qt)', counts?.barakati || 0],
-      ['Total Orders', totalOrders],
+      ['Total Registrations', totalOrders],
       ['Total Quarts', counts?.totalQuarts?.toFixed(2) || '0.00'],
     ];
     const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
@@ -615,7 +615,7 @@ export default function ThaaliOrderReport() {
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(255);
-    doc.text('Order Summary', 16, yPos);
+    doc.text('Thaali Summary', 16, yPos);
     yPos += 10;
 
     doc.setTextColor(0);
@@ -793,7 +793,7 @@ export default function ThaaliOrderReport() {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(31, 41, 55);
-    doc.text('Order Summary', 18, yPos + 5);
+    doc.text('Thaali Summary', 18, yPos + 5);
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);

@@ -123,7 +123,7 @@ export default function RsvpPage() {
             <div className={`p-6 ${isClosed ? 'bg-red-50' : 'bg-amber-50'}`}>
               <p className={`text-lg ${isClosed ? 'text-red-700' : 'text-amber-700'}`}>
                 {isClosed
-                  ? `The deadline to ${isNiyaz ? 'RSVP' : 'place your order'} for "${event.title}" has passed.`
+                  ? `The deadline to ${isNiyaz ? 'RSVP' : 'register'} for "${event.title}" has passed.`
                   : notYetOpen
                   ? `Registration for "${event.title}" will open on ${registrationOpenAt?.toLocaleDateString('en-US', {
                       weekday: 'long',
@@ -287,7 +287,7 @@ export default function RsvpPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="border-b pb-4 mb-6">
               <h2 className="text-xl font-semibold text-gray-900">
-                {isNiyaz ? 'RSVP for this Event' : 'Place Your Order'}
+                {isNiyaz ? 'RSVP for this Event' : 'Register for Thaali'}
               </h2>
               <p className="text-sm text-gray-500 mt-1">
                 {isNiyaz

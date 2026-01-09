@@ -348,7 +348,7 @@ END:VCALENDAR`
                   ? 'text-amber-600'
                   : 'text-blue-600'
               }`}>
-                The deadline to {isNiyaz ? 'RSVP' : 'place your order'} is <strong>{formatDeadlineDate(registrationCloseAt)}</strong>
+                The deadline to {isNiyaz ? 'RSVP' : 'register'} is <strong>{formatDeadlineDate(registrationCloseAt)}</strong>
               </p>
             </div>
           )}
@@ -363,7 +363,7 @@ END:VCALENDAR`
               }`}
               to={`/events/${id}/rsvp`}
             >
-              {isNiyaz ? 'RSVP to this Event' : 'Place Your Order'}
+              {isNiyaz ? 'RSVP to this Event' : 'Register for Thaali'}
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>
