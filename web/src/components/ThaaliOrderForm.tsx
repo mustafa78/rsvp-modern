@@ -88,10 +88,10 @@ export default function ThaaliOrderForm({ eventId }: Props) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-thaali-order', eventId] });
       setError(null);
-      alert('Your order has been saved!');
+      alert('Your thaali registration has been saved!');
     },
     onError: (err: Error) => {
-      setError(err.message || 'Failed to save order');
+      setError(err.message || 'Failed to save thaali registration');
     },
   });
 
@@ -221,7 +221,7 @@ export default function ThaaliOrderForm({ eventId }: Props) {
 
       {/* Summary */}
       <div className="bg-gray-50 rounded p-4">
-        <h4 className="font-medium mb-2">Order Summary</h4>
+        <h4 className="font-medium mb-2">Thaali Summary</h4>
         {selections.filter((s) => s.size !== null).length === 0 ? (
           <p className="text-gray-500 text-sm">No items selected</p>
         ) : (
@@ -246,8 +246,8 @@ export default function ThaaliOrderForm({ eventId }: Props) {
         {submitMutation.isPending
           ? 'Saving...'
           : existingOrder
-          ? 'Update Order'
-          : 'Place Order'}
+          ? 'Update Thaali'
+          : 'Register'}
       </button>
     </form>
   );

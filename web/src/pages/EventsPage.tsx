@@ -182,7 +182,7 @@ function EventRow({ event, isPast, idx }: { event: Event; isPast: boolean; idx: 
   // Determine button text
   const buttonText = hasRegistered
     ? 'Update'
-    : (isNiyaz ? 'RSVP' : 'Order');
+    : (isNiyaz ? 'RSVP' : 'Register');
 
   return (
     <tr className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${isPast ? 'opacity-75' : ''}`}>
