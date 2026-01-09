@@ -289,9 +289,12 @@ export default function DishList() {
 
             {/* Ingredients Section */}
             <div className="border-t pt-4 mt-4">
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium mb-1">
                 Ingredients ({selectedIngredients.length} selected)
               </label>
+              <p className="text-xs text-gray-500 mb-2">
+                Specify the quantity of each ingredient needed per quart of this dish.
+              </p>
 
               {/* Ingredient Search */}
               <div className="relative mb-3" ref={ingredientSearchRef}>
@@ -333,20 +336,19 @@ export default function DishList() {
                 <div className="border rounded-md divide-y">
                   {selectedIngredients.map((ing) => (
                     <div key={ing.ingredientId} className="flex items-center gap-3 p-2">
-                      <div className="flex-1">
-                        <span className="font-medium">{ing.name}</span>
-                        <span className="text-gray-400 text-sm ml-2">({ing.unit})</span>
-                      </div>
+                      <div className="flex-1 font-medium">{ing.name}</div>
                       <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-500">Qty/qt:</label>
                         <input
                           type="number"
                           step="0.001"
                           min="0"
-                          className="input w-24 text-right"
+                          className="input w-20 text-right"
                           value={ing.qtyPerQuart}
                           onChange={(e) => updateIngredientQty(ing.ingredientId, e.target.value)}
                         />
+                        <span className="text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded w-20 text-center">
+                          {ing.unit}
+                        </span>
                       </div>
                       <button
                         type="button"
