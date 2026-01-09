@@ -10,6 +10,7 @@ import com.acme.rsvp.repository.IngredientRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,9 +21,10 @@ public class DishService {
   private final DishRepository dishes;
   private final DishIngredientRepository dishIngs;
   private final IngredientRepository ingredients;
+  private final EntityManager em;
 
-  public DishService(DishRepository dishes, DishIngredientRepository dishIngs, IngredientRepository ingredients){
-    this.dishes = dishes; this.dishIngs = dishIngs; this.ingredients = ingredients;
+  public DishService(DishRepository dishes, DishIngredientRepository dishIngs, IngredientRepository ingredients, EntityManager em){
+    this.dishes = dishes; this.dishIngs = dishIngs; this.ingredients = ingredients; this.em = em;
   }
 
   public DishDto create(DishUpsertRequest req){
@@ -52,7 +54,11 @@ public class DishService {
 
   private void upsertIngredients(Dish d, List<DishIngredientUpsert> ins){
     if(ins==null) return;
+    // Clear existing ingredients and flush to avoid NonUniqueObjectException
+    // when re-adding the same ingredient with different quantities
     d.getIngredients().clear();
+    em.flush();
+
     for (DishIngredientUpsert i : ins){
       Ingredient ing = ingredients.findById(i.ingredientId()).orElseThrow();
       DishIngredient di = new DishIngredient();
