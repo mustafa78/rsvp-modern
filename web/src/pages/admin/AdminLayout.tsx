@@ -53,6 +53,10 @@ const getNavItems = (roles: string[]): NavItem[] => {
         { label: 'Dishes', path: '/admin/catalog/dishes' },
         { label: 'Ingredients', path: '/admin/catalog/ingredients' },
         { label: 'Chefs', path: '/admin/catalog/chefs' },
+        { label: 'Categories', path: '/admin/catalog/categories' },
+        { label: 'Stores', path: '/admin/catalog/stores' },
+        { label: 'Storage Locations', path: '/admin/catalog/storage-locations' },
+        { label: 'Units', path: '/admin/catalog/units' },
       ],
     });
   }

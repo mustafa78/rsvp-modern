@@ -15,6 +15,13 @@ type Ingredient = {
   notes: string | null;
 };
 
+type LookupItem = {
+  id: number;
+  name: string;
+  displayOrder: number;
+  active: boolean;
+};
+
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   unit: z.string().min(1, 'Unit is required'),
@@ -26,11 +33,6 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-const commonUnits = ['g', 'kg', 'lb', 'oz', 'tsp', 'tbsp', 'cup', 'ml', 'l', 'piece', 'bunch', 'can', 'box', 'bag', 'jar'];
-const categories = ['produce', 'meat', 'dairy', 'non-perishable', 'frozen', 'pantry', 'bread', 'spices', 'beverages'];
-const stores = ['Costco', 'Indian Store', 'Grocery', 'Walmart', 'Target', 'Online'];
-const storageLocations = ['refrigerator', 'freezer', 'pantry', 'spice rack', 'counter', 'dry storage'];
-
 export default function IngredientList() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -41,6 +43,27 @@ export default function IngredientList() {
   const { data: ingredients, isLoading } = useQuery<Ingredient[]>({
     queryKey: ['ingredients'],
     queryFn: async () => (await api.get('/ingredients')).data,
+  });
+
+  // Fetch lookup data
+  const { data: categories = [] } = useQuery<LookupItem[]>({
+    queryKey: ['ingredient-lookups', 'categories'],
+    queryFn: async () => (await api.get('/ingredient-lookups/categories')).data,
+  });
+
+  const { data: stores = [] } = useQuery<LookupItem[]>({
+    queryKey: ['ingredient-lookups', 'stores'],
+    queryFn: async () => (await api.get('/ingredient-lookups/stores')).data,
+  });
+
+  const { data: storageLocations = [] } = useQuery<LookupItem[]>({
+    queryKey: ['ingredient-lookups', 'storage-locations'],
+    queryFn: async () => (await api.get('/ingredient-lookups/storage-locations')).data,
+  });
+
+  const { data: units = [] } = useQuery<LookupItem[]>({
+    queryKey: ['ingredient-lookups', 'units'],
+    queryFn: async () => (await api.get('/ingredient-lookups/units')).data,
   });
 
   // Filter ingredients based on search query
@@ -66,7 +89,7 @@ export default function IngredientList() {
     resolver: zodResolver(schema),
     defaultValues: {
       name: '',
-      unit: 'g',
+      unit: '',
       category: '',
       defaultStore: '',
       storageLocation: '',
@@ -132,7 +155,7 @@ export default function IngredientList() {
     setShowForm(false);
     reset({
       name: '',
-      unit: 'g',
+      unit: '',
       category: '',
       defaultStore: '',
       storageLocation: '',
@@ -204,9 +227,10 @@ export default function IngredientList() {
               <div>
                 <label className="block text-sm font-medium mb-1">Unit *</label>
                 <select className="input" {...register('unit')}>
-                  {commonUnits.map((u) => (
-                    <option key={u} value={u}>
-                      {u}
+                  <option value="">-- Select Unit --</option>
+                  {units.map((u) => (
+                    <option key={u.id} value={u.name}>
+                      {u.name}
                     </option>
                   ))}
                 </select>
@@ -219,8 +243,8 @@ export default function IngredientList() {
                 <select className="input" {...register('category')}>
                   <option value="">-- Select Category --</option>
                   {categories.map((c) => (
-                    <option key={c} value={c}>
-                      {c.charAt(0).toUpperCase() + c.slice(1)}
+                    <option key={c.id} value={c.name}>
+                      {c.name.charAt(0).toUpperCase() + c.name.slice(1)}
                     </option>
                   ))}
                 </select>
@@ -230,8 +254,8 @@ export default function IngredientList() {
                 <select className="input" {...register('defaultStore')}>
                   <option value="">-- Select Store --</option>
                   {stores.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
+                    <option key={s.id} value={s.name}>
+                      {s.name}
                     </option>
                   ))}
                 </select>
@@ -241,8 +265,8 @@ export default function IngredientList() {
                 <select className="input" {...register('storageLocation')}>
                   <option value="">-- Select Location --</option>
                   {storageLocations.map((loc) => (
-                    <option key={loc} value={loc}>
-                      {loc.charAt(0).toUpperCase() + loc.slice(1)}
+                    <option key={loc.id} value={loc.name}>
+                      {loc.name.charAt(0).toUpperCase() + loc.name.slice(1)}
                     </option>
                   ))}
                 </select>
