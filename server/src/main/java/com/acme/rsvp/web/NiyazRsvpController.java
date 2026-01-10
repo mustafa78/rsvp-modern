@@ -32,6 +32,9 @@ public class NiyazRsvpController {
             @PathVariable Long eventId,
             @Valid @RequestBody NiyazRsvpRequest request,
             @AuthenticationPrincipal Person user) {
+        if (!user.isHof()) {
+            throw new IllegalStateException("Only Head of Family (HOF) users can submit RSVPs");
+        }
         return service.upsert(eventId, user.getId(), request.adults(), request.kids());
     }
 

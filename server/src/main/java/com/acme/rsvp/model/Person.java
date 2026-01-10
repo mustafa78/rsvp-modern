@@ -67,6 +67,9 @@ public class Person extends Auditable {
 	@Column(name = "account_expires_at")
 	private java.time.Instant accountExpiresAt;
 
+	@Column(name = "is_hof", nullable = false)
+	private boolean hof = true;
+
 	@Column(name = "reset_token", length = 100)
 	private String resetToken;
 
@@ -202,6 +205,14 @@ public class Person extends Auditable {
 
 	public void setAccountExpiresAt(java.time.Instant accountExpiresAt) {
 		this.accountExpiresAt = accountExpiresAt;
+	}
+
+	public boolean isHof() {
+		return hof;
+	}
+
+	public void setHof(boolean hof) {
+		this.hof = hof;
 	}
 
 	/**

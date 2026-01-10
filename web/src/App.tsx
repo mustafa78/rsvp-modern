@@ -11,6 +11,7 @@ type User = {
   lastName: string;
   email: string;
   roles: string[];
+  isHof: boolean;
 };
 
 // Public routes that don't require authentication
@@ -29,12 +30,27 @@ export default function App() {
 
   const isPublicRoute = PUBLIC_ROUTES.some(route => location.pathname.startsWith(route));
 
+  // Check if user has any admin role
+  const hasAdminRole = user?.roles?.some(role =>
+    ['ADMIN', 'NIYAZ_COORDINATOR', 'THAALI_COORDINATOR', 'SHOPPING_COORDINATOR'].includes(role)
+  );
+
   // Redirect to login if not authenticated and not on a public route
+  // Redirect non-HOF users away from events pages to admin
   useEffect(() => {
     if (!isLoading && !user && !isPublicRoute) {
       navigate('/login', { replace: true });
     }
-  }, [isLoading, user, isPublicRoute, navigate]);
+    // Non-HOF users should be redirected to admin if they try to access events
+    if (!isLoading && user && !user.isHof && !isPublicRoute) {
+      const isEventsRoute = location.pathname === '/' ||
+        location.pathname.startsWith('/events') ||
+        location.pathname.startsWith('/rsvp');
+      if (isEventsRoute && hasAdminRole) {
+        navigate('/admin', { replace: true });
+      }
+    }
+  }, [isLoading, user, isPublicRoute, navigate, location.pathname, hasAdminRole]);
 
   const handleLogout = async () => {
     try {
@@ -98,12 +114,11 @@ export default function App() {
       <header className="border-b bg-white">
         <div className="px-4 lg:px-6 h-14 flex items-center justify-between">
           <nav className="space-x-6">
-            <Link to="/" className="font-semibold text-gray-900 hover:text-blue-600">Events</Link>
-            {(user.roles?.includes('ADMIN') ||
-              user.roles?.includes('NIYAZ_COORDINATOR') ||
-              user.roles?.includes('THAALI_COORDINATOR') ||
-              user.roles?.includes('SHOPPING_COORDINATOR')) && (
-              <Link to="/admin" className="text-gray-600 hover:text-blue-600">Admin</Link>
+            {user.isHof && (
+              <Link to="/" className="font-semibold text-gray-900 hover:text-blue-600">Events</Link>
+            )}
+            {hasAdminRole && (
+              <Link to="/admin" className={user.isHof ? "text-gray-600 hover:text-blue-600" : "font-semibold text-gray-900 hover:text-blue-600"}>Admin</Link>
             )}
           </nav>
           <nav className="flex items-center space-x-4">

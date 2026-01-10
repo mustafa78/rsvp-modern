@@ -172,6 +172,6 @@ public class AuthService {
 
 	private static AuthResponse toAuthResponse(Person p) {
 		Long pickupZoneId = p.getPickupZone() != null ? p.getPickupZone().getId() : null;
-		return new AuthResponse(p.getId(), p.getItsNumber(), p.getFirstName(), p.getLastName(), p.getEmail(), p.getPhone(), p.getRoles(), pickupZoneId);
+		return new AuthResponse(p.getId(), p.getItsNumber(), p.getFirstName(), p.getLastName(), p.getEmail(), p.getPhone(), p.getRoles(), pickupZoneId, p.isHof());
 	}
 }

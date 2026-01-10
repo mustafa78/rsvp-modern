@@ -24,6 +24,7 @@ public class AdminUserDtos {
             UserType userType,
             Instant accountExpiresAt,
             boolean isExpired,
+            boolean isHof,
             Long pickupZoneId,
             String pickupZoneName,
             Instant lastLoginAt) {
@@ -39,7 +40,8 @@ public class AdminUserDtos {
             Long pickupZoneId,
             Set<String> roles,
             UserType userType,
-            Instant accountExpiresAt) {
+            Instant accountExpiresAt,
+            Boolean isHof) {
     }
 
     public record UpdateRolesRequest(@NotNull Set<String> roles) {
@@ -62,6 +64,7 @@ public class AdminUserDtos {
             @NotBlank String lastName,
             @NotBlank @Email String email,
             String phone,
-            Long pickupZoneId) {
+            Long pickupZoneId,
+            Boolean isHof) {
     }
 }
