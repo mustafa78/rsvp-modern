@@ -1,6 +1,7 @@
 package com.acme.rsvp.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import java.math.BigDecimal;
 
 public class IngredientDtos {
   public record IngredientDto(
@@ -10,7 +11,9 @@ public class IngredientDtos {
       String category,
       String defaultStore,
       String storageLocation,
-      String notes
+      String notes,
+      BigDecimal costPerUnit,
+      Integer caloriesPerUnit
   ) {}
 
   public record IngredientUpsertRequest(
@@ -19,6 +22,8 @@ public class IngredientDtos {
       String category,
       String defaultStore,
       String storageLocation,
-      String notes
+      String notes,
+      BigDecimal costPerUnit,
+      Integer caloriesPerUnit
   ) {}
 }

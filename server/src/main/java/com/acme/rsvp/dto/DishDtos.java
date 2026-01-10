@@ -7,10 +7,25 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public class DishDtos {
-  public record DishDto(Long id, String name, String description, BigDecimal defaultQuartsPerThaaliUnit, boolean active,
-                        List<DishIngredientDto> ingredients) {}
+  public record DishDto(
+      Long id,
+      String name,
+      String description,
+      BigDecimal defaultQuartsPerThaaliUnit,
+      boolean active,
+      List<DishIngredientDto> ingredients,
+      BigDecimal estimatedCostPerQuart,
+      Integer estimatedCaloriesPerQuart
+  ) {}
 
-  public record DishIngredientDto(Long ingredientId, String ingredientName, String unit, @NotNull @Positive BigDecimal qtyPerQuart) {}
+  public record DishIngredientDto(
+      Long ingredientId,
+      String ingredientName,
+      String unit,
+      @NotNull @Positive BigDecimal qtyPerQuart,
+      BigDecimal costPerUnit,
+      Integer caloriesPerUnit
+  ) {}
 
   public record DishUpsertRequest(@NotBlank String name, String description,
                                   @NotNull @Positive BigDecimal defaultQuartsPerThaaliUnit,

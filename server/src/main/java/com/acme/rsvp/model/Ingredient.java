@@ -1,6 +1,7 @@
 package com.acme.rsvp.model;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name="ingredients", uniqueConstraints = @UniqueConstraint(name="uc_ingredient_name", columnNames = "name"))
@@ -26,6 +27,12 @@ public class Ingredient extends Auditable {
   @Column(name="notes", length=500)
   private String notes;
 
+  @Column(name="cost_per_unit", precision=10, scale=2)
+  private BigDecimal costPerUnit; // Cost in dollars per unit
+
+  @Column(name="calories_per_unit")
+  private Integer caloriesPerUnit; // Calories per unit
+
   // getters/setters
   public Long getId() { return id; }
   public String getName() { return name; }
@@ -40,4 +47,8 @@ public class Ingredient extends Auditable {
   public void setStorageLocation(String storageLocation) { this.storageLocation = storageLocation; }
   public String getNotes() { return notes; }
   public void setNotes(String notes) { this.notes = notes; }
+  public BigDecimal getCostPerUnit() { return costPerUnit; }
+  public void setCostPerUnit(BigDecimal costPerUnit) { this.costPerUnit = costPerUnit; }
+  public Integer getCaloriesPerUnit() { return caloriesPerUnit; }
+  public void setCaloriesPerUnit(Integer caloriesPerUnit) { this.caloriesPerUnit = caloriesPerUnit; }
 }
