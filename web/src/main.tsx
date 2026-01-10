@@ -22,6 +22,10 @@ import EventDetail from './pages/admin/events/EventDetail'
 import DishList from './pages/admin/catalog/DishList'
 import IngredientList from './pages/admin/catalog/IngredientList'
 import ChefList from './pages/admin/catalog/ChefList'
+import CategoryList from './pages/admin/catalog/CategoryList'
+import StoreList from './pages/admin/catalog/StoreList'
+import StorageLocationList from './pages/admin/catalog/StorageLocationList'
+import UnitList from './pages/admin/catalog/UnitList'
 import UserList from './pages/admin/settings/UserList'
 import PickupZoneList from './pages/admin/settings/PickupZoneList'
 import RoleManagement from './pages/admin/settings/RoleManagement'
@@ -54,6 +58,10 @@ const router = createBrowserRouter([
           { path: 'catalog/dishes', element: <DishList /> },
           { path: 'catalog/ingredients', element: <IngredientList /> },
           { path: 'catalog/chefs', element: <ChefList /> },
+          { path: 'catalog/categories', element: <CategoryList /> },
+          { path: 'catalog/stores', element: <StoreList /> },
+          { path: 'catalog/storage-locations', element: <StorageLocationList /> },
+          { path: 'catalog/units', element: <UnitList /> },
           { path: 'settings/users', element: <UserList /> },
           { path: 'settings/roles', element: <RoleManagement /> },
           { path: 'settings/zones', element: <PickupZoneList /> },
