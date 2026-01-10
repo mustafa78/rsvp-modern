@@ -17,6 +17,7 @@ type User = {
   userType: UserType;
   accountExpiresAt: string | null;
   isExpired: boolean;
+  isHof: boolean;
   pickupZoneId: number | null;
   pickupZoneName: string | null;
   lastLoginAt: string | null;
@@ -111,6 +112,7 @@ type FormData = {
   userType: UserType;
   accountExpiresAt: string;
   accountStatus: AccountStatus;
+  isHof: boolean;
 };
 
 const initialFormData: FormData = {
@@ -125,6 +127,7 @@ const initialFormData: FormData = {
   userType: 'REGISTERED',
   accountExpiresAt: '',
   accountStatus: 'ACTIVE',
+  isHof: true,
 };
 
 export default function UserList() {
@@ -166,6 +169,7 @@ export default function UserList() {
         roles: data.roles,
         userType: data.userType,
         accountExpiresAt: data.accountExpiresAt ? new Date(data.accountExpiresAt).toISOString() : null,
+        isHof: data.isHof,
       };
       return api.post('/admin/users', payload);
     },
@@ -184,6 +188,7 @@ export default function UserList() {
         email: data.email,
         phone: data.phone || null,
         pickupZoneId: data.pickupZoneId ? Number(data.pickupZoneId) : null,
+        isHof: data.isHof,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
@@ -269,6 +274,7 @@ export default function UserList() {
       userType: user.userType || 'REGISTERED',
       accountExpiresAt: user.accountExpiresAt ? user.accountExpiresAt.split('T')[0] : '',
       accountStatus: user.accountStatus,
+      isHof: user.isHof,
     });
     setShowForm(true);
     setError(null);
@@ -315,7 +321,8 @@ export default function UserList() {
         formData.lastName !== originalUser.lastName ||
         formData.email !== originalUser.email ||
         formData.phone !== (originalUser.phone || '') ||
-        formData.pickupZoneId !== (originalUser.pickupZoneId ? String(originalUser.pickupZoneId) : '');
+        formData.pickupZoneId !== (originalUser.pickupZoneId ? String(originalUser.pickupZoneId) : '') ||
+        formData.isHof !== originalUser.isHof;
 
       const rolesChanged = JSON.stringify([...formData.roles].sort()) !== JSON.stringify([...originalUser.roles].sort());
       const statusChanged = formData.accountStatus !== originalUser.accountStatus;
@@ -574,6 +581,30 @@ export default function UserList() {
               )}
             </div>
 
+            {/* Head of Family Checkbox */}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  checked={formData.isHof}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    isHof: e.target.checked,
+                    // Clear pickup zone when HOF is unchecked
+                    pickupZoneId: e.target.checked ? formData.pickupZoneId : '',
+                  })}
+                />
+                <div>
+                  <span className="font-medium text-gray-900">Head of Family (HOF)</span>
+                  <p className="text-sm text-gray-600 mt-0.5">
+                    HOF users can RSVP for events and register for thaalis. Non-HOF users are operational staff
+                    who only have access to the Admin panel based on their assigned roles.
+                  </p>
+                </div>
+              </label>
+            </div>
+
             {/* Quick Actions for Student/Mehmaan (Edit mode only) */}
             {isEditing && formData.userType !== 'REGISTERED' && (
               <div className="bg-gray-50 rounded-lg p-4">
@@ -610,21 +641,24 @@ export default function UserList() {
               </div>
             )}
 
-            {/* Pickup Zone and Roles */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Pickup Zone</label>
-                <select
-                  className="input"
-                  value={formData.pickupZoneId}
-                  onChange={(e) => setFormData({ ...formData, pickupZoneId: e.target.value })}
-                >
-                  <option value="">-- No zone --</option>
-                  {zones?.filter(z => z.active).map((zone) => (
-                    <option key={zone.id} value={zone.id}>{zone.name}</option>
-                  ))}
-                </select>
-              </div>
+            {/* Pickup Zone (only for HOF users) and Roles */}
+            <div className={`grid gap-4 ${formData.isHof ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              {formData.isHof && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Pickup Zone</label>
+                  <select
+                    className="input"
+                    value={formData.pickupZoneId}
+                    onChange={(e) => setFormData({ ...formData, pickupZoneId: e.target.value })}
+                  >
+                    <option value="">-- No zone --</option>
+                    {zones?.filter(z => z.active).map((zone) => (
+                      <option key={zone.id} value={zone.id}>{zone.name}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Required for thaali registration</p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium mb-1">Roles</label>
                 {formData.userType === 'REGISTERED' ? (
@@ -711,14 +745,17 @@ export default function UserList() {
           <table className="w-full table-fixed">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="w-[22%] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="w-[20%] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   User
                 </th>
-                <th className="w-[20%] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="w-[18%] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Contact
                 </th>
-                <th className="w-[18%] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="w-[16%] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Account
+                </th>
+                <th className="w-[6%] px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  HOF
                 </th>
                 <th className="w-[15%] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Roles
@@ -788,6 +825,23 @@ export default function UserList() {
                         </div>
                       )}
                     </div>
+                  </td>
+
+                  {/* HOF Status */}
+                  <td className="px-4 py-3 text-center">
+                    {user.isHof ? (
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-100 text-green-600">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-gray-400">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </span>
+                    )}
                   </td>
 
                   {/* Roles */}

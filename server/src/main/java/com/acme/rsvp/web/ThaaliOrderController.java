@@ -27,6 +27,9 @@ public class ThaaliOrderController {
             @PathVariable Long eventId,
             @Valid @RequestBody ThaaliOrderRequest request,
             @AuthenticationPrincipal Person user) {
+        if (!user.isHof()) {
+            throw new IllegalStateException("Only Head of Family (HOF) users can register for thaalis");
+        }
         return service.upsert(eventId, user.getId(), request);
     }
 
@@ -44,6 +47,9 @@ public class ThaaliOrderController {
     public ResponseEntity<Void> deleteMyOrder(
             @PathVariable Long eventId,
             @AuthenticationPrincipal Person user) {
+        if (!user.isHof()) {
+            throw new IllegalStateException("Only Head of Family (HOF) users can manage thaali registrations");
+        }
         service.deleteOrder(eventId, user.getId());
         return ResponseEntity.noContent().build();
     }

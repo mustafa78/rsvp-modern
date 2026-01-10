@@ -89,6 +89,9 @@ public class AdminUserService {
             person.setAccountExpiresAt(calculateDefaultExpiration(userType));
         }
 
+        // Set HOF (default to true if not provided)
+        person.setHof(request.isHof() == null || request.isHof());
+
         return toDto(personRepository.save(person));
     }
 
@@ -139,6 +142,11 @@ public class AdminUserService {
                     .ifPresent(person::setPickupZone);
         } else {
             person.setPickupZone(null);
+        }
+
+        // Update HOF if provided
+        if (request.isHof() != null) {
+            person.setHof(request.isHof());
         }
 
         return toDto(personRepository.save(person));
@@ -197,6 +205,7 @@ public class AdminUserService {
                 p.getUserType(),
                 p.getAccountExpiresAt(),
                 p.isExpired(),
+                p.isHof(),
                 p.getPickupZone() != null ? p.getPickupZone().getId() : null,
                 p.getPickupZone() != null ? p.getPickupZone().getName() : null,
                 p.getLastLoginAt());
