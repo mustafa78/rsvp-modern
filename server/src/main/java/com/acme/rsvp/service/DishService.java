@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityManager;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -75,9 +77,56 @@ public class DishService {
         di.getIngredient().getId(),
         di.getIngredient().getName(),
         di.getIngredient().getUnit(),
-        di.getQtyPerQuart()
+        di.getQtyPerQuart(),
+        di.getIngredient().getCostPerUnit(),
+        di.getIngredient().getCaloriesPerUnit()
       )).collect(java.util.stream.Collectors.toList());
 
-    return new DishDto(d.getId(), d.getName(), d.getDescription(), d.getDefaultQuartsPerThaaliUnit(), d.isActive(), ingDtos);
+    // Calculate estimated cost per quart
+    // Cost = sum of (qtyPerQuart * costPerUnit) for each ingredient
+    BigDecimal estimatedCostPerQuart = null;
+    if (d.getIngredients() != null && !d.getIngredients().isEmpty()) {
+      BigDecimal totalCost = BigDecimal.ZERO;
+      boolean hasCostData = false;
+      for (DishIngredient di : d.getIngredients()) {
+        if (di.getIngredient().getCostPerUnit() != null) {
+          BigDecimal ingredientCost = di.getQtyPerQuart().multiply(di.getIngredient().getCostPerUnit());
+          totalCost = totalCost.add(ingredientCost);
+          hasCostData = true;
+        }
+      }
+      if (hasCostData) {
+        estimatedCostPerQuart = totalCost.setScale(2, RoundingMode.HALF_UP);
+      }
+    }
+
+    // Calculate estimated calories per quart
+    // Calories = sum of (qtyPerQuart * caloriesPerUnit) for each ingredient
+    Integer estimatedCaloriesPerQuart = null;
+    if (d.getIngredients() != null && !d.getIngredients().isEmpty()) {
+      double totalCalories = 0;
+      boolean hasCalorieData = false;
+      for (DishIngredient di : d.getIngredients()) {
+        if (di.getIngredient().getCaloriesPerUnit() != null) {
+          double ingredientCalories = di.getQtyPerQuart().doubleValue() * di.getIngredient().getCaloriesPerUnit();
+          totalCalories += ingredientCalories;
+          hasCalorieData = true;
+        }
+      }
+      if (hasCalorieData) {
+        estimatedCaloriesPerQuart = (int) Math.round(totalCalories);
+      }
+    }
+
+    return new DishDto(
+        d.getId(),
+        d.getName(),
+        d.getDescription(),
+        d.getDefaultQuartsPerThaaliUnit(),
+        d.isActive(),
+        ingDtos,
+        estimatedCostPerQuart,
+        estimatedCaloriesPerQuart
+    );
   }
 }

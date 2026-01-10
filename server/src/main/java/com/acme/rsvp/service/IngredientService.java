@@ -42,6 +42,8 @@ public class IngredientService {
         i.setDefaultStore(req.defaultStore());
         i.setStorageLocation(req.storageLocation());
         i.setNotes(req.notes());
+        i.setCostPerUnit(req.costPerUnit());
+        i.setCaloriesPerUnit(req.caloriesPerUnit());
         repo.save(i);
         return toDto(i);
     }
@@ -54,6 +56,8 @@ public class IngredientService {
         i.setDefaultStore(req.defaultStore());
         i.setStorageLocation(req.storageLocation());
         i.setNotes(req.notes());
+        i.setCostPerUnit(req.costPerUnit());
+        i.setCaloriesPerUnit(req.caloriesPerUnit());
         repo.save(i);
         return toDto(i);
     }
@@ -68,7 +72,9 @@ public class IngredientService {
             i.getCategory(),
             i.getDefaultStore(),
             i.getStorageLocation(),
-            i.getNotes()
+            i.getNotes(),
+            i.getCostPerUnit(),
+            i.getCaloriesPerUnit()
         );
     }
 }

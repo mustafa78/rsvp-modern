@@ -6,7 +6,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { api } from '../../../api/client';
 
 type Ingredient = { id: number; name: string; unit: string };
-type DishIngredient = { ingredientId: number; ingredientName: string; unit: string; qtyPerQuart: number };
+type DishIngredient = {
+  ingredientId: number;
+  ingredientName: string;
+  unit: string;
+  qtyPerQuart: number;
+  costPerUnit: number | null;
+  caloriesPerUnit: number | null;
+};
 type Dish = {
   id: number;
   name: string;
@@ -14,6 +21,8 @@ type Dish = {
   defaultQuartsPerThaaliUnit: number;
   active: boolean;
   ingredients: DishIngredient[];
+  estimatedCostPerQuart: number | null;
+  estimatedCaloriesPerQuart: number | null;
 };
 
 type SelectedIngredient = {
@@ -389,9 +398,11 @@ export default function DishList() {
           <table className="w-full text-left table-fixed">
             <thead>
               <tr className="bg-gray-50 border-b">
-                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[25%]">Name</th>
-                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[10%] text-center">Qt/Unit</th>
-                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[45%]">Ingredients</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[20%]">Name</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[8%] text-center">Qt/Unit</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[32%]">Ingredients</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[8%] text-right">Cost/Qt</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[8%] text-right">Cal/Qt</th>
                 <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[10%] text-center">Status</th>
                 <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[10%] text-center">Actions</th>
               </tr>
@@ -426,6 +437,20 @@ export default function DishList() {
                       </div>
                     ) : (
                       <span className="text-sm text-gray-400 italic">No ingredients</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    {dish.estimatedCostPerQuart != null ? (
+                      <span className="text-sm font-medium text-green-700">${dish.estimatedCostPerQuart.toFixed(2)}</span>
+                    ) : (
+                      <span className="text-sm text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    {dish.estimatedCaloriesPerQuart != null ? (
+                      <span className="text-sm font-medium text-orange-600">{dish.estimatedCaloriesPerQuart}</span>
+                    ) : (
+                      <span className="text-sm text-gray-400">-</span>
                     )}
                   </td>
                   <td className="py-3 px-4 text-center">

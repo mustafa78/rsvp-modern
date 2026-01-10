@@ -13,6 +13,8 @@ type Ingredient = {
   defaultStore: string | null;
   storageLocation: string | null;
   notes: string | null;
+  costPerUnit: number | null;
+  caloriesPerUnit: number | null;
 };
 
 type LookupItem = {
@@ -29,6 +31,8 @@ const schema = z.object({
   defaultStore: z.string().optional(),
   storageLocation: z.string().optional(),
   notes: z.string().optional(),
+  costPerUnit: z.coerce.number().positive().optional().or(z.literal('')),
+  caloriesPerUnit: z.coerce.number().int().positive().optional().or(z.literal('')),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -94,6 +98,8 @@ export default function IngredientList() {
       defaultStore: '',
       storageLocation: '',
       notes: '',
+      costPerUnit: '',
+      caloriesPerUnit: '',
     },
   });
 
@@ -128,6 +134,8 @@ export default function IngredientList() {
       defaultStore: values.defaultStore || null,
       storageLocation: values.storageLocation || null,
       notes: values.notes || null,
+      costPerUnit: values.costPerUnit || null,
+      caloriesPerUnit: values.caloriesPerUnit || null,
     };
 
     if (editingId) {
@@ -147,6 +155,8 @@ export default function IngredientList() {
       defaultStore: ingredient.defaultStore || '',
       storageLocation: ingredient.storageLocation || '',
       notes: ingredient.notes || '',
+      costPerUnit: ingredient.costPerUnit ?? '',
+      caloriesPerUnit: ingredient.caloriesPerUnit ?? '',
     });
   };
 
@@ -160,6 +170,8 @@ export default function IngredientList() {
       defaultStore: '',
       storageLocation: '',
       notes: '',
+      costPerUnit: '',
+      caloriesPerUnit: '',
     });
     setError(null);
   };
@@ -272,6 +284,32 @@ export default function IngredientList() {
                 </select>
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Cost per Unit ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="input"
+                  {...register('costPerUnit')}
+                  placeholder="e.g., 5.99"
+                />
+                <p className="text-xs text-gray-500 mt-1">Cost in dollars per unit (e.g., per lb, per piece)</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Calories per Unit</label>
+                <input
+                  type="number"
+                  step="1"
+                  min="0"
+                  className="input"
+                  {...register('caloriesPerUnit')}
+                  placeholder="e.g., 165"
+                />
+                <p className="text-xs text-gray-500 mt-1">Calories per unit (e.g., per lb, per piece)</p>
+              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium mb-1">Notes</label>
               <textarea className="input" rows={2} {...register('notes')} placeholder="Optional notes" />
@@ -298,11 +336,13 @@ export default function IngredientList() {
           <table className="w-full text-left table-fixed">
             <thead>
               <tr className="bg-gray-50 border-b">
-                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[22%]">Name</th>
-                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[8%] text-center">Unit</th>
-                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[14%]">Category</th>
-                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[12%]">Store</th>
-                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[14%]">Storage</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[18%]">Name</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[6%] text-center">Unit</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[10%]">Category</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[10%]">Store</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[10%]">Storage</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[8%] text-right">Cost</th>
+                <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[8%] text-right">Calories</th>
                 <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[22%]">Notes</th>
                 <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider w-[8%] text-center">Actions</th>
               </tr>
@@ -335,6 +375,20 @@ export default function IngredientList() {
                   <td className="py-3 px-4">
                     {ingredient.storageLocation ? (
                       <span className="text-sm text-gray-600 capitalize">{ingredient.storageLocation}</span>
+                    ) : (
+                      <span className="text-sm text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    {ingredient.costPerUnit != null ? (
+                      <span className="text-sm font-medium text-green-700">${ingredient.costPerUnit.toFixed(2)}</span>
+                    ) : (
+                      <span className="text-sm text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    {ingredient.caloriesPerUnit != null ? (
+                      <span className="text-sm font-medium text-orange-600">{ingredient.caloriesPerUnit}</span>
                     ) : (
                       <span className="text-sm text-gray-400">-</span>
                     )}
