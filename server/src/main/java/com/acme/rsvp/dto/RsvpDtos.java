@@ -32,12 +32,19 @@ public class RsvpDtos {
             @Min(0) int kids) {
     }
 
+    // Guest detail for public RSVP summary
+    public record GuestDetailDto(
+            String name,
+            int adults,
+            int kids) {
+    }
+
     // Public RSVP summary for event detail page (only shown if showRsvpSummary is true)
     public record NiyazRsvpPublicSummaryDto(
             int familyCount,
             long totalAdults,
             long totalKids,
-            List<String> guestNames) {
+            List<GuestDetailDto> guests) {
     }
 
     // Thaali Order DTOs - new structure with order items
