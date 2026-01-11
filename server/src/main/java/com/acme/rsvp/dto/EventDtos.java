@@ -35,6 +35,7 @@ public final class EventDtos {
         public String miqaatName;
         public Set<Long> chefIds;
         public Set<Long> hostIds; // Person IDs who are hosting this Niyaz
+        public Boolean showRsvpSummary; // When true, shows RSVP list on public event page
     }
 
     /* ============== THAALI ============== */
@@ -63,8 +64,9 @@ public final class EventDtos {
             OffsetDateTime registrationOpenAt,
             OffsetDateTime registrationCloseAt,
             EventStatus status,
-            // Niyaz-specific field (null for Thaali)
-            String miqaatName
+            // Niyaz-specific fields (null for Thaali)
+            String miqaatName,
+            Boolean showRsvpSummary
     ) {}
 
     // Host info for Niyaz events
@@ -85,6 +87,7 @@ public final class EventDtos {
             OffsetDateTime registrationCloseAt,
             EventStatus status,
             String miqaatName,
+            boolean showRsvpSummary,
             Set<Long> chefIds,
             Set<Long> hostIds,
             List<HostDto> hosts // Full host info for display

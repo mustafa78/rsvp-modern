@@ -11,8 +11,9 @@ export type Event = {
   registrationOpenAt?: string;
   registrationCloseAt?: string;
   status: EventStatus;
-  // Niyaz-specific field
+  // Niyaz-specific fields
   miqaatName?: string;
+  showRsvpSummary?: boolean;
 };
 
 // Menu item for Thaali events

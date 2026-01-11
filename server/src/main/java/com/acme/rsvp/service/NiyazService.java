@@ -1,10 +1,12 @@
 package com.acme.rsvp.service;
 
+import java.util.Collections;
 import java.util.List;
 
 import com.acme.rsvp.dto.RsvpDtos.AdminNiyazRsvpRequest;
 import com.acme.rsvp.dto.RsvpDtos.NiyazRsvpDetailDto;
 import com.acme.rsvp.dto.RsvpDtos.NiyazRsvpDto;
+import com.acme.rsvp.dto.RsvpDtos.NiyazRsvpPublicSummaryDto;
 import com.acme.rsvp.dto.RsvpDtos.PersonBasicDto;
 import com.acme.rsvp.model.NiyazEvent;
 import com.acme.rsvp.model.NiyazRsvp;
@@ -152,5 +154,34 @@ public class NiyazService {
                         p.getLastName(),
                         p.getPhone()))
                 .toList();
+    }
+
+    /**
+     * Get public RSVP summary for event detail page.
+     * Only returns guest names if showRsvpSummary is enabled for the event.
+     */
+    @Transactional(readOnly = true)
+    public NiyazRsvpPublicSummaryDto getPublicSummary(Long eventId) {
+        NiyazEvent event = eventRepo.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found: " + eventId));
+
+        List<NiyazRsvp> rsvps = rsvpRepo.findByEventIdWithPerson(eventId);
+
+        int familyCount = rsvps.size();
+        long totalAdults = rsvps.stream().mapToInt(NiyazRsvp::getAdults).sum();
+        long totalKids = rsvps.stream().mapToInt(NiyazRsvp::getKids).sum();
+
+        // Only include guest names if showRsvpSummary is enabled
+        List<String> guestNames;
+        if (event.isShowRsvpSummary()) {
+            guestNames = rsvps.stream()
+                    .map(r -> r.getPerson().getFirstName() + " " + r.getPerson().getLastName())
+                    .sorted()
+                    .toList();
+        } else {
+            guestNames = Collections.emptyList();
+        }
+
+        return new NiyazRsvpPublicSummaryDto(familyCount, totalAdults, totalKids, guestNames);
     }
 }

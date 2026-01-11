@@ -100,6 +100,7 @@ public class EventService {
         e.setMiqaatName(req.miqaatName);
         // Auto-populate title from miqaatName for Niyaz events
         e.setTitle(req.miqaatName);
+        e.setShowRsvpSummary(req.showRsvpSummary != null && req.showRsvpSummary);
         attachHosts(e, req.hostIds);
         niyazRepo.save(e);
         return toDto(e);
@@ -112,6 +113,7 @@ public class EventService {
         e.setMiqaatName(req.miqaatName);
         // Auto-populate title from miqaatName for Niyaz events
         e.setTitle(req.miqaatName);
+        e.setShowRsvpSummary(req.showRsvpSummary != null && req.showRsvpSummary);
         attachHosts(e, req.hostIds);
         return toDto(e);
     }
@@ -202,16 +204,18 @@ public class EventService {
     private static EventSummaryDto toSummary(Event e) {
         String type = (e instanceof NiyazEvent) ? "NIYAZ" : (e instanceof ThaaliEvent) ? "THAALI" : "EVENT";
 
-        // Include Niyaz-specific field if applicable
+        // Include Niyaz-specific fields if applicable
         String miqaatName = null;
+        Boolean showRsvpSummary = null;
         if (e instanceof NiyazEvent niyaz) {
             miqaatName = niyaz.getMiqaatName();
+            showRsvpSummary = niyaz.isShowRsvpSummary();
         }
 
         return new EventSummaryDto(
                 e.getId(), type, e.getTitle(), e.getDescription(), e.getEventDate(), e.getStartTime(),
                 e.getRegistrationOpenAt(), e.getRegistrationCloseAt(), e.getStatus(),
-                miqaatName);
+                miqaatName, showRsvpSummary);
     }
 
     private ThaaliEventDto toDto(ThaaliEvent e) {
@@ -259,7 +263,7 @@ public class EventService {
         return new NiyazEventDto(
                 e.getId(), e.getTitle(), e.getDescription(), e.getEventDate(), e.getStartTime(),
                 e.getRegistrationOpenAt(), e.getRegistrationCloseAt(), e.getStatus(),
-                e.getMiqaatName(), chefIds, hostIds, hosts);
+                e.getMiqaatName(), e.isShowRsvpSummary(), chefIds, hostIds, hosts);
     }
 
 }
