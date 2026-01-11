@@ -34,6 +34,7 @@ public class RsvpDtos {
 
     // Guest detail for public RSVP summary
     public record GuestDetailDto(
+            Long personId,
             String name,
             int adults,
             int kids) {

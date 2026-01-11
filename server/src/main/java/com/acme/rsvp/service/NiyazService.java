@@ -177,6 +177,7 @@ public class NiyazService {
         if (event.isShowRsvpSummary()) {
             guests = rsvps.stream()
                     .map(r -> new GuestDetailDto(
+                            r.getPerson().getId(),
                             r.getPerson().getFirstName() + " " + r.getPerson().getLastName(),
                             r.getAdults(),
                             r.getKids()))

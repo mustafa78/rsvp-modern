@@ -5,6 +5,7 @@ import { api } from '../api/client'
 import type { Event, NiyazRsvp } from '../types/models'
 
 type GuestDetail = {
+  personId: number
   name: string
   adults: number
   kids: number
@@ -15,6 +16,22 @@ type RsvpSummary = {
   totalAdults: number
   totalKids: number
   guests: GuestDetail[]
+}
+
+type ThaaliOrderItem = {
+  menuItemId: number
+  dishName: string
+  size: 'LARGE' | 'SMALL' | 'BARAKATI'
+}
+
+type ThaaliOrder = {
+  id: number
+  eventId: number
+  personId: number
+  pickupZoneId: number
+  pickupZoneName: string
+  notes: string | null
+  items: ThaaliOrderItem[]
 }
 
 export default function EventDetailPage() {
@@ -46,6 +63,20 @@ export default function EventDetailPage() {
     queryKey: ['niyaz-rsvp-summary', id],
     queryFn: async () => (await api.get(`/niyaz/${id}/rsvp/summary`)).data,
     enabled: !!data && data.type === 'NIYAZ'
+  })
+
+  // Fetch user's existing order for Thaali events
+  const { data: myThaaliOrder } = useQuery<ThaaliOrder | null>({
+    queryKey: ['my-thaali-order', id],
+    queryFn: async () => {
+      try {
+        const res = await api.get(`/thaali/${id}/orders/my`)
+        return res.data
+      } catch {
+        return null
+      }
+    },
+    enabled: !!data && data.type === 'THAALI'
   })
 
   if (isLoading) {
@@ -228,6 +259,15 @@ END:VCALENDAR`
                     You're Attending
                   </span>
                 )}
+                {/* "Registered" badge for Thaali events */}
+                {isThaali && myThaaliOrder && (
+                  <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-400/30 text-emerald-100 flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    Registered
+                  </span>
+                )}
               </div>
               <h1 className="text-2xl lg:text-3xl font-bold text-white">{data.title}</h1>
               {isNiyaz && data.miqaatName && data.miqaatName !== data.title && (
@@ -397,8 +437,8 @@ END:VCALENDAR`
             </div>
           )}
 
-          {/* RSVP/Order Button */}
-          {isRegistrationOpen && (
+          {/* RSVP/Order Button - hide for Thaali if user already has an order */}
+          {isRegistrationOpen && !(isThaali && myThaaliOrder) && (
             <Link
               className={`flex items-center justify-center gap-2 w-full py-4 px-6 text-lg font-semibold text-white rounded-xl transition-all hover:shadow-lg ${
                 isNiyaz
@@ -407,7 +447,7 @@ END:VCALENDAR`
               }`}
               to={`/events/${id}/rsvp`}
             >
-              {isNiyaz ? 'RSVP to this Event' : 'Register for Thaali'}
+              {isNiyaz ? (myRsvp ? 'Update RSVP' : 'RSVP to this Event') : 'Register for Thaali'}
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>
@@ -476,6 +516,79 @@ END:VCALENDAR`
             </div>
           )}
 
+          {/* Your Order Card for Thaali events */}
+          {isThaali && myThaaliOrder && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-blue-50 px-5 py-3 border-b border-blue-100">
+                <h3 className="font-semibold text-blue-900 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                  </svg>
+                  My Registered Thaalis
+                </h3>
+              </div>
+              <div className="p-5 space-y-4">
+                {/* Pickup Location */}
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-blue-50 rounded-lg">
+                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Pickup Location</p>
+                    <p className="text-sm text-gray-900 font-medium">{myThaaliOrder.pickupZoneName}</p>
+                  </div>
+                </div>
+
+                {/* Registered Items */}
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-2">Items Registered</p>
+                  <div className="space-y-2">
+                    {myThaaliOrder.items.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm text-gray-700">{item.dishName}</span>
+                        <span className={`px-2 py-0.5 text-xs font-semibold rounded ${
+                          item.size === 'LARGE'
+                            ? 'bg-blue-100 text-blue-700'
+                            : item.size === 'SMALL'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {item.size === 'LARGE' ? 'L' : item.size === 'SMALL' ? 'S' : 'B'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2 flex items-center gap-3">
+                    <span className="flex items-center gap-1"><span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-semibold">L</span> Large</span>
+                    <span className="flex items-center gap-1"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-xs font-semibold">S</span> Small</span>
+                    <span className="flex items-center gap-1"><span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-xs font-semibold">B</span> Barakati</span>
+                  </p>
+                </div>
+
+                {/* Notes */}
+                {myThaaliOrder.notes && (
+                  <div className="pt-3 border-t border-gray-100">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Notes</p>
+                    <p className="text-sm text-gray-600 italic">{myThaaliOrder.notes}</p>
+                  </div>
+                )}
+
+                {/* Update Registration Button */}
+                {isRegistrationOpen && (
+                  <Link
+                    to={`/events/${id}/rsvp`}
+                    className="block w-full text-center py-2.5 px-4 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                  >
+                    Update Registration
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* RSVP Summary Card for Niyaz events */}
           {isNiyaz && rsvpSummary && rsvpSummary.familyCount > 0 && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -527,17 +640,23 @@ END:VCALENDAR`
                     {showGuestList && (
                       <div className="mt-3 max-h-64 overflow-y-auto">
                         <ul className="space-y-2">
-                          {rsvpSummary.guests.map((guest, idx) => (
-                            <li key={idx} className="flex items-start gap-2">
-                              <span className="w-1.5 h-1.5 bg-purple-400 rounded-full flex-shrink-0 mt-1.5"></span>
-                              <div className="min-w-0">
-                                <span className="text-sm text-gray-700 font-medium">{guest.name}</span>
-                                <span className="text-gray-400 italic text-xs ml-1">
-                                  ({guest.adults}{guest.kids > 0 ? `, ${guest.kids}` : ''})
-                                </span>
-                              </div>
-                            </li>
-                          ))}
+                          {rsvpSummary.guests.map((guest, idx) => {
+                            const isCurrentUser = myRsvp && guest.personId === myRsvp.personId
+                            return (
+                              <li key={idx} className={`flex items-start gap-2 ${isCurrentUser ? 'bg-purple-50 -mx-2 px-2 py-1 rounded-lg' : ''}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5 ${isCurrentUser ? 'bg-purple-600' : 'bg-purple-400'}`}></span>
+                                <div className="min-w-0 flex-1">
+                                  <span className={`text-sm font-medium ${isCurrentUser ? 'text-purple-700' : 'text-gray-700'}`}>
+                                    {guest.name}
+                                    {isCurrentUser && <span className="ml-1.5 text-xs text-purple-500">(You)</span>}
+                                  </span>
+                                  <span className="text-gray-400 italic text-xs ml-1">
+                                    ({guest.adults}{guest.kids > 0 ? `, ${guest.kids}` : ''})
+                                  </span>
+                                </div>
+                              </li>
+                            )
+                          })}
                         </ul>
                         <p className="text-xs text-gray-400 italic mt-3 pt-2 border-t border-gray-100">
                           (adults, kids)
