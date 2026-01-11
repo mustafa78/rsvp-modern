@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.acme.rsvp.dto.RsvpDtos.AdminNiyazRsvpRequest;
+import com.acme.rsvp.dto.RsvpDtos.GuestDetailDto;
 import com.acme.rsvp.dto.RsvpDtos.NiyazRsvpDetailDto;
 import com.acme.rsvp.dto.RsvpDtos.NiyazRsvpDto;
 import com.acme.rsvp.dto.RsvpDtos.NiyazRsvpPublicSummaryDto;
@@ -158,7 +159,7 @@ public class NiyazService {
 
     /**
      * Get public RSVP summary for event detail page.
-     * Only returns guest names if showRsvpSummary is enabled for the event.
+     * Only returns guest details if showRsvpSummary is enabled for the event.
      */
     @Transactional(readOnly = true)
     public NiyazRsvpPublicSummaryDto getPublicSummary(Long eventId) {
@@ -171,17 +172,20 @@ public class NiyazService {
         long totalAdults = rsvps.stream().mapToInt(NiyazRsvp::getAdults).sum();
         long totalKids = rsvps.stream().mapToInt(NiyazRsvp::getKids).sum();
 
-        // Only include guest names if showRsvpSummary is enabled
-        List<String> guestNames;
+        // Only include guest details if showRsvpSummary is enabled
+        List<GuestDetailDto> guests;
         if (event.isShowRsvpSummary()) {
-            guestNames = rsvps.stream()
-                    .map(r -> r.getPerson().getFirstName() + " " + r.getPerson().getLastName())
-                    .sorted()
+            guests = rsvps.stream()
+                    .map(r -> new GuestDetailDto(
+                            r.getPerson().getFirstName() + " " + r.getPerson().getLastName(),
+                            r.getAdults(),
+                            r.getKids()))
+                    .sorted((a, b) -> a.name().compareToIgnoreCase(b.name()))
                     .toList();
         } else {
-            guestNames = Collections.emptyList();
+            guests = Collections.emptyList();
         }
 
-        return new NiyazRsvpPublicSummaryDto(familyCount, totalAdults, totalKids, guestNames);
+        return new NiyazRsvpPublicSummaryDto(familyCount, totalAdults, totalKids, guests);
     }
 }

@@ -46,7 +46,8 @@ public class WebSecurityConfig {
 	    	        .requestMatchers(HttpMethod.GET,
 	    	            "/api/auth/pickup-zones",
 	    	            "/api/events/public",
-	    	            "/api/events/{id}").permitAll()
+	    	            "/api/events/{id}",
+	    	            "/api/niyaz/{eventId}/rsvp/summary").permitAll()
 	    	        .anyRequest().authenticated()
 	      );
 	    http.addFilterBefore(sessionAuthFilter,

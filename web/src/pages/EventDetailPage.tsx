@@ -4,11 +4,17 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '../api/client'
 import type { Event, NiyazRsvp } from '../types/models'
 
+type GuestDetail = {
+  name: string
+  adults: number
+  kids: number
+}
+
 type RsvpSummary = {
   familyCount: number
   totalAdults: number
   totalKids: number
-  guestNames: string[]
+  guests: GuestDetail[]
 }
 
 export default function EventDetailPage() {
@@ -501,8 +507,8 @@ END:VCALENDAR`
                   <span>{rsvpSummary.totalKids} kids</span>
                 </div>
 
-                {/* Guest names list (only if showRsvpSummary is enabled and there are guests) */}
-                {data.showRsvpSummary && rsvpSummary.guestNames.length > 0 && (
+                {/* Guest list (only if showRsvpSummary is enabled and there are guests) */}
+                {data.showRsvpSummary && rsvpSummary.guests.length > 0 && (
                   <div className="border-t pt-4">
                     <button
                       onClick={() => setShowGuestList(!showGuestList)}
@@ -519,15 +525,23 @@ END:VCALENDAR`
                       </svg>
                     </button>
                     {showGuestList && (
-                      <div className="mt-3 max-h-48 overflow-y-auto">
-                        <ul className="space-y-1">
-                          {rsvpSummary.guestNames.map((name, idx) => (
-                            <li key={idx} className="text-sm text-gray-600 flex items-center gap-2">
-                              <span className="w-1.5 h-1.5 bg-purple-400 rounded-full"></span>
-                              {name}
+                      <div className="mt-3 max-h-64 overflow-y-auto">
+                        <ul className="space-y-2">
+                          {rsvpSummary.guests.map((guest, idx) => (
+                            <li key={idx} className="flex items-start gap-2">
+                              <span className="w-1.5 h-1.5 bg-purple-400 rounded-full flex-shrink-0 mt-1.5"></span>
+                              <div className="min-w-0">
+                                <span className="text-sm text-gray-700 font-medium">{guest.name}</span>
+                                <span className="text-gray-400 italic text-xs ml-1">
+                                  ({guest.adults}{guest.kids > 0 ? `, ${guest.kids}` : ''})
+                                </span>
+                              </div>
                             </li>
                           ))}
                         </ul>
+                        <p className="text-xs text-gray-400 italic mt-3 pt-2 border-t border-gray-100">
+                          (adults, kids)
+                        </p>
                       </div>
                     )}
                   </div>
