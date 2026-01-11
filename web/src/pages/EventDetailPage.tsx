@@ -2,15 +2,44 @@ import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api/client'
-import type { Event } from '../types/models'
+import type { Event, NiyazRsvp } from '../types/models'
+
+type RsvpSummary = {
+  familyCount: number
+  totalAdults: number
+  totalKids: number
+  guestNames: string[]
+}
 
 export default function EventDetailPage() {
   const { id } = useParams()
   const [showCalendarMenu, setShowCalendarMenu] = useState(false)
+  const [showGuestList, setShowGuestList] = useState(false)
 
   const { data, isLoading } = useQuery<Event>({
     queryKey: ['event', id],
     queryFn: async () => (await api.get(`/events/${id}`)).data
+  })
+
+  // Fetch user's existing RSVP for Niyaz events
+  const { data: myRsvp } = useQuery<NiyazRsvp | null>({
+    queryKey: ['my-niyaz-rsvp', id],
+    queryFn: async () => {
+      try {
+        const res = await api.get(`/niyaz/${id}/rsvp/my`)
+        return res.data
+      } catch {
+        return null
+      }
+    },
+    enabled: !!data && data.type === 'NIYAZ'
+  })
+
+  // Fetch RSVP summary for Niyaz events
+  const { data: rsvpSummary } = useQuery<RsvpSummary>({
+    queryKey: ['niyaz-rsvp-summary', id],
+    queryFn: async () => (await api.get(`/niyaz/${id}/rsvp/summary`)).data,
+    enabled: !!data && data.type === 'NIYAZ'
   })
 
   if (isLoading) {
@@ -182,6 +211,15 @@ END:VCALENDAR`
                 {data.status === 'PUBLISHED' && isRegistrationOpen && (
                   <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-green-400/30 text-green-100">
                     Open for Registration
+                  </span>
+                )}
+                {/* "You're attending" badge for Niyaz events */}
+                {isNiyaz && myRsvp && (
+                  <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-400/30 text-emerald-100 flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    You're Attending
                   </span>
                 )}
               </div>
@@ -429,6 +467,72 @@ END:VCALENDAR`
                 <p className="text-red-700 font-semibold">Event Cancelled</p>
               </div>
               <p className="text-red-600 text-sm">This event has been cancelled.</p>
+            </div>
+          )}
+
+          {/* RSVP Summary Card for Niyaz events */}
+          {isNiyaz && rsvpSummary && rsvpSummary.familyCount > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-purple-50 px-5 py-3 border-b border-purple-100">
+                <h3 className="font-semibold text-purple-900 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  RSVP Summary
+                </h3>
+              </div>
+              <div className="p-5">
+                {/* Attendance count */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-center flex-1">
+                    <p className="text-3xl font-bold text-purple-600">{rsvpSummary.familyCount}</p>
+                    <p className="text-sm text-gray-500">{rsvpSummary.familyCount === 1 ? 'Family' : 'Families'}</p>
+                  </div>
+                  <div className="w-px h-12 bg-gray-200"></div>
+                  <div className="text-center flex-1">
+                    <p className="text-3xl font-bold text-purple-600">{rsvpSummary.totalAdults + rsvpSummary.totalKids}</p>
+                    <p className="text-sm text-gray-500">Attendees</p>
+                  </div>
+                </div>
+
+                {/* Breakdown */}
+                <div className="flex justify-center gap-6 text-sm text-gray-600 mb-4">
+                  <span>{rsvpSummary.totalAdults} adults</span>
+                  <span>{rsvpSummary.totalKids} kids</span>
+                </div>
+
+                {/* Guest names list (only if showRsvpSummary is enabled and there are guests) */}
+                {data.showRsvpSummary && rsvpSummary.guestNames.length > 0 && (
+                  <div className="border-t pt-4">
+                    <button
+                      onClick={() => setShowGuestList(!showGuestList)}
+                      className="w-full flex items-center justify-between text-sm text-purple-600 hover:text-purple-800 font-medium"
+                    >
+                      <span>View Guest List</span>
+                      <svg
+                        className={`w-4 h-4 transition-transform ${showGuestList ? 'rotate-180' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {showGuestList && (
+                      <div className="mt-3 max-h-48 overflow-y-auto">
+                        <ul className="space-y-1">
+                          {rsvpSummary.guestNames.map((name, idx) => (
+                            <li key={idx} className="text-sm text-gray-600 flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 bg-purple-400 rounded-full"></span>
+                              {name}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

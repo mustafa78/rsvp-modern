@@ -25,6 +25,7 @@ type NiyazEventData = {
   registrationCloseAt: string;
   status: string;
   miqaatName: string;
+  showRsvpSummary: boolean;
   hostIds: number[];
 };
 
@@ -46,6 +47,7 @@ export default function CreateNiyazEvent() {
   const isEditMode = !!id;
 
   const [selectedHosts, setSelectedHosts] = useState<number[]>([]);
+  const [showRsvpSummary, setShowRsvpSummary] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hostSearch, setHostSearch] = useState('');
 
@@ -92,6 +94,7 @@ export default function CreateNiyazEvent() {
         status: existingEvent.status || 'DRAFT',
       });
       setSelectedHosts(existingEvent.hostIds || []);
+      setShowRsvpSummary(existingEvent.showRsvpSummary || false);
     }
   }, [existingEvent, reset]);
 
@@ -130,6 +133,7 @@ export default function CreateNiyazEvent() {
       registrationCloseAt: values.registrationCloseAt ? `${values.registrationCloseAt}T23:59:59Z` : null,
       status: isEditMode ? values.status : 'DRAFT',
       miqaatName: values.miqaatName,
+      showRsvpSummary: showRsvpSummary,
       hostIds: selectedHosts,
     };
 
@@ -231,6 +235,25 @@ export default function CreateNiyazEvent() {
                 <p className="text-red-500 text-sm mt-1">{errors.registrationCloseAt.message}</p>
               )}
             </div>
+          </div>
+
+          {/* RSVP Summary Option */}
+          <div className="border-t pt-4 mt-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showRsvpSummary}
+                onChange={(e) => setShowRsvpSummary(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+              />
+              <div>
+                <span className="block font-medium text-gray-900">Show RSVP Summary</span>
+                <span className="block text-sm text-gray-500">
+                  When enabled, the event page will display how many families are attending and their names.
+                  Similar to showing the "guest list" on an invitation.
+                </span>
+              </div>
+            </label>
           </div>
           </div>
         </div>

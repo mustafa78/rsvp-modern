@@ -11,6 +11,9 @@ public class NiyazEvent extends Event {
     @Column(name = "miqaat_name", nullable = false, length = 200)
     private String miqaatName;
 
+    @Column(name = "show_rsvp_summary", nullable = false)
+    private boolean showRsvpSummary = false;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "niyaz_event_hosts", joinColumns = @JoinColumn(name = "event_id"), inverseJoinColumns = @JoinColumn(name = "person_id"))
     private Set<Person> hosts = new HashSet<>();
@@ -22,6 +25,14 @@ public class NiyazEvent extends Event {
 
     public void setMiqaatName(String miqaatName) {
         this.miqaatName = miqaatName;
+    }
+
+    public boolean isShowRsvpSummary() {
+        return showRsvpSummary;
+    }
+
+    public void setShowRsvpSummary(boolean showRsvpSummary) {
+        this.showRsvpSummary = showRsvpSummary;
     }
 
     public Set<Person> getHosts() {

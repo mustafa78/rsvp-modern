@@ -5,6 +5,7 @@ import java.util.List;
 import com.acme.rsvp.dto.RsvpDtos.AdminNiyazRsvpRequest;
 import com.acme.rsvp.dto.RsvpDtos.NiyazRsvpDetailDto;
 import com.acme.rsvp.dto.RsvpDtos.NiyazRsvpDto;
+import com.acme.rsvp.dto.RsvpDtos.NiyazRsvpPublicSummaryDto;
 import com.acme.rsvp.dto.RsvpDtos.PersonBasicDto;
 import com.acme.rsvp.model.Person;
 import com.acme.rsvp.service.NiyazService;
@@ -56,6 +57,12 @@ public class NiyazRsvpController {
     @GetMapping("/totals/kids")
     public long kids(@PathVariable Long eventId) {
         return service.totalKids(eventId);
+    }
+
+    // Public: Get RSVP summary for event detail page (respects showRsvpSummary setting)
+    @GetMapping("/summary")
+    public NiyazRsvpPublicSummaryDto getPublicSummary(@PathVariable Long eventId) {
+        return service.getPublicSummary(eventId);
     }
 
     // Admin: Get all RSVPs with person details
