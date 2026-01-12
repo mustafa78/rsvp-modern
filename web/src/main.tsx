@@ -6,6 +6,7 @@ import App from './App'
 import EventsPage from './pages/EventsPage'
 import EventDetailPage from './pages/EventDetailPage'
 import RsvpPage from './pages/RsvpPage'
+import BulkThaaliRegistration from './pages/BulkThaaliRegistration'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ForgotPassword from './pages/ForgotPassword'
@@ -44,6 +45,7 @@ const router = createBrowserRouter([
       { index: true, element: <EventsPage /> },
       { path: 'events/:id', element: <EventDetailPage /> },
       { path: 'events/:id/rsvp', element: <RsvpPage /> },
+      { path: 'thaali/quick-register', element: <BulkThaaliRegistration /> },
       {
         path: 'admin',
         element: <AdminLayout />,
