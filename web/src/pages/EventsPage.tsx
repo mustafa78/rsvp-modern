@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import type { Event } from '../types/models';
 
@@ -326,6 +326,7 @@ type Tab = 'upcoming' | 'past';
 type FilterType = 'all' | 'niyaz' | 'thaali';
 
 export default function EventsPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>('upcoming');
   const [filterType, setFilterType] = useState<FilterType>('all');
 
@@ -399,6 +400,18 @@ export default function EventsPage() {
     return events.filter(e => e.type === 'THAALI').length;
   }, [activeTab, upcomingEvents, pastEvents]);
 
+  // Count of open Thaali events (for quick registration button)
+  const openThaaliCount = useMemo(() => {
+    const now = new Date();
+    return upcomingEvents.filter(event => {
+      if (event.type !== 'THAALI') return false;
+      if (event.status !== 'PUBLISHED') return false;
+      const openAt = event.registrationOpenAt ? new Date(event.registrationOpenAt) : null;
+      const closeAt = event.registrationCloseAt ? new Date(event.registrationCloseAt) : null;
+      return openAt && closeAt && now >= openAt && now < closeAt;
+    }).length;
+  }, [upcomingEvents]);
+
   if (isLoading) {
     return (
       <div className="max-w-6xl mx-auto px-4 lg:px-6 py-6">
@@ -410,8 +423,19 @@ export default function EventsPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 lg:px-6 py-6 space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <h1 className="text-2xl font-bold">Events</h1>
+        {openThaaliCount >= 2 && (
+          <button
+            onClick={() => navigate('/thaali/quick-register')}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            Quick Register ({openThaaliCount} Thaalis)
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
