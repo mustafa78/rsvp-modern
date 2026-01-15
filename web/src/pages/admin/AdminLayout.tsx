@@ -19,6 +19,8 @@ const hasRole = (roles: string[], role: string) => roles?.includes(role) ?? fals
 const isAdmin = (roles: string[]) => hasRole(roles, 'ADMIN');
 const isNiyazCoordinator = (roles: string[]) => hasRole(roles, 'NIYAZ_COORDINATOR');
 const isThaaliCoordinator = (roles: string[]) => hasRole(roles, 'THAALI_COORDINATOR');
+const isMenuCoordinator = (roles: string[]) => hasRole(roles, 'MENU_COORDINATOR');
+const isShoppingCoordinator = (roles: string[]) => hasRole(roles, 'SHOPPING_COORDINATOR');
 
 // Build navigation items based on user roles
 const getNavItems = (roles: string[]): NavItem[] => {
@@ -45,24 +47,49 @@ const getNavItems = (roles: string[]): NavItem[] => {
     items.push({ label: 'Events', children: eventChildren });
   }
 
-  // Catalog - admin only for now
-  if (admin) {
-    items.push({
-      label: 'Catalog',
-      children: [
-        { label: 'Dishes', path: '/admin/catalog/dishes' },
-        { label: 'Ingredients', path: '/admin/catalog/ingredients' },
-        { label: 'Chefs', path: '/admin/catalog/chefs' },
-        { label: 'Categories', path: '/admin/catalog/categories' },
-        { label: 'Stores', path: '/admin/catalog/stores' },
-        { label: 'Storage Locations', path: '/admin/catalog/storage-locations' },
-        { label: 'Units', path: '/admin/catalog/units' },
-      ],
-    });
+  // Catalog - based on role
+  const menuCoord = isMenuCoordinator(roles);
+  const shoppingCoord = isShoppingCoordinator(roles);
+
+  if (admin || menuCoord || shoppingCoord) {
+    const catalogChildren: { label: string; path: string }[] = [];
+
+    // Dishes - Admin, Menu Coordinator
+    if (admin || menuCoord) {
+      catalogChildren.push({ label: 'Dishes', path: '/admin/catalog/dishes' });
+    }
+    // Ingredients - Admin, Menu Coordinator, Shopping Coordinator
+    if (admin || menuCoord || shoppingCoord) {
+      catalogChildren.push({ label: 'Ingredients', path: '/admin/catalog/ingredients' });
+    }
+    // Chefs - Admin, Menu Coordinator
+    if (admin || menuCoord) {
+      catalogChildren.push({ label: 'Chefs', path: '/admin/catalog/chefs' });
+    }
+    // Categories - Admin, Menu Coordinator, Shopping Coordinator
+    if (admin || menuCoord || shoppingCoord) {
+      catalogChildren.push({ label: 'Categories', path: '/admin/catalog/categories' });
+    }
+    // Stores - Admin, Shopping Coordinator
+    if (admin || shoppingCoord) {
+      catalogChildren.push({ label: 'Stores', path: '/admin/catalog/stores' });
+    }
+    // Storage Locations - Admin, Shopping Coordinator
+    if (admin || shoppingCoord) {
+      catalogChildren.push({ label: 'Storage Locations', path: '/admin/catalog/storage-locations' });
+    }
+    // Units - Admin, Menu Coordinator, Shopping Coordinator
+    if (admin || menuCoord || shoppingCoord) {
+      catalogChildren.push({ label: 'Units', path: '/admin/catalog/units' });
+    }
+
+    if (catalogChildren.length > 0) {
+      items.push({ label: 'Catalog', children: catalogChildren });
+    }
   }
 
-  // Reports - admin only for now
-  if (admin) {
+  // Reports - Admin and Shopping Coordinator
+  if (admin || shoppingCoord) {
     items.push({
       label: 'Reports',
       children: [
