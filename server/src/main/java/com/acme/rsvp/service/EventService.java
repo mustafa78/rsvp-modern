@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.acme.rsvp.dto.EventDtos.BaseEventReq;
+import com.acme.rsvp.dto.EventDtos.ChefSummaryDto;
 import com.acme.rsvp.dto.EventDtos.CreateUpdateNiyazEventRequest;
 import com.acme.rsvp.dto.EventDtos.CreateUpdateThaaliEventRequest;
 import com.acme.rsvp.dto.EventDtos.EventSummaryDto;
@@ -88,7 +89,7 @@ public class EventService {
 
     @Transactional(readOnly = true)
     public ThaaliEventDto getThaaliEvent(Long id) {
-        return thaaliRepo.findById(id).map(this::toDto).orElseThrow();
+        return thaaliRepo.findByIdWithChefs(id).map(this::toDto).orElseThrow();
     }
 
     /* ======================= Commands ======================= */
@@ -180,6 +181,7 @@ public class EventService {
         var existing = menuRepo.findByEvent_IdOrderByPositionAsc(eventId);
         if (!existing.isEmpty()) {
             menuRepo.deleteAll(existing);
+            menuRepo.flush();  // Ensure deletes are executed before inserts (unique constraint)
         }
         if (items == null || items.isEmpty())
             return;
@@ -195,8 +197,11 @@ public class EventService {
             mi.setEvent(e);
             mi.setDish(d);
             mi.setPosition(dto.position());
-            // If null, callers/readers should fall back to dish.defaultQuartsPerThaaliUnit
-            mi.setQuartsPerThaaliUnit(dto.quartsPerThaaliUnit());
+            // Use DTO value if provided, otherwise fall back to dish's default
+            BigDecimal quartsValue = dto.quartsPerThaaliUnit() != null
+                    ? dto.quartsPerThaaliUnit()
+                    : d.getDefaultQuartsPerThaaliUnit();
+            mi.setQuartsPerThaaliUnit(quartsValue);
             menuRepo.save(mi);
         }
     }
@@ -243,9 +248,13 @@ public class EventService {
 
         var chefIds = e.getChefs().stream().map(Chef::getId).collect(Collectors.toSet());
 
+        List<ChefSummaryDto> chefs = e.getChefs().stream()
+                .map(c -> new ChefSummaryDto(c.getId(), c.getName(), c.getType().name()))
+                .toList();
+
         return new ThaaliEventDto(
                 e.getId(), e.getTitle(), e.getDescription(), e.getEventDate(), e.getStartTime(),
-                e.getRegistrationOpenAt(), e.getRegistrationCloseAt(), e.getStatus(), menu, chefIds);
+                e.getRegistrationOpenAt(), e.getRegistrationCloseAt(), e.getStatus(), menu, chefIds, chefs);
     }
 
     private NiyazEventDto toDto(NiyazEvent e) {
