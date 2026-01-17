@@ -34,6 +34,42 @@ type ThaaliOrder = {
   items: ThaaliOrderItem[]
 }
 
+type Host = {
+  id: number
+  firstName: string
+  lastName: string
+  fullName: string
+}
+
+type NiyazEventDetail = {
+  id: number
+  title: string
+  miqaatName: string
+  showRsvpSummary: boolean
+  hosts: Host[]
+}
+
+type ChefSummary = {
+  id: number
+  name: string
+  type: string
+}
+
+type MenuItem = {
+  id: number
+  name: string
+  description: string | null
+  dishId: number
+  position: number
+}
+
+type ThaaliEventDetail = {
+  id: number
+  title: string
+  menu: MenuItem[]
+  chefs: ChefSummary[]
+}
+
 export default function EventDetailPage() {
   const { id } = useParams()
   const [showCalendarMenu, setShowCalendarMenu] = useState(false)
@@ -78,6 +114,29 @@ export default function EventDetailPage() {
     },
     enabled: !!data && data.type === 'THAALI'
   })
+
+  // Fetch detailed Niyaz event info (hosts)
+  const { data: niyazDetail } = useQuery<NiyazEventDetail>({
+    queryKey: ['niyaz-detail', id],
+    queryFn: async () => (await api.get(`/niyaz/${id}`)).data,
+    enabled: !!data && data.type === 'NIYAZ'
+  })
+
+  // Fetch detailed Thaali event info (menu, chefs)
+  const { data: thaaliDetail, error: thaaliError } = useQuery<ThaaliEventDetail>({
+    queryKey: ['thaali-detail', id],
+    queryFn: async () => (await api.get(`/thaali/${id}`)).data,
+    enabled: !!data && data.type === 'THAALI',
+    retry: false,
+  })
+
+  // Debug: log thaali detail for troubleshooting
+  if (thaaliError) {
+    console.error('Failed to fetch thaali details:', thaaliError)
+  }
+  if (thaaliDetail) {
+    console.log('Thaali detail loaded:', thaaliDetail)
+  }
 
   if (isLoading) {
     return (
@@ -314,6 +373,75 @@ END:VCALENDAR`
                     <p className="text-gray-700 leading-relaxed whitespace-pre-line">{data.description}</p>
                   </div>
                 </div>
+              )}
+
+              {/* Host info for Niyaz events */}
+              {isNiyaz && niyazDetail && niyazDetail.hosts && niyazDetail.hosts.length > 0 && (
+                <div className="border-t pt-6">
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                    {niyazDetail.hosts.length === 1 ? 'Host' : 'Hosts'}
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {niyazDetail.hosts.map((host) => (
+                      <span
+                        key={host.id}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-sm font-medium"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        {host.fullName}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Menu and Chefs for Thaali events */}
+              {isThaali && thaaliDetail && (
+                <>
+                  {/* Menu/Dishes */}
+                  {thaaliDetail.menu && thaaliDetail.menu.length > 0 && (
+                    <div className="border-t pt-6">
+                      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Menu</h3>
+                      <div className="space-y-2">
+                        {thaaliDetail.menu
+                          .sort((a, b) => (a.position || 0) - (b.position || 0))
+                          .map((item, idx) => (
+                            <div
+                              key={item.id}
+                              className="flex items-center gap-3 py-2 px-3 bg-blue-50 rounded-lg"
+                            >
+                              <span className="w-6 h-6 flex items-center justify-center bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                                {idx + 1}
+                              </span>
+                              <span className="text-gray-900 font-medium">{item.name}</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cooking Group/Chefs */}
+                  {thaaliDetail.chefs && thaaliDetail.chefs.length > 0 && (
+                    <div className="border-t pt-6">
+                      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Chef / Cooking Group</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {thaaliDetail.chefs.map((chef) => (
+                          <span
+                            key={chef.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full text-sm font-medium"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            {chef.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

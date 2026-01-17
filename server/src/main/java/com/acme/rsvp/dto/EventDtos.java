@@ -77,6 +77,13 @@ public final class EventDtos {
             String fullName
     ) {}
 
+    // Chef summary for event display
+    public static record ChefSummaryDto(
+            Long id,
+            String name,
+            String type
+    ) {}
+
     public static record NiyazEventDto(
             Long id,
             String title,
@@ -120,6 +127,7 @@ public final class EventDtos {
             OffsetDateTime registrationCloseAt,
             EventStatus status,
             List<MenuItemDto> menu,
-            Set<Long> chefIds
+            Set<Long> chefIds,
+            List<ChefSummaryDto> chefs
     ) {}
 }
