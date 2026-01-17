@@ -169,6 +169,15 @@ export default function EventDetailPage() {
   const isRegistrationClosed = data.status === 'PUBLISHED' &&
     registrationCloseAt && now >= registrationCloseAt
 
+  // Check if event date has passed
+  const parseLocalDate = (dateStr: string) => {
+    const [year, month, day] = dateStr.split('-').map(Number)
+    return new Date(year, month - 1, day)
+  }
+  const eventDate = parseLocalDate(data.eventDate)
+  eventDate.setHours(23, 59, 59) // End of event day
+  const isEventPast = now > eventDate
+
   // Calculate days until deadline
   const getDaysUntilDeadline = () => {
     if (!registrationCloseAt) return null
@@ -208,12 +217,6 @@ export default function EventDetailPage() {
       day: 'numeric',
       year: 'numeric'
     })
-  }
-
-  // Parse date string as local date to avoid timezone issues
-  const parseLocalDate = (dateStr: string) => {
-    const [year, month, day] = dateStr.split('-').map(Number)
-    return new Date(year, month - 1, day)
   }
 
   // Generate calendar event URLs
@@ -345,7 +348,7 @@ END:VCALENDAR`
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 font-medium">{isNiyaz ? 'Miqaat Date' : 'Event Date'}</p>
+                    <p className="text-sm text-gray-500 font-medium">{isNiyaz ? 'Miqaat Date' : 'Thaali Date'}</p>
                     <p className="text-lg font-semibold text-gray-900">{formatDate(data.eventDate)}</p>
                   </div>
                 </div>
@@ -379,7 +382,7 @@ END:VCALENDAR`
               {isNiyaz && niyazDetail && niyazDetail.hosts && niyazDetail.hosts.length > 0 && (
                 <div className="border-t pt-6">
                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                    {niyazDetail.hosts.length === 1 ? 'Host' : 'Hosts'}
+                    {niyazDetail.hosts.length === 1 ? 'Niyaz Khidmat' : 'Niyaz Khidmat'}
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {niyazDetail.hosts.map((host) => (
@@ -446,67 +449,69 @@ END:VCALENDAR`
             </div>
           </div>
 
-          {/* Add to Calendar */}
-          <div className="relative inline-block">
-            <button
-              onClick={() => setShowCalendarMenu(!showCalendarMenu)}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
-            >
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Add to Calendar
-              <svg className={`w-4 h-4 transition-transform ${showCalendarMenu ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
+          {/* Add to Calendar - only show for upcoming events */}
+          {!isEventPast && (
+            <div className="relative inline-block">
+              <button
+                onClick={() => setShowCalendarMenu(!showCalendarMenu)}
+                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+              >
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Add to Calendar
+                <svg className={`w-4 h-4 transition-transform ${showCalendarMenu ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
 
-            {showCalendarMenu && (
-              <div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                <a
-                  href={googleUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100"
-                  onClick={() => setShowCalendarMenu(false)}
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
-                  Google Calendar
-                </a>
-                <a
-                  href={outlookUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100"
-                  onClick={() => setShowCalendarMenu(false)}
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="#0078D4" d="M24 7.387v10.478c0 .23-.08.424-.238.576-.158.152-.356.228-.594.228h-8.457v-6.696l1.2.96c.106.085.23.128.374.128.143 0 .268-.043.374-.128l6.103-4.872c.17-.128.255-.298.255-.512v-.17c0-.213-.085-.383-.255-.51L16.71 2.85v-.512c0-.213.085-.383.255-.51.17-.128.34-.192.51-.192h5.693c.238 0 .437.076.595.228.158.152.237.347.237.576v4.948z"/>
-                    <path fill="#0078D4" d="M15.711 7.47v6.697H8.457v5.503h-7.22c-.237 0-.436-.076-.594-.228C.485 19.29.406 19.096.406 18.866V5.133c0-.23.08-.424.237-.576.158-.152.357-.228.595-.228h7.22V9.83l3.626-2.902c.107-.085.231-.128.374-.128s.268.043.374.128l2.88 2.304v-1.76z"/>
-                    <path fill="#28A8EA" d="M15.711 4.33v3.14l-2.88-2.303c-.106-.085-.23-.128-.374-.128-.143 0-.267.043-.374.128L8.457 7.87V4.33h7.254z"/>
-                    <path fill="#0364B8" d="M8.457 9.83V4.33l-7.22-.001v5.502h7.22z"/>
-                    <path fill="#0078D4" d="M8.457 14.168v5.502H1.237c-.238 0-.437-.076-.595-.228-.158-.152-.236-.347-.236-.576v-4.698h8.05z"/>
-                  </svg>
-                  Outlook Calendar
-                </a>
-                <div className="border-t border-gray-100 my-1"></div>
-                <button
-                  onClick={handleDownloadICS}
-                  className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 text-left"
-                >
-                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download iCal (.ics)
-                </button>
-              </div>
-            )}
-          </div>
+              {showCalendarMenu && (
+                <div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                  <a
+                    href={googleUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setShowCalendarMenu(false)}
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Google Calendar
+                  </a>
+                  <a
+                    href={outlookUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setShowCalendarMenu(false)}
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                      <path fill="#0078D4" d="M24 7.387v10.478c0 .23-.08.424-.238.576-.158.152-.356.228-.594.228h-8.457v-6.696l1.2.96c.106.085.23.128.374.128.143 0 .268-.043.374-.128l6.103-4.872c.17-.128.255-.298.255-.512v-.17c0-.213-.085-.383-.255-.51L16.71 2.85v-.512c0-.213.085-.383.255-.51.17-.128.34-.192.51-.192h5.693c.238 0 .437.076.595.228.158.152.237.347.237.576v4.948z"/>
+                      <path fill="#0078D4" d="M15.711 7.47v6.697H8.457v5.503h-7.22c-.237 0-.436-.076-.594-.228C.485 19.29.406 19.096.406 18.866V5.133c0-.23.08-.424.237-.576.158-.152.357-.228.595-.228h7.22V9.83l3.626-2.902c.107-.085.231-.128.374-.128s.268.043.374.128l2.88 2.304v-1.76z"/>
+                      <path fill="#28A8EA" d="M15.711 4.33v3.14l-2.88-2.303c-.106-.085-.23-.128-.374-.128-.143 0-.267.043-.374.128L8.457 7.87V4.33h7.254z"/>
+                      <path fill="#0364B8" d="M8.457 9.83V4.33l-7.22-.001v5.502h7.22z"/>
+                      <path fill="#0078D4" d="M8.457 14.168v5.502H1.237c-.238 0-.437-.076-.595-.228-.158-.152-.236-.347-.236-.576v-4.698h8.05z"/>
+                    </svg>
+                    Outlook Calendar
+                  </a>
+                  <div className="border-t border-gray-100 my-1"></div>
+                  <button
+                    onClick={handleDownloadICS}
+                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 text-left"
+                  >
+                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download iCal (.ics)
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Sidebar - 1 column on large screens */}

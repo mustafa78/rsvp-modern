@@ -271,7 +271,7 @@ export default function EventDetail() {
               {niyazDetail.hosts && niyazDetail.hosts.length > 0 && (
                 <div className="border-t pt-6">
                   <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
-                    {niyazDetail.hosts.length === 1 ? 'Host' : 'Hosts'}
+                    {niyazDetail.hosts.length === 1 ? 'Niyaz Khidmat' : 'Niyaz Khidmat'}
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {niyazDetail.hosts.map((host) => (

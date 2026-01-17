@@ -174,58 +174,87 @@ function UserEventStatus({
   return null;
 }
 
-// Row component to use the hook and share status between cells
-function EventRow({ event, isPast, idx }: { event: Event; isPast: boolean; idx: number }) {
+// Event Card component with modern styling
+function EventCard({ event, isPast }: { event: Event; isPast: boolean }) {
   const isNiyaz = event.type === 'NIYAZ';
-  const { niyazRsvp, thaaliOrder, isLoading, hasRegistered } = useEventStatus(event);
+  const { niyazRsvp, thaaliOrder, isLoading } = useEventStatus(event);
 
-  // Determine button text
-  const buttonText = hasRegistered
-    ? 'Update'
-    : (isNiyaz ? 'RSVP' : 'Register');
+  const eventDate = parseLocalDate(event.eventDate);
+  const dayNum = eventDate.getDate();
+  const monthShort = eventDate.toLocaleDateString('en-US', { month: 'short' });
+  const weekday = eventDate.toLocaleDateString('en-US', { weekday: 'short' });
 
   return (
-    <tr className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${isPast ? 'opacity-75' : ''}`}>
-      {/* Date Column */}
-      <td className="py-3 px-4 w-28">
-        <div className="text-sm font-medium text-gray-900">
-          {formatDate(event.eventDate)}
+    <Link
+      to={`/events/${event.id}`}
+      className={`block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md hover:border-gray-200 ${isPast ? 'opacity-70' : ''}`}
+    >
+      <div className="flex">
+        {/* Colored Left Accent */}
+        <div className={`w-1.5 ${isNiyaz ? 'bg-purple-500' : 'bg-blue-500'}`} />
+
+        <div className="flex-1 p-4 flex items-center gap-4">
+          {/* Calendar Date */}
+          <div className={`flex-shrink-0 w-14 h-14 rounded-lg flex flex-col items-center justify-center ${
+            isNiyaz ? 'bg-purple-50' : 'bg-blue-50'
+          }`}>
+            <span className={`text-xs font-medium uppercase ${isNiyaz ? 'text-purple-600' : 'text-blue-600'}`}>
+              {monthShort}
+            </span>
+            <span className={`text-xl font-bold leading-none ${isNiyaz ? 'text-purple-700' : 'text-blue-700'}`}>
+              {dayNum}
+            </span>
+            <span className="text-[10px] text-gray-500 uppercase">{weekday}</span>
+          </div>
+
+          {/* Event Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span
+                className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full ${
+                  isNiyaz
+                    ? 'bg-purple-100 text-purple-700'
+                    : 'bg-blue-100 text-blue-700'
+                }`}
+              >
+                {isNiyaz ? 'Niyaz' : 'Thaali'}
+              </span>
+              {event.startTime && (
+                <span className="text-xs text-gray-500">
+                  {formatTime(event.startTime)}
+                </span>
+              )}
+            </div>
+            <h3 className="font-semibold text-gray-900 truncate">{event.title}</h3>
+            {event.description && (
+              <p className="text-sm text-gray-500 line-clamp-1 mt-0.5">
+                {event.description}
+              </p>
+            )}
+          </div>
+
+          {/* Status */}
+          <div className="flex-shrink-0 hidden sm:block">
+            <UserEventStatus
+              event={event}
+              isPast={isPast}
+              niyazRsvp={niyazRsvp}
+              thaaliOrder={thaaliOrder}
+              isLoading={isLoading}
+            />
+          </div>
+
+          {/* Arrow */}
+          <div className="flex-shrink-0">
+            <svg className={`w-5 h-5 ${isNiyaz ? 'text-purple-400' : 'text-blue-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
         </div>
-        {event.startTime && (
-          <div className="text-xs text-gray-500">
-            {formatTime(event.startTime)}
-          </div>
-        )}
-      </td>
+      </div>
 
-      {/* Type Badge */}
-      <td className="py-3 px-2 w-20">
-        <span
-          className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded ${
-            isNiyaz
-              ? 'bg-purple-100 text-purple-700'
-              : 'bg-blue-100 text-blue-700'
-          }`}
-        >
-          {isNiyaz ? 'Niyaz' : 'Thaali'}
-        </span>
-      </td>
-
-      {/* Event Details */}
-      <td className="py-3 px-4">
-        <div className="font-medium text-gray-900">{event.title}</div>
-        {isNiyaz && event.miqaatName && event.miqaatName !== event.title && (
-          <div className="text-xs text-purple-600">{event.miqaatName}</div>
-        )}
-        {event.description && (
-          <div className="text-xs text-gray-500 line-clamp-1 max-w-md">
-            {event.description}
-          </div>
-        )}
-      </td>
-
-      {/* My Status */}
-      <td className="py-3 px-4">
+      {/* Mobile Status - shown below on small screens */}
+      <div className="sm:hidden px-4 pb-3 -mt-1">
         <UserEventStatus
           event={event}
           isPast={isPast}
@@ -233,32 +262,8 @@ function EventRow({ event, isPast, idx }: { event: Event; isPast: boolean; idx: 
           thaaliOrder={thaaliOrder}
           isLoading={isLoading}
         />
-      </td>
-
-      {/* Actions */}
-      <td className="py-3 px-4 w-32 text-right">
-        <div className="flex items-center justify-end gap-2">
-          <Link
-            to={`/events/${event.id}`}
-            className="text-sm text-gray-600 hover:text-gray-900"
-          >
-            Details
-          </Link>
-          {!isPast && (
-            <Link
-              to={`/events/${event.id}/rsvp`}
-              className={`text-sm text-white px-3 py-1 rounded ${
-                hasRegistered
-                  ? 'bg-green-600 hover:bg-green-700'
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-            >
-              {buttonText}
-            </Link>
-          )}
-        </div>
-      </td>
-    </tr>
+      </div>
+    </Link>
   );
 }
 
@@ -517,26 +522,21 @@ export default function EventsPage() {
             <div key={group.label}>
               {/* Group Header */}
               <div className="flex items-center gap-3 mb-3">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
+                <span className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   {group.label}
-                </h3>
+                </span>
                 <div className="flex-1 border-t border-gray-200" />
               </div>
 
-              {/* Events Table */}
-              <div className="card overflow-hidden p-0">
-                <table className="w-full">
-                  <tbody className="divide-y divide-gray-100">
-                    {group.events.map((event, idx) => (
-                      <EventRow
-                        key={event.id}
-                        event={event}
-                        isPast={activeTab === 'past'}
-                        idx={idx}
-                      />
-                    ))}
-                  </tbody>
-                </table>
+              {/* Event Cards */}
+              <div className="space-y-3">
+                {group.events.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    isPast={activeTab === 'past'}
+                  />
+                ))}
               </div>
             </div>
           ))}
