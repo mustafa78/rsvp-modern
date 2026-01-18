@@ -12,8 +12,9 @@ public class Ingredient extends Auditable {
   @Column(name="name", nullable=false, length=200)
   private String name;
 
-  @Column(name="unit", nullable=false, length=32) // e.g., lb, bunch, can, box
-  private String unit;
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "unit_id", nullable = false)
+  private IngredientUnit unit;
 
   @Column(name="category", length=32) // produce, meat, non-perishable, frozen, pantry, bread
   private String category;
@@ -37,8 +38,8 @@ public class Ingredient extends Auditable {
   public Long getId() { return id; }
   public String getName() { return name; }
   public void setName(String name) { this.name = name; }
-  public String getUnit() { return unit; }
-  public void setUnit(String unit) { this.unit = unit; }
+  public IngredientUnit getUnit() { return unit; }
+  public void setUnit(IngredientUnit unit) { this.unit = unit; }
   public String getCategory() { return category; }
   public void setCategory(String category) { this.category = category; }
   public String getDefaultStore() { return defaultStore; }

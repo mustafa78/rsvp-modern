@@ -236,7 +236,7 @@ public class EventService {
                     : d.getIngredients().stream().map(di -> new MenuItemIngredientDto(
                             di.getIngredient().getId(),
                             di.getIngredient().getName(),
-                            di.getIngredient().getUnit(),
+                            di.getIngredient().getUnit().getName(),
                             di.getQtyPerQuart())).toList();
 
             Long dishId = (d != null ? d.getId() : null);

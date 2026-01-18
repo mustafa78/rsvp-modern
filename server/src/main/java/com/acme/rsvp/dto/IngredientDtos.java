@@ -1,13 +1,15 @@
 package com.acme.rsvp.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 public class IngredientDtos {
   public record IngredientDto(
       Long id,
       String name,
-      String unit,
+      Long unitId,
+      String unit,  // unit name for display
       String category,
       String defaultStore,
       String storageLocation,
@@ -18,7 +20,7 @@ public class IngredientDtos {
 
   public record IngredientUpsertRequest(
       @NotBlank String name,
-      @NotBlank String unit,
+      @NotNull Long unitId,  // foreign key to ingredient_units
       String category,
       String defaultStore,
       String storageLocation,

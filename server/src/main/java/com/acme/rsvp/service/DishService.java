@@ -76,7 +76,7 @@ public class DishService {
       : d.getIngredients().stream().map(di -> new DishIngredientDto(
         di.getIngredient().getId(),
         di.getIngredient().getName(),
-        di.getIngredient().getUnit(),
+        di.getIngredient().getUnit().getName(),
         di.getQtyPerQuart(),
         di.getIngredient().getCostPerUnit(),
         di.getIngredient().getCaloriesPerUnit()
