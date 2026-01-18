@@ -16,14 +16,17 @@ public class Ingredient extends Auditable {
   @JoinColumn(name = "unit_id", nullable = false)
   private IngredientUnit unit;
 
-  @Column(name="category", length=32) // produce, meat, non-perishable, frozen, pantry, bread
-  private String category;
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "category_id")
+  private IngredientCategory category;
 
-  @Column(name="default_store", length=64) // Costco, Indian, Indus, Grocery
-  private String defaultStore;
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "store_id")
+  private IngredientStore store;
 
-  @Column(name="storage_location", length=100) // refrigerator, freezer, spice rack, etc.
-  private String storageLocation;
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "storage_location_id")
+  private IngredientStorageLocation storageLocation;
 
   @Column(name="notes", length=500)
   private String notes;
@@ -40,12 +43,12 @@ public class Ingredient extends Auditable {
   public void setName(String name) { this.name = name; }
   public IngredientUnit getUnit() { return unit; }
   public void setUnit(IngredientUnit unit) { this.unit = unit; }
-  public String getCategory() { return category; }
-  public void setCategory(String category) { this.category = category; }
-  public String getDefaultStore() { return defaultStore; }
-  public void setDefaultStore(String defaultStore) { this.defaultStore = defaultStore; }
-  public String getStorageLocation() { return storageLocation; }
-  public void setStorageLocation(String storageLocation) { this.storageLocation = storageLocation; }
+  public IngredientCategory getCategory() { return category; }
+  public void setCategory(IngredientCategory category) { this.category = category; }
+  public IngredientStore getStore() { return store; }
+  public void setStore(IngredientStore store) { this.store = store; }
+  public IngredientStorageLocation getStorageLocation() { return storageLocation; }
+  public void setStorageLocation(IngredientStorageLocation storageLocation) { this.storageLocation = storageLocation; }
   public String getNotes() { return notes; }
   public void setNotes(String notes) { this.notes = notes; }
   public BigDecimal getCostPerUnit() { return costPerUnit; }

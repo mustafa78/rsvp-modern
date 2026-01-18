@@ -10,9 +10,12 @@ type Ingredient = {
   name: string;
   unitId: number;
   unit: string;  // unit name for display
-  category: string | null;
-  defaultStore: string | null;
-  storageLocation: string | null;
+  categoryId: number | null;
+  category: string | null;  // category name for display
+  storeId: number | null;
+  store: string | null;  // store name for display
+  storageLocationId: number | null;
+  storageLocation: string | null;  // storage location name for display
   notes: string | null;
   costPerUnit: number | null;
   caloriesPerUnit: number | null;
@@ -28,9 +31,9 @@ type LookupItem = {
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   unitId: z.coerce.number().min(1, 'Unit is required'),
-  category: z.string().optional(),
-  defaultStore: z.string().optional(),
-  storageLocation: z.string().optional(),
+  categoryId: z.coerce.number().optional().or(z.literal('')),
+  storeId: z.coerce.number().optional().or(z.literal('')),
+  storageLocationId: z.coerce.number().optional().or(z.literal('')),
   notes: z.string().optional(),
   costPerUnit: z.coerce.number().positive().optional().or(z.literal('')),
   caloriesPerUnit: z.coerce.number().int().positive().optional().or(z.literal('')),
@@ -88,7 +91,7 @@ export default function IngredientList() {
       i.name.toLowerCase().includes(query) ||
       i.unit.toLowerCase().includes(query) ||
       i.category?.toLowerCase().includes(query) ||
-      i.defaultStore?.toLowerCase().includes(query) ||
+      i.store?.toLowerCase().includes(query) ||
       i.notes?.toLowerCase().includes(query)
     );
   }, [ingredients, searchQuery]);
@@ -103,9 +106,9 @@ export default function IngredientList() {
     defaultValues: {
       name: '',
       unitId: 0,
-      category: '',
-      defaultStore: '',
-      storageLocation: '',
+      categoryId: '',
+      storeId: '',
+      storageLocationId: '',
       notes: '',
       costPerUnit: '',
       caloriesPerUnit: '',
@@ -139,9 +142,9 @@ export default function IngredientList() {
     const payload = {
       name: values.name,
       unitId: values.unitId,
-      category: values.category || null,
-      defaultStore: values.defaultStore || null,
-      storageLocation: values.storageLocation || null,
+      categoryId: values.categoryId || null,
+      storeId: values.storeId || null,
+      storageLocationId: values.storageLocationId || null,
       notes: values.notes || null,
       costPerUnit: values.costPerUnit || null,
       caloriesPerUnit: values.caloriesPerUnit || null,
@@ -160,9 +163,9 @@ export default function IngredientList() {
     reset({
       name: ingredient.name,
       unitId: ingredient.unitId,
-      category: ingredient.category || '',
-      defaultStore: ingredient.defaultStore || '',
-      storageLocation: ingredient.storageLocation || '',
+      categoryId: ingredient.categoryId ?? '',
+      storeId: ingredient.storeId ?? '',
+      storageLocationId: ingredient.storageLocationId ?? '',
       notes: ingredient.notes || '',
       costPerUnit: ingredient.costPerUnit ?? '',
       caloriesPerUnit: ingredient.caloriesPerUnit ?? '',
@@ -175,9 +178,9 @@ export default function IngredientList() {
     reset({
       name: '',
       unitId: 0,
-      category: '',
-      defaultStore: '',
-      storageLocation: '',
+      categoryId: '',
+      storeId: '',
+      storageLocationId: '',
       notes: '',
       costPerUnit: '',
       caloriesPerUnit: '',
@@ -261,10 +264,10 @@ export default function IngredientList() {
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Category</label>
-                <select className="input" {...register('category')}>
+                <select className="input" {...register('categoryId')}>
                   <option value="">-- Select Category --</option>
                   {categories.map((c) => (
-                    <option key={c.id} value={c.name}>
+                    <option key={c.id} value={c.id}>
                       {c.name.charAt(0).toUpperCase() + c.name.slice(1)}
                     </option>
                   ))}
@@ -272,10 +275,10 @@ export default function IngredientList() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Default Store</label>
-                <select className="input" {...register('defaultStore')}>
+                <select className="input" {...register('storeId')}>
                   <option value="">-- Select Store --</option>
                   {stores.map((s) => (
-                    <option key={s.id} value={s.name}>
+                    <option key={s.id} value={s.id}>
                       {s.name}
                     </option>
                   ))}
@@ -283,10 +286,10 @@ export default function IngredientList() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Storage Location</label>
-                <select className="input" {...register('storageLocation')}>
+                <select className="input" {...register('storageLocationId')}>
                   <option value="">-- Select Location --</option>
                   {storageLocations.map((loc) => (
-                    <option key={loc.id} value={loc.name}>
+                    <option key={loc.id} value={loc.id}>
                       {loc.name.charAt(0).toUpperCase() + loc.name.slice(1)}
                     </option>
                   ))}
@@ -373,9 +376,9 @@ export default function IngredientList() {
                     )}
                   </td>
                   <td className="py-3 px-4">
-                    {ingredient.defaultStore ? (
+                    {ingredient.store ? (
                       <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">
-                        {ingredient.defaultStore}
+                        {ingredient.store}
                       </span>
                     ) : (
                       <span className="text-sm text-gray-400">-</span>

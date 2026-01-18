@@ -1,10 +1,8 @@
 package com.acme.rsvp.service;
 
 import com.acme.rsvp.dto.IngredientDtos.*;
-import com.acme.rsvp.model.Ingredient;
-import com.acme.rsvp.model.IngredientUnit;
-import com.acme.rsvp.repository.IngredientRepository;
-import com.acme.rsvp.repository.IngredientUnitRepository;
+import com.acme.rsvp.model.*;
+import com.acme.rsvp.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,10 +14,20 @@ public class IngredientService {
 
     private final IngredientRepository repo;
     private final IngredientUnitRepository unitRepo;
+    private final IngredientCategoryRepository categoryRepo;
+    private final IngredientStoreRepository storeRepo;
+    private final IngredientStorageLocationRepository storageLocationRepo;
 
-    public IngredientService(IngredientRepository repo, IngredientUnitRepository unitRepo) {
+    public IngredientService(IngredientRepository repo,
+                             IngredientUnitRepository unitRepo,
+                             IngredientCategoryRepository categoryRepo,
+                             IngredientStoreRepository storeRepo,
+                             IngredientStorageLocationRepository storageLocationRepo) {
         this.repo = repo;
         this.unitRepo = unitRepo;
+        this.categoryRepo = categoryRepo;
+        this.storeRepo = storeRepo;
+        this.storageLocationRepo = storageLocationRepo;
     }
 
     /* ======================= Queries ======================= */
@@ -42,12 +50,22 @@ public class IngredientService {
         IngredientUnit unit = unitRepo.findById(req.unitId())
                 .orElseThrow(() -> new IllegalArgumentException("Unit not found: " + req.unitId()));
 
+        IngredientCategory category = req.categoryId() != null
+                ? categoryRepo.findById(req.categoryId()).orElse(null)
+                : null;
+        IngredientStore store = req.storeId() != null
+                ? storeRepo.findById(req.storeId()).orElse(null)
+                : null;
+        IngredientStorageLocation storageLocation = req.storageLocationId() != null
+                ? storageLocationRepo.findById(req.storageLocationId()).orElse(null)
+                : null;
+
         Ingredient i = new Ingredient();
         i.setName(req.name());
         i.setUnit(unit);
-        i.setCategory(req.category());
-        i.setDefaultStore(req.defaultStore());
-        i.setStorageLocation(req.storageLocation());
+        i.setCategory(category);
+        i.setStore(store);
+        i.setStorageLocation(storageLocation);
         i.setNotes(req.notes());
         i.setCostPerUnit(req.costPerUnit());
         i.setCaloriesPerUnit(req.caloriesPerUnit());
@@ -59,12 +77,22 @@ public class IngredientService {
         IngredientUnit unit = unitRepo.findById(req.unitId())
                 .orElseThrow(() -> new IllegalArgumentException("Unit not found: " + req.unitId()));
 
+        IngredientCategory category = req.categoryId() != null
+                ? categoryRepo.findById(req.categoryId()).orElse(null)
+                : null;
+        IngredientStore store = req.storeId() != null
+                ? storeRepo.findById(req.storeId()).orElse(null)
+                : null;
+        IngredientStorageLocation storageLocation = req.storageLocationId() != null
+                ? storageLocationRepo.findById(req.storageLocationId()).orElse(null)
+                : null;
+
         Ingredient i = repo.findById(id).orElseThrow();
         i.setName(req.name());
         i.setUnit(unit);
-        i.setCategory(req.category());
-        i.setDefaultStore(req.defaultStore());
-        i.setStorageLocation(req.storageLocation());
+        i.setCategory(category);
+        i.setStore(store);
+        i.setStorageLocation(storageLocation);
         i.setNotes(req.notes());
         i.setCostPerUnit(req.costPerUnit());
         i.setCaloriesPerUnit(req.caloriesPerUnit());
@@ -80,9 +108,12 @@ public class IngredientService {
             i.getName(),
             i.getUnit().getId(),
             i.getUnit().getName(),
-            i.getCategory(),
-            i.getDefaultStore(),
-            i.getStorageLocation(),
+            i.getCategory() != null ? i.getCategory().getId() : null,
+            i.getCategory() != null ? i.getCategory().getName() : null,
+            i.getStore() != null ? i.getStore().getId() : null,
+            i.getStore() != null ? i.getStore().getName() : null,
+            i.getStorageLocation() != null ? i.getStorageLocation().getId() : null,
+            i.getStorageLocation() != null ? i.getStorageLocation().getName() : null,
             i.getNotes(),
             i.getCostPerUnit(),
             i.getCaloriesPerUnit()
