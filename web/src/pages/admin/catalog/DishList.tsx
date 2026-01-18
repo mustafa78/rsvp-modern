@@ -91,8 +91,7 @@ export default function DishList() {
     const selectedIds = new Set(selectedIngredients.map(s => s.ingredientId));
     return ingredients
       .filter(i => !selectedIds.has(i.id))
-      .filter(i => i.name.toLowerCase().includes(ingredientSearch.toLowerCase()))
-      .slice(0, 10); // Limit dropdown to 10 items
+      .filter(i => i.name.toLowerCase().includes(ingredientSearch.toLowerCase()));
   }, [ingredients, selectedIngredients, ingredientSearch]);
 
   const addIngredient = (ingredient: Ingredient) => {
