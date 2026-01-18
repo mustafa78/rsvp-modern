@@ -135,7 +135,7 @@ export default function LookupManagement({ type, title, description }: Props) {
           <p className="text-sm text-gray-500 mt-1">{description}</p>
         </div>
         {!showForm && (
-          <button onClick={() => setShowForm(true)} className="btn">
+          <button onClick={() => setShowForm(true)} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all shadow-sm hover:shadow-md">
             + Add {title.slice(0, -1)}
           </button>
         )}
@@ -178,10 +178,10 @@ export default function LookupManagement({ type, title, description }: Props) {
               </div>
             )}
             <div className="flex gap-2">
-              <button type="submit" className="btn" disabled={isSubmitting}>
+              <button type="submit" className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all shadow-sm hover:shadow-md disabled:opacity-50" disabled={isSubmitting}>
                 {isSubmitting ? 'Saving...' : editingId ? 'Update' : 'Create'}
               </button>
-              <button type="button" className="btn bg-gray-500" onClick={cancelEdit}>
+              <button type="button" className="px-4 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors" onClick={cancelEdit}>
                 Cancel
               </button>
             </div>

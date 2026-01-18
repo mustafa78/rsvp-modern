@@ -373,12 +373,12 @@ export default function EventDetail() {
         <div className="flex gap-3 flex-wrap">
           {/* Edit button - only for upcoming events */}
           {!isPast && isNiyaz && (
-            <Link to={`/admin/events/edit/niyaz/${event.id}`} className="btn">
+            <Link to={`/admin/events/edit/niyaz/${event.id}`} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all shadow-sm hover:shadow-md">
               Edit Event
             </Link>
           )}
           {!isPast && isThaali && (
-            <Link to={`/admin/events/edit/thaali/${event.id}`} className="btn">
+            <Link to={`/admin/events/edit/thaali/${event.id}`} className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-sm hover:shadow-md">
               Edit Event
             </Link>
           )}
@@ -386,7 +386,7 @@ export default function EventDetail() {
           {isThaali && event.status === 'PUBLISHED' && (
             <Link
               to={`/admin/reports/orders/${event.id}`}
-              className={`btn ${isPast ? 'bg-gray-500 hover:bg-gray-600' : 'bg-blue-600 hover:bg-blue-700'}`}
+              className={`px-4 py-2 font-medium rounded-lg transition-all shadow-sm hover:shadow-md ${isPast ? 'bg-gray-500 hover:bg-gray-600 text-white' : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800'}`}
             >
               {isPast ? 'View Summary' : 'View Signups'}
             </Link>
@@ -394,12 +394,12 @@ export default function EventDetail() {
           {isNiyaz && event.status === 'PUBLISHED' && (
             <Link
               to={`/admin/reports/rsvps/${event.id}`}
-              className={`btn ${isPast ? 'bg-gray-500 hover:bg-gray-600' : 'bg-purple-600 hover:bg-purple-700'}`}
+              className={`px-4 py-2 font-medium rounded-lg transition-all shadow-sm hover:shadow-md ${isPast ? 'bg-gray-500 hover:bg-gray-600 text-white' : 'bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800'}`}
             >
               {isPast ? 'View Summary' : 'View RSVPs'}
             </Link>
           )}
-          <Link to="/admin/events" className="btn bg-gray-500 hover:bg-gray-600">
+          <Link to="/admin/events" className="px-4 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors">
             Back to Events
           </Link>
         </div>

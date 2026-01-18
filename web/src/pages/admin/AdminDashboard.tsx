@@ -69,47 +69,63 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      {/* Page Header */}
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 -m-4 lg:-m-8 mb-6 p-6 lg:p-8">
+        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+        <p className="text-purple-100 mt-1">Manage events, registrations, and more</p>
+      </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="card">
-          <div className="text-3xl font-bold text-blue-600">{upcomingEvents.length}</div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <div className="text-3xl font-bold text-purple-600">{upcomingEvents.length}</div>
           <div className="text-gray-500 text-sm">Upcoming {eventTypeLabel}Events</div>
         </div>
-        <div className="card">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <div className="text-3xl font-bold text-green-600">{publishedEvents.length}</div>
           <div className="text-gray-500 text-sm">Published</div>
         </div>
-        <div className="card">
-          <div className="text-3xl font-bold text-yellow-600">{draftEvents.length}</div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <div className="text-3xl font-bold text-amber-600">{draftEvents.length}</div>
           <div className="text-gray-500 text-sm">Drafts</div>
         </div>
-        <div className="card">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <div className="text-3xl font-bold text-gray-600">{pastEvents.length}</div>
           <div className="text-gray-500 text-sm">Past {eventTypeLabel}Events</div>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="card">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           {canCreateThaali && (
-            <Link to="/admin/events/new/thaali" className="btn">
-              + Create Thaali Event
+            <Link
+              to="/admin/events/new/thaali"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-sm"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Create Thaali Event
             </Link>
           )}
           {canCreateNiyaz && (
-            <Link to="/admin/events/new/niyaz" className="btn bg-gray-700">
-              + Create Niyaz Event
+            <Link
+              to="/admin/events/new/niyaz"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all shadow-sm"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Create Niyaz Event
             </Link>
           )}
         </div>
       </div>
 
       {/* Recent Events */}
-      <div className="card">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <h2 className="text-lg font-semibold mb-4">Upcoming {eventTypeLabel}Events</h2>
         {upcomingEvents.length === 0 ? (
           <p className="text-gray-500">No upcoming {eventTypeLabel.toLowerCase()}events</p>
@@ -127,7 +143,7 @@ export default function AdminDashboard() {
               {upcomingEvents.slice(0, 5).map((event) => (
                 <tr key={event.id} className="border-b last:border-0">
                   <td className="py-2">
-                    <Link to={`/admin/events/${event.id}`} className="text-blue-600 hover:underline">
+                    <Link to={`/admin/events/${event.id}`} className="text-purple-600 hover:text-purple-700 hover:underline font-medium">
                       {event.title}
                     </Link>
                   </td>

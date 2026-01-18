@@ -426,22 +426,31 @@ export default function EventsPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 lg:px-6 py-6 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <h1 className="text-2xl font-bold">Events</h1>
-        {openThaaliCount >= 2 && (
-          <button
-            onClick={() => navigate('/thaali/quick-register')}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
-            Quick Register ({openThaaliCount} Thaalis)
-          </button>
-        )}
+    <div>
+      {/* Page Header */}
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 -mt-6 pt-6">
+        <div className="max-w-6xl mx-auto px-4 lg:px-6 py-8">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-white">Events</h1>
+              <p className="text-purple-100 mt-1">Browse and RSVP for upcoming community events</p>
+            </div>
+            {openThaaliCount >= 2 && (
+              <button
+                onClick={() => navigate('/thaali/quick-register')}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-purple-700 font-medium rounded-lg hover:bg-purple-50 transition-colors shadow-lg"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+                Quick Register ({openThaaliCount} Thaalis)
+              </button>
+            )}
+          </div>
+        </div>
       </div>
+
+      <div className="max-w-6xl mx-auto px-4 lg:px-6 py-6 space-y-4">
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
@@ -450,12 +459,12 @@ export default function EventsPage() {
             onClick={() => setActiveTab('upcoming')}
             className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'upcoming'
-                ? 'border-blue-600 text-blue-600'
+                ? 'border-purple-600 text-purple-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
             Upcoming
-            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700">
+            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-purple-100 text-purple-700">
               {upcomingEvents.length}
             </span>
           </button>
@@ -463,7 +472,7 @@ export default function EventsPage() {
             onClick={() => setActiveTab('past')}
             className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'past'
-                ? 'border-blue-600 text-blue-600'
+                ? 'border-purple-600 text-purple-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -542,6 +551,7 @@ export default function EventsPage() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -171,12 +171,18 @@ export default function EventList() {
         <h1 className="text-2xl font-bold">{pageTitle}</h1>
         <div className="flex gap-2">
           {canCreateThaali && (
-            <Link to="/admin/events/new/thaali" className="btn">
+            <Link
+              to="/admin/events/new/thaali"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-sm"
+            >
               + Thaali Event
             </Link>
           )}
           {canCreateNiyaz && (
-            <Link to="/admin/events/new/niyaz" className="btn bg-gray-700">
+            <Link
+              to="/admin/events/new/niyaz"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all shadow-sm"
+            >
               + Niyaz Event
             </Link>
           )}

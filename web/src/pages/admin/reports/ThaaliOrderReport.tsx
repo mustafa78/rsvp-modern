@@ -829,7 +829,7 @@ export default function ThaaliOrderReport() {
           <h1 className="text-2xl font-bold">Thaali Registration Report</h1>
           <p className="text-gray-500">{event.title} - {event.eventDate}</p>
         </div>
-        <Link to="/admin/events" className="btn bg-gray-500">
+        <Link to="/admin/events" className="px-4 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors">
           ← Back to Events
         </Link>
       </div>
@@ -945,10 +945,10 @@ export default function ThaaliOrderReport() {
           )}
 
           <div className="flex gap-3">
-            <button onClick={exportSummaryToPDF} className="btn bg-blue-600 hover:bg-blue-700">
+            <button onClick={exportSummaryToPDF} className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-sm hover:shadow-md">
               Export to PDF
             </button>
-            <button onClick={() => window.print()} className="btn bg-gray-500 hover:bg-gray-600">
+            <button onClick={() => window.print()} className="px-4 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors">
               Print Report
             </button>
           </div>
