@@ -399,7 +399,7 @@ export default function NiyazRsvpReport() {
           <h1 className="text-2xl font-bold">Niyaz RSVP Report</h1>
           <p className="text-gray-500">{event.title} - {event.eventDate}</p>
         </div>
-        <Link to="/admin/events" className="btn bg-gray-500">
+        <Link to="/admin/events" className="px-4 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors">
           ← Back to Events
         </Link>
       </div>
@@ -529,10 +529,10 @@ export default function NiyazRsvpReport() {
 
       {/* Export Buttons */}
       <div className="flex gap-3">
-        <button onClick={exportToPDF} className="btn bg-purple-600 hover:bg-purple-700">
+        <button onClick={exportToPDF} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all shadow-sm hover:shadow-md">
           Export to PDF
         </button>
-        <button onClick={() => window.print()} className="btn bg-gray-500 hover:bg-gray-600">
+        <button onClick={() => window.print()} className="px-4 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors">
           Print Report
         </button>
       </div>

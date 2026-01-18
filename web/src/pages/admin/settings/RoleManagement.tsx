@@ -130,7 +130,7 @@ export default function RoleManagement() {
           <p className="text-sm text-gray-500 mt-1">Create and manage system roles</p>
         </div>
         {!showCreateForm && (
-          <button onClick={() => setShowCreateForm(true)} className="btn">
+          <button onClick={() => setShowCreateForm(true)} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all shadow-sm hover:shadow-md">
             + Add Role
           </button>
         )}
@@ -169,14 +169,14 @@ export default function RoleManagement() {
             <div className="flex gap-2">
               <button
                 type="submit"
-                className="btn"
+                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all shadow-sm hover:shadow-md disabled:opacity-50"
                 disabled={createMutation.isPending}
               >
                 {createMutation.isPending ? 'Creating...' : 'Create Role'}
               </button>
               <button
                 type="button"
-                className="btn bg-gray-500"
+                className="px-4 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors"
                 onClick={() => {
                   setShowCreateForm(false);
                   setCreateForm({ name: '', description: '' });
@@ -209,12 +209,12 @@ export default function RoleManagement() {
               <div className="flex gap-2">
                 <button
                   type="submit"
-                  className="btn"
+                  className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all shadow-sm hover:shadow-md disabled:opacity-50"
                   disabled={updateMutation.isPending}
                 >
                   {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
                 </button>
-                <button type="button" className="btn bg-gray-500" onClick={cancelEdit}>
+                <button type="button" className="px-4 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors" onClick={cancelEdit}>
                   Cancel
                 </button>
               </div>

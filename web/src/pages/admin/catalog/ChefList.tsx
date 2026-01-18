@@ -166,7 +166,7 @@ export default function ChefList() {
           <p className="text-gray-500 mt-1">Manage cooking groups, individual chefs, and external vendors</p>
         </div>
         {!showForm && (
-          <button onClick={() => setShowForm(true)} className="btn bg-blue-600 hover:bg-blue-700">
+          <button onClick={() => setShowForm(true)} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all shadow-sm hover:shadow-md">
             + Add Chef/Group
           </button>
         )}
@@ -225,10 +225,10 @@ export default function ChefList() {
               <label htmlFor="active" className="text-sm text-gray-700">Active</label>
             </div>
             <div className="flex gap-3 pt-2">
-              <button type="submit" className="btn bg-blue-600 hover:bg-blue-700" disabled={isSubmitting}>
+              <button type="submit" className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all shadow-sm hover:shadow-md disabled:opacity-50" disabled={isSubmitting}>
                 {isSubmitting ? 'Saving...' : editingId ? 'Update' : 'Create'}
               </button>
-              <button type="button" className="btn bg-gray-500 hover:bg-gray-600" onClick={cancelEdit}>
+              <button type="button" className="px-4 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors" onClick={cancelEdit}>
                 Cancel
               </button>
             </div>

@@ -116,7 +116,7 @@ export default function PickupZoneList() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Pickup Zones</h1>
         {!showForm && (
-          <button onClick={() => setShowForm(true)} className="btn">
+          <button onClick={() => setShowForm(true)} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all shadow-sm hover:shadow-md">
             + Add Zone
           </button>
         )}
@@ -156,10 +156,10 @@ export default function PickupZoneList() {
               </label>
             </div>
             <div className="flex gap-2">
-              <button type="submit" className="btn" disabled={isSubmitting}>
+              <button type="submit" className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all shadow-sm hover:shadow-md disabled:opacity-50" disabled={isSubmitting}>
                 {isSubmitting ? 'Saving...' : editingId ? 'Update' : 'Create'}
               </button>
-              <button type="button" className="btn bg-gray-500" onClick={cancelEdit}>
+              <button type="button" className="px-4 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors" onClick={cancelEdit}>
                 Cancel
               </button>
             </div>

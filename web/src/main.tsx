@@ -7,6 +7,7 @@ import EventsPage from './pages/EventsPage'
 import EventDetailPage from './pages/EventDetailPage'
 import RsvpPage from './pages/RsvpPage'
 import BulkThaaliRegistration from './pages/BulkThaaliRegistration'
+import LandingPage from './pages/LandingPage'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ForgotPassword from './pages/ForgotPassword'
@@ -42,7 +43,8 @@ const router = createBrowserRouter([
     // optional safety net so you don't get a silent blank on errors
     errorElement: <div style={{padding:24}}>Something went wrong. <a href="/">Go home</a></div>,
     children: [
-      { index: true, element: <EventsPage /> },
+      { index: true, element: <LandingPage /> },
+      { path: 'events', element: <EventsPage /> },
       { path: 'events/:id', element: <EventDetailPage /> },
       { path: 'events/:id/rsvp', element: <RsvpPage /> },
       { path: 'thaali/quick-register', element: <BulkThaaliRegistration /> },

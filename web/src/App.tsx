@@ -15,7 +15,7 @@ type User = {
 };
 
 // Public routes that don't require authentication
-const PUBLIC_ROUTES = ['/login', '/forgot-password', '/reset-password', '/change-password-public'];
+const PUBLIC_ROUTES = ['/', '/login', '/forgot-password', '/reset-password', '/change-password-public'];
 
 export default function App() {
   const navigate = useNavigate();
@@ -28,7 +28,9 @@ export default function App() {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  const isPublicRoute = PUBLIC_ROUTES.some(route => location.pathname.startsWith(route));
+  const isPublicRoute = PUBLIC_ROUTES.some(route =>
+    route === '/' ? location.pathname === '/' : location.pathname.startsWith(route)
+  );
 
   // Check if user has any admin role
   const hasAdminRole = user?.roles?.some(role =>
@@ -36,15 +38,23 @@ export default function App() {
   );
 
   // Redirect to login if not authenticated and not on a public route
+  // Redirect logged-in users from landing page to events
   // Redirect non-HOF users away from events pages to admin
   useEffect(() => {
     if (!isLoading && !user && !isPublicRoute) {
       navigate('/login', { replace: true });
     }
+    // Redirect logged-in users from landing page to events
+    if (!isLoading && user && location.pathname === '/') {
+      if (user.isHof) {
+        navigate('/events', { replace: true });
+      } else if (hasAdminRole) {
+        navigate('/admin', { replace: true });
+      }
+    }
     // Non-HOF users should be redirected to admin if they try to access events
     if (!isLoading && user && !user.isHof && !isPublicRoute) {
-      const isEventsRoute = location.pathname === '/' ||
-        location.pathname.startsWith('/events') ||
+      const isEventsRoute = location.pathname.startsWith('/events') ||
         location.pathname.startsWith('/rsvp');
       if (isEventsRoute && hasAdminRole) {
         navigate('/admin', { replace: true });
@@ -64,7 +74,29 @@ export default function App() {
     }
   };
 
-  // Show minimal layout for public routes (login, forgot password, etc.)
+  // Landing page has its own layout, render it directly for non-logged-in users
+  // Logged-in users will be redirected by useEffect, show nothing while that happens
+  if (location.pathname === '/') {
+    if (isLoading) {
+      return (
+        <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+          <div className="text-gray-500">Loading...</div>
+        </div>
+      );
+    }
+    if (user) {
+      // User is logged in, redirect will happen via useEffect
+      return null;
+    }
+    return <Outlet />;
+  }
+
+  // Login page has its own full-screen layout
+  if (location.pathname === '/login') {
+    return <Outlet />;
+  }
+
+  // Show minimal layout for other public routes (forgot password, etc.)
   if (isPublicRoute) {
     return (
       <div className="min-h-screen bg-neutral-50 text-black flex flex-col">
@@ -116,35 +148,35 @@ export default function App() {
   }
 
   // Check if current route is active
-  const isEventsActive = location.pathname === '/' || (location.pathname.startsWith('/events') && !location.pathname.startsWith('/admin'));
+  const isEventsActive = location.pathname.startsWith('/events') && !location.pathname.startsWith('/admin');
   const isAdminActive = location.pathname.startsWith('/admin');
 
   // Authenticated layout
   return (
     <div className="min-h-screen bg-neutral-50 text-black flex flex-col">
-      <header className="bg-white shadow-sm sticky top-0 z-50">
+      <header className="bg-gradient-to-r from-purple-600 to-blue-600 sticky top-0 z-50 shadow-lg">
         <div className="px-4 lg:px-6 h-16 flex items-center justify-between">
           {/* Left: Logo & Navigation */}
           <div className="flex items-center gap-8">
             {/* Logo/Brand */}
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span className="font-bold text-gray-900 hidden sm:block">RSVP</span>
+              <span className="font-bold text-white hidden sm:block">RSVP</span>
             </div>
 
             {/* Navigation */}
             <nav className="flex items-center gap-1">
               {user.isHof && (
                 <Link
-                  to="/"
+                  to="/events"
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     isEventsActive
-                      ? 'bg-gray-100 text-gray-900'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      ? 'bg-white/20 text-white'
+                      : 'text-white/80 hover:bg-white/10 hover:text-white'
                   }`}
                 >
                   Events
@@ -155,8 +187,8 @@ export default function App() {
                   to="/admin"
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     isAdminActive
-                      ? 'bg-gray-100 text-gray-900'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      ? 'bg-white/20 text-white'
+                      : 'text-white/80 hover:bg-white/10 hover:text-white'
                   }`}
                 >
                   Admin
@@ -168,17 +200,17 @@ export default function App() {
           {/* Right: User Menu */}
           <div className="flex items-center gap-3">
             {/* User Info */}
-            <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
+            <div className="flex items-center gap-3 pl-3 border-l border-white/20">
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
                 <span className="text-xs font-semibold text-white">
                   {user.firstName.charAt(0)}{user.lastName.charAt(0)}
                 </span>
               </div>
               <div className="hidden sm:block">
-                <p className="text-sm font-medium text-gray-900 leading-tight">
+                <p className="text-sm font-medium text-white leading-tight">
                   {user.firstName} {user.lastName}
                 </p>
-                <p className="text-xs text-gray-500 leading-tight">
+                <p className="text-xs text-white/70 leading-tight">
                   {user.itsNumber}
                 </p>
               </div>
@@ -187,7 +219,7 @@ export default function App() {
             {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className="p-2 rounded-lg text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+              className="p-2 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
               title="Logout"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
