@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -44,6 +44,14 @@ export default function IngredientList() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
+  const formRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to form when editing
+  useEffect(() => {
+    if (showForm && formRef.current) {
+      formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [showForm]);
 
   const { data: ingredients, isLoading } = useQuery<Ingredient[]>({
     queryKey: ['ingredients'],
@@ -226,7 +234,7 @@ export default function IngredientList() {
 
       {/* Create/Edit Form */}
       {showForm && (
-        <div className="card">
+        <div ref={formRef} className="card">
           <h2 className="text-lg font-semibold mb-4">
             {editingId ? 'Edit Ingredient' : 'New Ingredient'}
           </h2>
