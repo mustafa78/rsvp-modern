@@ -10,9 +10,12 @@ public class IngredientDtos {
       String name,
       Long unitId,
       String unit,  // unit name for display
-      String category,
-      String defaultStore,
-      String storageLocation,
+      Long categoryId,
+      String category,  // category name for display
+      Long storeId,
+      String store,  // store name for display
+      Long storageLocationId,
+      String storageLocation,  // storage location name for display
       String notes,
       BigDecimal costPerUnit,
       Integer caloriesPerUnit
@@ -21,9 +24,9 @@ public class IngredientDtos {
   public record IngredientUpsertRequest(
       @NotBlank String name,
       @NotNull Long unitId,  // foreign key to ingredient_units
-      String category,
-      String defaultStore,
-      String storageLocation,
+      Long categoryId,  // foreign key to ingredient_categories
+      Long storeId,  // foreign key to ingredient_stores
+      Long storageLocationId,  // foreign key to ingredient_storage_locations
       String notes,
       BigDecimal costPerUnit,
       Integer caloriesPerUnit
