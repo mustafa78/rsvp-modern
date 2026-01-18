@@ -8,7 +8,8 @@ import { api } from '../../../api/client';
 type Ingredient = {
   id: number;
   name: string;
-  unit: string;
+  unitId: number;
+  unit: string;  // unit name for display
   category: string | null;
   defaultStore: string | null;
   storageLocation: string | null;
@@ -26,7 +27,7 @@ type LookupItem = {
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
-  unit: z.string().min(1, 'Unit is required'),
+  unitId: z.coerce.number().min(1, 'Unit is required'),
   category: z.string().optional(),
   defaultStore: z.string().optional(),
   storageLocation: z.string().optional(),
@@ -93,7 +94,7 @@ export default function IngredientList() {
     resolver: zodResolver(schema),
     defaultValues: {
       name: '',
-      unit: '',
+      unitId: 0,
       category: '',
       defaultStore: '',
       storageLocation: '',
@@ -129,7 +130,7 @@ export default function IngredientList() {
   const onSubmit = (values: FormValues) => {
     const payload = {
       name: values.name,
-      unit: values.unit,
+      unitId: values.unitId,
       category: values.category || null,
       defaultStore: values.defaultStore || null,
       storageLocation: values.storageLocation || null,
@@ -150,7 +151,7 @@ export default function IngredientList() {
     setShowForm(true);
     reset({
       name: ingredient.name,
-      unit: ingredient.unit,
+      unitId: ingredient.unitId,
       category: ingredient.category || '',
       defaultStore: ingredient.defaultStore || '',
       storageLocation: ingredient.storageLocation || '',
@@ -165,7 +166,7 @@ export default function IngredientList() {
     setShowForm(false);
     reset({
       name: '',
-      unit: '',
+      unitId: 0,
       category: '',
       defaultStore: '',
       storageLocation: '',
@@ -238,15 +239,15 @@ export default function IngredientList() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Unit *</label>
-                <select className="input" {...register('unit')}>
-                  <option value="">-- Select Unit --</option>
+                <select className="input" {...register('unitId')}>
+                  <option value={0}>-- Select Unit --</option>
                   {units.map((u) => (
-                    <option key={u.id} value={u.name}>
+                    <option key={u.id} value={u.id}>
                       {u.name}
                     </option>
                   ))}
                 </select>
-                {errors.unit && <p className="text-red-500 text-sm mt-1">{errors.unit.message}</p>}
+                {errors.unitId && <p className="text-red-500 text-sm mt-1">{errors.unitId.message}</p>}
               </div>
             </div>
             <div className="grid grid-cols-3 gap-4">

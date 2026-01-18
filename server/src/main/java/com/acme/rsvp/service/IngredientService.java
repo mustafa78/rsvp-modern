@@ -2,7 +2,9 @@ package com.acme.rsvp.service;
 
 import com.acme.rsvp.dto.IngredientDtos.*;
 import com.acme.rsvp.model.Ingredient;
+import com.acme.rsvp.model.IngredientUnit;
 import com.acme.rsvp.repository.IngredientRepository;
+import com.acme.rsvp.repository.IngredientUnitRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,9 +15,11 @@ import java.util.List;
 public class IngredientService {
 
     private final IngredientRepository repo;
+    private final IngredientUnitRepository unitRepo;
 
-    public IngredientService(IngredientRepository repo) {
+    public IngredientService(IngredientRepository repo, IngredientUnitRepository unitRepo) {
         this.repo = repo;
+        this.unitRepo = unitRepo;
     }
 
     /* ======================= Queries ======================= */
@@ -35,9 +39,12 @@ public class IngredientService {
     /* ======================= Commands ======================= */
 
     public IngredientDto create(IngredientUpsertRequest req) {
+        IngredientUnit unit = unitRepo.findById(req.unitId())
+                .orElseThrow(() -> new IllegalArgumentException("Unit not found: " + req.unitId()));
+
         Ingredient i = new Ingredient();
         i.setName(req.name());
-        i.setUnit(req.unit());
+        i.setUnit(unit);
         i.setCategory(req.category());
         i.setDefaultStore(req.defaultStore());
         i.setStorageLocation(req.storageLocation());
@@ -49,9 +56,12 @@ public class IngredientService {
     }
 
     public IngredientDto update(Long id, IngredientUpsertRequest req) {
+        IngredientUnit unit = unitRepo.findById(req.unitId())
+                .orElseThrow(() -> new IllegalArgumentException("Unit not found: " + req.unitId()));
+
         Ingredient i = repo.findById(id).orElseThrow();
         i.setName(req.name());
-        i.setUnit(req.unit());
+        i.setUnit(unit);
         i.setCategory(req.category());
         i.setDefaultStore(req.defaultStore());
         i.setStorageLocation(req.storageLocation());
@@ -68,7 +78,8 @@ public class IngredientService {
         return new IngredientDto(
             i.getId(),
             i.getName(),
-            i.getUnit(),
+            i.getUnit().getId(),
+            i.getUnit().getName(),
             i.getCategory(),
             i.getDefaultStore(),
             i.getStorageLocation(),
