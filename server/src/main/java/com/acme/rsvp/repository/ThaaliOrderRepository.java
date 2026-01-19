@@ -77,7 +77,7 @@ public interface ThaaliOrderRepository extends JpaRepository<ThaaliOrder, Long> 
     @Query(value = """
             SELECT i.id AS ingredient_id,
                    i.name AS ingredient_name,
-                   i.unit AS unit,
+                   iu.name AS unit,
                    SUM(
                        di.qty_per_quart
                        * COALESCE(mi.quarts_per_thaali_unit, d.default_quarts_per_thaali_unit)
@@ -88,17 +88,20 @@ public interface ThaaliOrderRepository extends JpaRepository<ThaaliOrder, Long> 
                            ELSE 0
                          END
                    ) AS required_qty,
-                   i.default_store AS default_store,
-                   i.category AS category
+                   ist.name AS default_store,
+                   ic.name AS category
             FROM thaali_order_items oi
             JOIN thaali_orders o ON o.id = oi.order_id
             JOIN menu_items mi ON mi.id = oi.menu_item_id
             JOIN dishes d ON d.id = mi.dish_id
             JOIN dish_ingredients di ON di.dish_id = d.id
             JOIN ingredients i ON i.id = di.ingredient_id
+            JOIN ingredient_units iu ON iu.id = i.unit_id
+            LEFT JOIN ingredient_stores ist ON ist.id = i.store_id
+            LEFT JOIN ingredient_categories ic ON ic.id = i.category_id
             WHERE o.event_id = :eventId
-            GROUP BY i.id, i.name, i.unit, i.default_store, i.category
-            ORDER BY COALESCE(i.default_store, 'ZZZ'), i.name
+            GROUP BY i.id, i.name, iu.name, ist.name, ic.name
+            ORDER BY COALESCE(ist.name, 'ZZZ'), i.name
             """, nativeQuery = true)
     List<Object[]> shoppingList(@Param("eventId") Long eventId);
 
@@ -133,7 +136,7 @@ public interface ThaaliOrderRepository extends JpaRepository<ThaaliOrder, Long> 
                    ) AS total_quarts,
                    i.id AS ingredient_id,
                    i.name AS ingredient_name,
-                   i.unit AS unit,
+                   iu.name AS unit,
                    SUM(
                        di.qty_per_quart
                        * COALESCE(mi.quarts_per_thaali_unit, d.default_quarts_per_thaali_unit)
@@ -144,16 +147,19 @@ public interface ThaaliOrderRepository extends JpaRepository<ThaaliOrder, Long> 
                            ELSE 0
                          END
                    ) AS required_qty,
-                   i.default_store AS default_store,
-                   i.category AS category
+                   ist.name AS default_store,
+                   ic.name AS category
             FROM thaali_order_items oi
             JOIN thaali_orders o ON o.id = oi.order_id
             JOIN menu_items mi ON mi.id = oi.menu_item_id
             JOIN dishes d ON d.id = mi.dish_id
             JOIN dish_ingredients di ON di.dish_id = d.id
             JOIN ingredients i ON i.id = di.ingredient_id
+            JOIN ingredient_units iu ON iu.id = i.unit_id
+            LEFT JOIN ingredient_stores ist ON ist.id = i.store_id
+            LEFT JOIN ingredient_categories ic ON ic.id = i.category_id
             WHERE o.event_id = :eventId
-            GROUP BY d.id, d.name, i.id, i.name, i.unit, i.default_store, i.category
+            GROUP BY d.id, d.name, i.id, i.name, iu.name, ist.name, ic.name
             ORDER BY d.name, i.name
             """, nativeQuery = true)
     List<Object[]> shoppingListPerDish(@Param("eventId") Long eventId);
