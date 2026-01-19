@@ -4,6 +4,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
 import EventsPage from './pages/EventsPage'
+import CalendarPage from './pages/CalendarPage'
 import EventDetailPage from './pages/EventDetailPage'
 import RsvpPage from './pages/RsvpPage'
 import BulkThaaliRegistration from './pages/BulkThaaliRegistration'
@@ -45,6 +46,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <LandingPage /> },
       { path: 'events', element: <EventsPage /> },
+      { path: 'calendar', element: <CalendarPage /> },
       { path: 'events/:id', element: <EventDetailPage /> },
       { path: 'events/:id/rsvp', element: <RsvpPage /> },
       { path: 'thaali/quick-register', element: <BulkThaaliRegistration /> },
