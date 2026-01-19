@@ -149,6 +149,7 @@ export default function App() {
 
   // Check if current route is active
   const isEventsActive = location.pathname.startsWith('/events') && !location.pathname.startsWith('/admin');
+  const isCalendarActive = location.pathname === '/calendar';
   const isAdminActive = location.pathname.startsWith('/admin');
 
   // Authenticated layout
@@ -171,16 +172,28 @@ export default function App() {
             {/* Navigation */}
             <nav className="flex items-center gap-1">
               {user.isHof && (
-                <Link
-                  to="/events"
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isEventsActive
-                      ? 'bg-white/20 text-white'
-                      : 'text-white/80 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  Events
-                </Link>
+                <>
+                  <Link
+                    to="/events"
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isEventsActive
+                        ? 'bg-white/20 text-white'
+                        : 'text-white/80 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    Events
+                  </Link>
+                  <Link
+                    to="/calendar"
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isCalendarActive
+                        ? 'bg-white/20 text-white'
+                        : 'text-white/80 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    Calendar
+                  </Link>
+                </>
               )}
               {hasAdminRole && (
                 <Link
