@@ -4,6 +4,10 @@ import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api/client';
 
+type UnreadCountResponse = {
+  count: number;
+};
+
 type User = {
   personId: number;
   itsNumber: string;
@@ -27,6 +31,17 @@ export default function App() {
     retry: false,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
+
+  // Fetch unread announcement count
+  const { data: unreadCountData } = useQuery<UnreadCountResponse>({
+    queryKey: ['announcements-unread-count'],
+    queryFn: async () => (await api.get('/announcements/unread-count')).data,
+    enabled: !!user,
+    staleTime: 1000 * 30, // 30 seconds
+    refetchInterval: 1000 * 60, // Refetch every minute
+  });
+
+  const unreadCount = unreadCountData?.count || 0;
 
   const isPublicRoute = PUBLIC_ROUTES.some(route =>
     route === '/' ? location.pathname === '/' : location.pathname.startsWith(route)
@@ -212,6 +227,22 @@ export default function App() {
 
           {/* Right: User Menu */}
           <div className="flex items-center gap-3">
+            {/* Notification Bell */}
+            <Link
+              to="/announcements"
+              className="relative p-2 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+              title="Announcements"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Link>
+
             {/* User Info */}
             <div className="flex items-center gap-3 pl-3 border-l border-white/20">
               <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">

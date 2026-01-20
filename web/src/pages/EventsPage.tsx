@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import type { Event } from '../types/models';
+import AnnouncementBanner from '../components/AnnouncementBanner';
 
 // Types for RSVP/Order status
 type NiyazRsvp = {
@@ -451,6 +452,8 @@ export default function EventsPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 lg:px-6 py-6 space-y-4">
+        {/* Announcement Banner */}
+        <AnnouncementBanner />
 
       {/* Tabs */}
       <div className="border-b border-gray-200">

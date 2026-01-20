@@ -1,8 +1,12 @@
 package com.acme.rsvp.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -46,6 +50,7 @@ public class EventService {
     private final MenuItemRepository menuRepo;
     private final DishRepository dishRepo;
     private final PersonRepository personRepo;
+    private final AnnouncementService announcementService;
 
     public EventService(EventRepository eventRepo,
             NiyazEventRepository niyazRepo,
@@ -53,7 +58,8 @@ public class EventService {
             ChefRepository chefRepo,
             MenuItemRepository menuRepo,
             DishRepository dishRepo,
-            PersonRepository personRepo) {
+            PersonRepository personRepo,
+            AnnouncementService announcementService) {
         this.eventRepo = eventRepo;
         this.niyazRepo = niyazRepo;
         this.thaaliRepo = thaaliRepo;
@@ -61,6 +67,7 @@ public class EventService {
         this.menuRepo = menuRepo;
         this.dishRepo = dishRepo;
         this.personRepo = personRepo;
+        this.announcementService = announcementService;
     }
 
     /* ======================= Queries ======================= */
@@ -110,12 +117,25 @@ public class EventService {
     @Transactional
     public NiyazEventDto updateNiyaz(Long id, CreateUpdateNiyazEventRequest req) {
         NiyazEvent e = niyazRepo.findById(id).orElseThrow();
+
+        // Capture old values for change detection (only if published)
+        boolean wasPublished = e.getStatus() == EventStatus.PUBLISHED;
+        LocalDate oldDate = e.getEventDate();
+        LocalTime oldTime = e.getStartTime();
+        OffsetDateTime oldRegClose = e.getRegistrationCloseAt();
+
         applyBase(e, req);
         e.setMiqaatName(req.miqaatName);
         // Auto-populate title from miqaatName for Niyaz events
         e.setTitle(req.miqaatName);
         e.setShowRsvpSummary(req.showRsvpSummary != null && req.showRsvpSummary);
         attachHosts(e, req.hostIds);
+
+        // Create announcements for significant changes on published events
+        if (wasPublished && e.getStatus() == EventStatus.PUBLISHED) {
+            createChangeAnnouncements(e, oldDate, oldTime, oldRegClose, req.eventDate, req.startTime, req.registrationCloseAt);
+        }
+
         return toDto(e);
     }
 
@@ -132,19 +152,100 @@ public class EventService {
     @Transactional
     public ThaaliEventDto updateThaali(Long id, CreateUpdateThaaliEventRequest req) {
         ThaaliEvent e = thaaliRepo.findById(id).orElseThrow();
+
+        // Capture old values for change detection (only if published)
+        boolean wasPublished = e.getStatus() == EventStatus.PUBLISHED;
+        LocalDate oldDate = e.getEventDate();
+        LocalTime oldTime = e.getStartTime();
+        OffsetDateTime oldRegClose = e.getRegistrationCloseAt();
+
+        // Capture old menu for comparison
+        Set<Long> oldDishIds = wasPublished
+                ? menuRepo.findByEvent_IdOrderByPositionAsc(id).stream()
+                        .map(mi -> mi.getDish().getId())
+                        .collect(Collectors.toSet())
+                : Set.of();
+
         applyBase(e, req);
         attachChefs(e, req.chefIds);
         upsertMenu(e.getId(), req.menu);
+
+        // Create announcements for significant changes on published events
+        if (wasPublished && e.getStatus() == EventStatus.PUBLISHED) {
+            createChangeAnnouncements(e, oldDate, oldTime, oldRegClose, req.eventDate, req.startTime, req.registrationCloseAt);
+
+            // Check for menu changes
+            Set<Long> newDishIds = req.menu != null
+                    ? req.menu.stream().map(MenuAssignmentDto::dishId).collect(Collectors.toSet())
+                    : Set.of();
+
+            if (!oldDishIds.equals(newDishIds)) {
+                announcementService.createEventUpdateAnnouncement(
+                        e.getId(),
+                        "Menu Updated",
+                        "The menu for " + e.getTitle() + " has been updated.",
+                        null);
+            }
+        }
+
         return toDto(e);
     }
 
     @Transactional
     public void setStatus(Long eventId, EventStatus status) {
         Event e = eventRepo.findById(eventId).orElseThrow();
+        EventStatus oldStatus = e.getStatus();
         e.setStatus(status);
+
+        // Create announcement when a published event is cancelled
+        if (oldStatus == EventStatus.PUBLISHED && status == EventStatus.CANCELLED) {
+            announcementService.createEventUpdateAnnouncement(
+                    eventId,
+                    "Event Cancelled",
+                    e.getTitle() + " has been cancelled.",
+                    null);
+        }
     }
 
     /* ======================= Internals ======================= */
+
+    /**
+     * Create announcements for significant changes to published events.
+     */
+    private void createChangeAnnouncements(Event e, LocalDate oldDate, LocalTime oldTime,
+            OffsetDateTime oldRegClose, LocalDate newDate, LocalTime newTime, OffsetDateTime newRegClose) {
+
+        // Date changed
+        if (!Objects.equals(oldDate, newDate)) {
+            String oldDateStr = oldDate != null ? oldDate.toString() : "TBD";
+            String newDateStr = newDate != null ? newDate.toString() : "TBD";
+            announcementService.createEventUpdateAnnouncement(
+                    e.getId(),
+                    "Date Changed",
+                    e.getTitle() + " has been moved from " + oldDateStr + " to " + newDateStr + ".",
+                    null);
+        }
+
+        // Time changed
+        if (!Objects.equals(oldTime, newTime)) {
+            String oldTimeStr = oldTime != null ? oldTime.toString() : "TBD";
+            String newTimeStr = newTime != null ? newTime.toString() : "TBD";
+            announcementService.createEventUpdateAnnouncement(
+                    e.getId(),
+                    "Time Changed",
+                    "The time for " + e.getTitle() + " has been changed from " + oldTimeStr + " to " + newTimeStr + ".",
+                    null);
+        }
+
+        // Registration deadline changed
+        if (!Objects.equals(oldRegClose, newRegClose)) {
+            announcementService.createEventUpdateAnnouncement(
+                    e.getId(),
+                    "Registration Deadline Updated",
+                    "The registration deadline for " + e.getTitle() + " has been updated.",
+                    null);
+        }
+    }
 
     private static void applyBase(Event e, BaseEventReq req) {
         e.setTitle(req.title);

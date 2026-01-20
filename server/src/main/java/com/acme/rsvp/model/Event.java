@@ -35,6 +35,9 @@ public abstract class Event extends Auditable {
   @Column(name="status", nullable=false, length=16)
   private EventStatus status = EventStatus.DRAFT;
 
+  @Column(name="last_significant_update_at")
+  private OffsetDateTime lastSignificantUpdateAt;
+
   // Chef assignments
   @ManyToMany
   @JoinTable(name="event_chefs",
@@ -58,6 +61,8 @@ public abstract class Event extends Auditable {
   public void setRegistrationCloseAt(OffsetDateTime registrationCloseAt) { this.registrationCloseAt = registrationCloseAt; }
   public EventStatus getStatus() { return status; }
   public void setStatus(EventStatus status) { this.status = status; }
+  public OffsetDateTime getLastSignificantUpdateAt() { return lastSignificantUpdateAt; }
+  public void setLastSignificantUpdateAt(OffsetDateTime lastSignificantUpdateAt) { this.lastSignificantUpdateAt = lastSignificantUpdateAt; }
   public Set<Chef> getChefs() { return chefs; }
   public void setChefs(Set<Chef> chefs) { this.chefs = chefs; }
 

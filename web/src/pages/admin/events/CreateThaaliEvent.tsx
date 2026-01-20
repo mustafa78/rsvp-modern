@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -42,6 +42,7 @@ type MenuItemSelection = {
 
 export default function CreateThaaliEvent() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { id } = useParams<{ id: string }>();
   const isEditMode = !!id;
 
@@ -114,6 +115,9 @@ export default function CreateThaaliEvent() {
       return await api.post('/events/thaali', data);
     },
     onSuccess: () => {
+      // Invalidate announcements in case auto-announcements were created
+      queryClient.invalidateQueries({ queryKey: ['announcements'] });
+      queryClient.invalidateQueries({ queryKey: ['announcements-unread-count'] });
       navigate('/admin/events');
     },
     onError: (err: any) => {
@@ -126,6 +130,9 @@ export default function CreateThaaliEvent() {
       return await api.put(`/events/thaali/${id}`, data);
     },
     onSuccess: () => {
+      // Invalidate announcements in case auto-announcements were created
+      queryClient.invalidateQueries({ queryKey: ['announcements'] });
+      queryClient.invalidateQueries({ queryKey: ['announcements-unread-count'] });
       navigate('/admin/events');
     },
     onError: (err: any) => {

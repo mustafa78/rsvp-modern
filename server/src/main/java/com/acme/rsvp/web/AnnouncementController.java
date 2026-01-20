@@ -1,0 +1,93 @@
+package com.acme.rsvp.web;
+
+import com.acme.rsvp.dto.AnnouncementDtos.*;
+import com.acme.rsvp.model.Person;
+import com.acme.rsvp.service.AnnouncementService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/announcements")
+public class AnnouncementController {
+
+    private final AnnouncementService announcementService;
+
+    public AnnouncementController(AnnouncementService announcementService) {
+        this.announcementService = announcementService;
+    }
+
+    // Get all announcements for the current user (with read status)
+    @GetMapping
+    public ResponseEntity<List<AnnouncementDto>> getAnnouncements(@AuthenticationPrincipal Person me) {
+        if (me == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(announcementService.getAnnouncementsForUser(me.getId()));
+    }
+
+    // Get unread count for badge display
+    @GetMapping("/unread-count")
+    public ResponseEntity<UnreadCountDto> getUnreadCount(@AuthenticationPrincipal Person me) {
+        if (me == null) {
+            return ResponseEntity.status(401).build();
+        }
+        long count = announcementService.getUnreadCount(me.getId());
+        return ResponseEntity.ok(new UnreadCountDto(count));
+    }
+
+    // Mark a single announcement as read
+    @PostMapping("/{id}/read")
+    public ResponseEntity<?> markAsRead(@PathVariable Long id, @AuthenticationPrincipal Person me) {
+        if (me == null) {
+            return ResponseEntity.status(401).build();
+        }
+        announcementService.markAsRead(id, me.getId());
+        return ResponseEntity.ok(Map.of("ok", true));
+    }
+
+    // Mark all announcements as read
+    @PostMapping("/read-all")
+    public ResponseEntity<?> markAllAsRead(@AuthenticationPrincipal Person me) {
+        if (me == null) {
+            return ResponseEntity.status(401).build();
+        }
+        announcementService.markAllAsRead(me.getId());
+        return ResponseEntity.ok(Map.of("ok", true));
+    }
+
+    // Admin: Create a manual announcement
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public AnnouncementDto createAnnouncement(
+            @RequestBody CreateAnnouncementRequest request,
+            @AuthenticationPrincipal Person me) {
+        return announcementService.createManualAnnouncement(request, me.getId());
+    }
+
+    // Admin: Get all announcements with stats
+    @GetMapping("/admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<AdminAnnouncementDto> getAdminAnnouncements() {
+        return announcementService.getAllAnnouncementsForAdmin();
+    }
+
+    // Admin: Delete an announcement
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deleteAnnouncement(@PathVariable Long id) {
+        announcementService.deleteAnnouncement(id);
+        return ResponseEntity.ok(Map.of("ok", true));
+    }
+
+    // Admin: Toggle active status
+    @PostMapping("/{id}/toggle-active")
+    @PreAuthorize("hasRole('ADMIN')")
+    public AdminAnnouncementDto toggleActive(@PathVariable Long id) {
+        return announcementService.toggleActive(id);
+    }
+}
