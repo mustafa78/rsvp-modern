@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -43,6 +43,7 @@ type FormValues = z.infer<typeof schema>;
 
 export default function CreateNiyazEvent() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { id } = useParams<{ id: string }>();
   const isEditMode = !!id;
 
@@ -103,6 +104,8 @@ export default function CreateNiyazEvent() {
       return await api.post('/events/niyaz', data);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['announcements'] });
+      queryClient.invalidateQueries({ queryKey: ['announcements-unread-count'] });
       navigate('/admin/events');
     },
     onError: (err: any) => {
@@ -115,6 +118,8 @@ export default function CreateNiyazEvent() {
       return await api.put(`/events/niyaz/${id}`, data);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['announcements'] });
+      queryClient.invalidateQueries({ queryKey: ['announcements-unread-count'] });
       navigate('/admin/events');
     },
     onError: (err: any) => {

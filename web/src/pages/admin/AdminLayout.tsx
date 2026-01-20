@@ -98,6 +98,11 @@ const getNavItems = (roles: string[]): NavItem[] => {
     });
   }
 
+  // Announcements - admin only
+  if (admin) {
+    items.push({ label: 'Announcements', path: '/admin/announcements' });
+  }
+
   // Settings - admin only
   if (admin) {
     items.push({

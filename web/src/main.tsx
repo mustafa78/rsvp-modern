@@ -15,6 +15,7 @@ import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import ChangePassword from './pages/ChangePassword'
 import ChangePasswordPublic from './pages/ChangePasswordPublic'
+import AnnouncementsPage from './pages/AnnouncementsPage'
 // Admin pages
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -35,6 +36,7 @@ import RoleManagement from './pages/admin/settings/RoleManagement'
 import ThaaliOrderReport from './pages/admin/reports/ThaaliOrderReport'
 import NiyazRsvpReport from './pages/admin/reports/NiyazRsvpReport'
 import ShoppingListGenerator from './pages/admin/reports/ShoppingListGenerator'
+import AnnouncementList from './pages/admin/announcements/AnnouncementList'
 import './styles/index.css'
 
 const router = createBrowserRouter([
@@ -50,6 +52,7 @@ const router = createBrowserRouter([
       { path: 'events/:id', element: <EventDetailPage /> },
       { path: 'events/:id/rsvp', element: <RsvpPage /> },
       { path: 'thaali/quick-register', element: <BulkThaaliRegistration /> },
+      { path: 'announcements', element: <AnnouncementsPage /> },
       {
         path: 'admin',
         element: <AdminLayout />,
@@ -74,6 +77,7 @@ const router = createBrowserRouter([
           { path: 'reports/orders/:eventId', element: <ThaaliOrderReport /> },
           { path: 'reports/rsvps/:eventId', element: <NiyazRsvpReport /> },
           { path: 'reports/shopping-list', element: <ShoppingListGenerator /> },
+          { path: 'announcements', element: <AnnouncementList /> },
         ],
       },
       { path: 'login', element: <Login /> },
