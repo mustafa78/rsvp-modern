@@ -98,8 +98,8 @@ const getNavItems = (roles: string[]): NavItem[] => {
     });
   }
 
-  // Announcements - admin only
-  if (admin) {
+  // Announcements - admin and coordinators
+  if (admin || niyazCoord || thaaliCoord) {
     items.push({ label: 'Announcements', path: '/admin/announcements' });
   }
 
