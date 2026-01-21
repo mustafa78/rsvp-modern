@@ -2,6 +2,21 @@ import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../api/client';
 
+// Format phone number as (xxx) xxx-xxxx
+function formatPhoneNumber(value: string): string {
+  // Remove all non-digit characters
+  const digits = value.replace(/\D/g, '');
+
+  // Limit to 10 digits
+  const limited = digits.slice(0, 10);
+
+  // Format based on length
+  if (limited.length === 0) return '';
+  if (limited.length <= 3) return `(${limited}`;
+  if (limited.length <= 6) return `(${limited.slice(0, 3)}) ${limited.slice(3)}`;
+  return `(${limited.slice(0, 3)}) ${limited.slice(3, 6)}-${limited.slice(6)}`;
+}
+
 type AccountStatus = 'ACTIVE' | 'LOCKED' | 'DISABLED';
 type UserType = 'REGISTERED' | 'STUDENT' | 'MEHMAAN';
 
@@ -267,7 +282,7 @@ export default function UserList() {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
-      phone: user.phone || '',
+      phone: user.phone ? formatPhoneNumber(user.phone) : '',
       password: '', // Not used for editing
       pickupZoneId: user.pickupZoneId ? String(user.pickupZoneId) : '',
       roles: user.userType !== 'REGISTERED' ? ['USER'] : [...user.roles],
@@ -513,7 +528,7 @@ export default function UserList() {
                 <input
                   className="input"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })}
                   placeholder="(555) 123-4567"
                 />
               </div>
