@@ -20,3 +20,4 @@ rsvp-modern-session.md
 # Database backups - never commit these
 db_backup*.sql
 *.dump
+rsvp-modern-session.md

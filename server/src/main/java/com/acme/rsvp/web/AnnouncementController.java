@@ -60,33 +60,33 @@ public class AnnouncementController {
         return ResponseEntity.ok(Map.of("ok", true));
     }
 
-    // Admin: Create a manual announcement
+    // Admin/Coordinators: Create a manual announcement
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'NIYAZ_COORDINATOR', 'THAALI_COORDINATOR')")
     public AnnouncementDto createAnnouncement(
             @RequestBody CreateAnnouncementRequest request,
             @AuthenticationPrincipal Person me) {
         return announcementService.createManualAnnouncement(request, me.getId());
     }
 
-    // Admin: Get all announcements with stats
+    // Admin/Coordinators: Get all announcements with stats
     @GetMapping("/admin")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'NIYAZ_COORDINATOR', 'THAALI_COORDINATOR')")
     public List<AdminAnnouncementDto> getAdminAnnouncements() {
         return announcementService.getAllAnnouncementsForAdmin();
     }
 
-    // Admin: Delete an announcement
+    // Admin/Coordinators: Delete an announcement
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'NIYAZ_COORDINATOR', 'THAALI_COORDINATOR')")
     public ResponseEntity<?> deleteAnnouncement(@PathVariable Long id) {
         announcementService.deleteAnnouncement(id);
         return ResponseEntity.ok(Map.of("ok", true));
     }
 
-    // Admin: Toggle active status
+    // Admin/Coordinators: Toggle active status
     @PostMapping("/{id}/toggle-active")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'NIYAZ_COORDINATOR', 'THAALI_COORDINATOR')")
     public AdminAnnouncementDto toggleActive(@PathVariable Long id) {
         return announcementService.toggleActive(id);
     }
