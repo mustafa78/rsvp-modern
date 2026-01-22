@@ -163,4 +163,15 @@ public interface ThaaliOrderRepository extends JpaRepository<ThaaliOrder, Long> 
             ORDER BY d.name, i.name
             """, nativeQuery = true)
     List<Object[]> shoppingListPerDish(@Param("eventId") Long eventId);
+
+    // Find all orders by person with event and item details for history
+    @Query("SELECT DISTINCT o FROM ThaaliOrder o " +
+           "JOIN FETCH o.event " +
+           "LEFT JOIN FETCH o.pickupZone " +
+           "LEFT JOIN FETCH o.items i " +
+           "LEFT JOIN FETCH i.menuItem mi " +
+           "LEFT JOIN FETCH mi.dish " +
+           "WHERE o.person.id = :personId " +
+           "ORDER BY o.event.eventDate DESC")
+    List<ThaaliOrder> findByPersonIdWithEventAndItems(@Param("personId") Long personId);
 }
