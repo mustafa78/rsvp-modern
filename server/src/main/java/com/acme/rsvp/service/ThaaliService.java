@@ -82,6 +82,9 @@ public class ThaaliService {
         // Clear existing items and add new ones
         order.clearItems();
 
+        // Flush to ensure deletes are executed before inserts (unique constraint on order_id, menu_item_id)
+        orderRepo.saveAndFlush(order);
+
         for (var itemRequest : request.items()) {
             MenuItem menuItem = menuItemRepo.findById(itemRequest.menuItemId())
                     .orElseThrow(() -> new IllegalArgumentException("Menu item not found: " + itemRequest.menuItemId()));
