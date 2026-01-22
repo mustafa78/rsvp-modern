@@ -29,4 +29,8 @@ public interface NiyazRsvpRepository extends JpaRepository<NiyazRsvp, Long> {
 
   @Query("SELECT r FROM NiyazRsvp r JOIN FETCH r.person WHERE r.event.id = :eventId ORDER BY r.person.lastName, r.person.firstName")
   List<NiyazRsvp> findByEventIdWithPerson(@Param("eventId") Long eventId);
+
+  // Find all RSVPs by person with event details for history
+  @Query("SELECT r FROM NiyazRsvp r JOIN FETCH r.event WHERE r.person.id = :personId ORDER BY r.event.eventDate DESC")
+  List<NiyazRsvp> findByPersonIdWithEvent(@Param("personId") Long personId);
 }
