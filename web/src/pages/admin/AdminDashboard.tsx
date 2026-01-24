@@ -20,6 +20,7 @@ const hasRole = (roles: string[], role: string) => roles?.includes(role) ?? fals
 const isAdmin = (roles: string[]) => hasRole(roles, 'ADMIN');
 const isNiyazCoordinator = (roles: string[]) => hasRole(roles, 'NIYAZ_COORDINATOR');
 const isThaaliCoordinator = (roles: string[]) => hasRole(roles, 'THAALI_COORDINATOR');
+const isDanaCoordinator = (roles: string[]) => hasRole(roles, 'DANA_COORDINATOR');
 
 export default function AdminDashboard() {
   const { data: user } = useQuery<User>({
@@ -37,9 +38,9 @@ export default function AdminDashboard() {
   const userRoles = user?.roles || [];
   const canSeeAllTypes = isAdmin(userRoles);
   const canSeeThaali = canSeeAllTypes || isThaaliCoordinator(userRoles);
-  const canSeeNiyaz = canSeeAllTypes || isNiyazCoordinator(userRoles);
+  const canSeeNiyaz = canSeeAllTypes || isNiyazCoordinator(userRoles) || isDanaCoordinator(userRoles);
   const canCreateThaali = canSeeAllTypes || isThaaliCoordinator(userRoles);
-  const canCreateNiyaz = canSeeAllTypes || isNiyazCoordinator(userRoles);
+  const canCreateNiyaz = canSeeAllTypes || isNiyazCoordinator(userRoles); // Dana Coordinator cannot create
 
   // Filter events based on role
   const visibleEvents = events?.filter((e) => {

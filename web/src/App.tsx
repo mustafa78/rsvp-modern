@@ -49,7 +49,7 @@ export default function App() {
 
   // Check if user has any admin role
   const hasAdminRole = user?.roles?.some(role =>
-    ['ADMIN', 'NIYAZ_COORDINATOR', 'THAALI_COORDINATOR', 'SHOPPING_COORDINATOR'].includes(role)
+    ['ADMIN', 'NIYAZ_COORDINATOR', 'THAALI_COORDINATOR', 'SHOPPING_COORDINATOR', 'DANA_COORDINATOR'].includes(role)
   );
 
   // User dropdown state - must be declared before any conditional returns (Rules of Hooks)

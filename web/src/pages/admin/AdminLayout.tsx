@@ -21,6 +21,7 @@ const isNiyazCoordinator = (roles: string[]) => hasRole(roles, 'NIYAZ_COORDINATO
 const isThaaliCoordinator = (roles: string[]) => hasRole(roles, 'THAALI_COORDINATOR');
 const isMenuCoordinator = (roles: string[]) => hasRole(roles, 'MENU_COORDINATOR');
 const isShoppingCoordinator = (roles: string[]) => hasRole(roles, 'SHOPPING_COORDINATOR');
+const isDanaCoordinator = (roles: string[]) => hasRole(roles, 'DANA_COORDINATOR');
 
 // Build navigation items based on user roles
 const getNavItems = (roles: string[]): NavItem[] => {
@@ -28,13 +29,14 @@ const getNavItems = (roles: string[]): NavItem[] => {
   const admin = isAdmin(roles);
   const niyazCoord = isNiyazCoordinator(roles);
   const thaaliCoord = isThaaliCoordinator(roles);
+  const danaCoord = isDanaCoordinator(roles);
 
   // Dashboard - visible to all admin panel users
   items.push({ label: 'Dashboard', path: '/admin' });
 
   // Events section
   const eventChildren: { label: string; path: string }[] = [];
-  if (admin || niyazCoord || thaaliCoord) {
+  if (admin || niyazCoord || thaaliCoord || danaCoord) {
     eventChildren.push({ label: 'All Events', path: '/admin/events' });
   }
   if (admin || thaaliCoord) {
@@ -88,8 +90,8 @@ const getNavItems = (roles: string[]): NavItem[] => {
     }
   }
 
-  // Reports - Admin and Shopping Coordinator
-  if (admin || shoppingCoord) {
+  // Reports - Admin, Shopping Coordinator, and Dana Coordinator
+  if (admin || shoppingCoord || danaCoord) {
     items.push({
       label: 'Reports',
       children: [
