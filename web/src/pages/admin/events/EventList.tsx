@@ -57,6 +57,7 @@ const hasRole = (roles: string[], role: string) => roles?.includes(role) ?? fals
 const isAdmin = (roles: string[]) => hasRole(roles, 'ADMIN');
 const isNiyazCoordinator = (roles: string[]) => hasRole(roles, 'NIYAZ_COORDINATOR');
 const isThaaliCoordinator = (roles: string[]) => hasRole(roles, 'THAALI_COORDINATOR');
+const isDanaCoordinator = (roles: string[]) => hasRole(roles, 'DANA_COORDINATOR');
 
 // Check if event date is in the past (compare dates only, not time)
 function isEventPast(eventDate: string): boolean {
@@ -88,9 +89,9 @@ export default function EventList() {
   const userRoles = user?.roles || [];
   const canSeeAllTypes = isAdmin(userRoles);
   const canSeeThaali = canSeeAllTypes || isThaaliCoordinator(userRoles);
-  const canSeeNiyaz = canSeeAllTypes || isNiyazCoordinator(userRoles);
+  const canSeeNiyaz = canSeeAllTypes || isNiyazCoordinator(userRoles) || isDanaCoordinator(userRoles);
   const canCreateThaali = canSeeAllTypes || isThaaliCoordinator(userRoles);
-  const canCreateNiyaz = canSeeAllTypes || isNiyazCoordinator(userRoles);
+  const canCreateNiyaz = canSeeAllTypes || isNiyazCoordinator(userRoles); // Dana Coordinator cannot create
 
   const publishMutation = useMutation({
     mutationFn: async (id: number) => {
