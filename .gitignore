@@ -21,3 +21,7 @@ rsvp-modern-session.md
 db_backup*.sql
 *.dump
 rsvp-modern-session.md
+
+# Training documentation (contains screenshots, managed separately)
+docs/role-training-guide.*
+docs/user-training-guide.html
