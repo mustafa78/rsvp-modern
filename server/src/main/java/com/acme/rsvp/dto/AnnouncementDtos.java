@@ -28,6 +28,13 @@ public class AnnouncementDtos {
         LocalDateTime expiresAt
     ) {}
 
+    // Request DTO for updating announcements
+    public record UpdateAnnouncementRequest(
+        String title,
+        String content,
+        LocalDateTime expiresAt
+    ) {}
+
     // Response DTO for unread count
     public record UnreadCountDto(
         long count

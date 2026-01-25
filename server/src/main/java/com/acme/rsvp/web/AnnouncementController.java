@@ -76,6 +76,15 @@ public class AnnouncementController {
         return announcementService.getAllAnnouncementsForAdmin();
     }
 
+    // Admin/Coordinators: Update an announcement
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'NIYAZ_COORDINATOR', 'THAALI_COORDINATOR')")
+    public AdminAnnouncementDto updateAnnouncement(
+            @PathVariable Long id,
+            @RequestBody UpdateAnnouncementRequest request) {
+        return announcementService.updateAnnouncement(id, request);
+    }
+
     // Admin/Coordinators: Delete an announcement
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'NIYAZ_COORDINATOR', 'THAALI_COORDINATOR')")
