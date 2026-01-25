@@ -138,7 +138,7 @@ export default function App() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span className="font-bold text-gray-900">RSVP</span>
+              <span className="font-bold text-gray-900">FMB-RSVP</span>
             </div>
           </div>
         </header>
@@ -196,7 +196,7 @@ export default function App() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span className="font-bold text-white hidden sm:block">RSVP</span>
+              <span className="font-bold text-white hidden sm:block">FMB-RSVP</span>
             </div>
 
             {/* Navigation */}
