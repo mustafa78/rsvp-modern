@@ -133,6 +133,23 @@ public class AnnouncementService {
                 .toList();
     }
 
+    // Admin: Update an announcement
+    public AdminAnnouncementDto updateAnnouncement(Long id, UpdateAnnouncementRequest request) {
+        Announcement announcement = announcementRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Announcement not found"));
+
+        announcement.setTitle(request.title());
+        announcement.setContent(request.content());
+        if (request.expiresAt() != null) {
+            announcement.setExpiresAt(request.expiresAt().atZone(ZoneId.systemDefault()).toOffsetDateTime());
+        } else {
+            announcement.setExpiresAt(null);
+        }
+
+        announcement = announcementRepository.save(announcement);
+        return toAdminDto(announcement);
+    }
+
     // Admin: Delete an announcement
     public void deleteAnnouncement(Long id) {
         announcementRepository.deleteById(id);
