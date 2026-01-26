@@ -32,6 +32,9 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-security")
+
+	// SendGrid for email
+	implementation("com.sendgrid:sendgrid-java:4.10.2")
   
 	// Keep app runtime in sync with the plugin 
 	implementation("org.flywaydb:flyway-core:11.10.0")
