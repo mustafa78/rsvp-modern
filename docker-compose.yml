@@ -46,7 +46,7 @@ services:
       context:  ./web
       dockerfile: Dockerfile.prod  # uses nginx and proxies /api to server
     ports:
-      - "4000:80"
+      - "80:80"
     depends_on:
       - server
     restart: unless-stopped
