@@ -132,8 +132,10 @@ public class AuthService {
 	}
 
 	@Transactional
-	public void sendReset(String itsNum, String baseUrl) {
-		Person p = findByItsNumber(itsNum)
+	public void sendReset(String identifier, String baseUrl) {
+		// Try to find by ITS number first, then by email
+		Person p = findByItsNumber(identifier)
+				.or(() -> personRepo.findByEmail(identifier))
 				.orElseThrow(() -> new IllegalArgumentException("Account not found"));
 		for (var t : prtRepo.findByPersonAndUsedAtIsNull(p)) {
 			t.setUsedAt(OffsetDateTime.now());

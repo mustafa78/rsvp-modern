@@ -15,3 +15,8 @@ server:
 
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  sendgrid:
+    enabled: ${SENDGRID_ENABLED:false}
+    api-key: ${SENDGRID_API_KEY:}
+    from-email: ${SENDGRID_FROM_EMAIL:noreply@example.com}
+    from-name: ${SENDGRID_FROM_NAME:RSVP System}
