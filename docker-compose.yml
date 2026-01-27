@@ -1,3 +1,5 @@
+name: rsvp-prod
+
 services:
   db:
     image: postgres:16
@@ -29,8 +31,7 @@ services:
 
   server:
     build: ./server
-    ports:
-      - "8080:8080"
+    # No external port needed - nginx proxies to server:8080 internally
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
