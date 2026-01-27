@@ -20,6 +20,7 @@ rsvp-modern-session.md
 # Database backups - never commit these
 db_backup*.sql
 *.dump
+backups/
 rsvp-modern-session.md
 
 # Training documentation (contains screenshots, managed separately)
