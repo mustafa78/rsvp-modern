@@ -58,6 +58,7 @@ const isAdmin = (roles: string[]) => hasRole(roles, 'ADMIN');
 const isNiyazCoordinator = (roles: string[]) => hasRole(roles, 'NIYAZ_COORDINATOR');
 const isThaaliCoordinator = (roles: string[]) => hasRole(roles, 'THAALI_COORDINATOR');
 const isDanaCoordinator = (roles: string[]) => hasRole(roles, 'DANA_COORDINATOR');
+const isShoppingCoordinator = (roles: string[]) => hasRole(roles, 'SHOPPING_COORDINATOR');
 
 // Check if event date is in the past (compare dates only, not time)
 function isEventPast(eventDate: string): boolean {
@@ -88,10 +89,13 @@ export default function EventList() {
   // Determine what event types the user can see/create based on roles
   const userRoles = user?.roles || [];
   const canSeeAllTypes = isAdmin(userRoles);
-  const canSeeThaali = canSeeAllTypes || isThaaliCoordinator(userRoles);
+  const shoppingCoord = isShoppingCoordinator(userRoles);
+  const canSeeThaali = canSeeAllTypes || isThaaliCoordinator(userRoles) || shoppingCoord;
   const canSeeNiyaz = canSeeAllTypes || isNiyazCoordinator(userRoles) || isDanaCoordinator(userRoles);
-  const canCreateThaali = canSeeAllTypes || isThaaliCoordinator(userRoles);
+  const canCreateThaali = canSeeAllTypes || isThaaliCoordinator(userRoles); // Shopping Coordinator cannot create
   const canCreateNiyaz = canSeeAllTypes || isNiyazCoordinator(userRoles); // Dana Coordinator cannot create
+  // Shopping Coordinator can only view events and signups (Summary + Shopping List tabs)
+  const canManageEvents = !shoppingCoord;
 
   const publishMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -144,6 +148,8 @@ export default function EventList() {
   // Determine page title based on role
   const pageTitle = canSeeAllTypes
     ? 'All Events'
+    : shoppingCoord
+    ? 'Thaali Events'
     : canSeeNiyaz && !canSeeThaali
     ? 'Niyaz Events'
     : canSeeThaali && !canSeeNiyaz
@@ -384,17 +390,20 @@ export default function EventList() {
                     {/* Actions */}
                     <td className="px-4 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Link
-                          to={`/admin/events/${event.id}`}
-                          className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
-                        >
-                          Details
-                        </Link>
+                        {/* Details link - hidden for Shopping Coordinator */}
+                        {canManageEvents && (
+                          <Link
+                            to={`/admin/events/${event.id}`}
+                            className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
+                          >
+                            Details
+                          </Link>
+                        )}
 
                         {/* Upcoming event actions */}
                         {!isPast && (
                           <>
-                            {event.status === 'DRAFT' && (
+                            {event.status === 'DRAFT' && canManageEvents && (
                               <button
                                 onClick={() => handlePublish(event.id)}
                                 className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700"
@@ -413,7 +422,7 @@ export default function EventList() {
                                     Signups
                                   </Link>
                                 )}
-                                {event.type === 'NIYAZ' && (
+                                {event.type === 'NIYAZ' && canManageEvents && (
                                   <Link
                                     to={`/admin/reports/rsvps/${event.id}`}
                                     className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-white bg-purple-600 rounded hover:bg-purple-700"
@@ -421,20 +430,22 @@ export default function EventList() {
                                     RSVPs
                                   </Link>
                                 )}
-                                <button
-                                  onClick={() => handleCancel(event.id)}
-                                  className="text-xs text-red-600 hover:text-red-800 hover:underline ml-1"
-                                  disabled={cancelMutation.isPending}
-                                >
-                                  Cancel
-                                </button>
+                                {canManageEvents && (
+                                  <button
+                                    onClick={() => handleCancel(event.id)}
+                                    className="text-xs text-red-600 hover:text-red-800 hover:underline ml-1"
+                                    disabled={cancelMutation.isPending}
+                                  >
+                                    Cancel
+                                  </button>
+                                )}
                               </>
                             )}
                           </>
                         )}
 
-                        {/* Past event actions */}
-                        {isPast && event.status === 'PUBLISHED' && (
+                        {/* Past event actions - Shopping Coordinator only sees Thaali Summary */}
+                        {isPast && event.status === 'PUBLISHED' && (canManageEvents || event.type === 'THAALI') && (
                           <Link
                             to={event.type === 'THAALI' ? `/admin/reports/orders/${event.id}` : `/admin/reports/rsvps/${event.id}`}
                             className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded hover:bg-gray-200"

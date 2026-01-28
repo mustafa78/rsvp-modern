@@ -36,7 +36,8 @@ const getNavItems = (roles: string[]): NavItem[] => {
 
   // Events section
   const eventChildren: { label: string; path: string }[] = [];
-  if (admin || niyazCoord || thaaliCoord || danaCoord) {
+  const shoppingCoord = isShoppingCoordinator(roles);
+  if (admin || niyazCoord || thaaliCoord || danaCoord || shoppingCoord) {
     eventChildren.push({ label: 'All Events', path: '/admin/events' });
   }
   if (admin || thaaliCoord) {
@@ -51,13 +52,12 @@ const getNavItems = (roles: string[]): NavItem[] => {
 
   // Catalog - based on role
   const menuCoord = isMenuCoordinator(roles);
-  const shoppingCoord = isShoppingCoordinator(roles);
 
   if (admin || menuCoord || shoppingCoord) {
     const catalogChildren: { label: string; path: string }[] = [];
 
-    // Dishes - Admin, Menu Coordinator
-    if (admin || menuCoord) {
+    // Dishes - Admin, Menu Coordinator, Shopping Coordinator (view only for Shopping)
+    if (admin || menuCoord || shoppingCoord) {
       catalogChildren.push({ label: 'Dishes', path: '/admin/catalog/dishes' });
     }
     // Ingredients - Admin, Menu Coordinator, Shopping Coordinator
