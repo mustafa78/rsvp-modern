@@ -25,7 +25,7 @@ type Ingredient = {
   name: string;
   unit: string;
   category: string | null;
-  defaultStore: string | null;
+  store: string | null;  // Backend sends "store", not "defaultStore"
   storageLocation: string | null;
   notes: string | null;
 };
@@ -115,7 +115,7 @@ export default function ShoppingListGenerator() {
           name: di.ingredientName,
           unit: di.unit,
           totalQty: di.qtyPerQuart * quarts,
-          defaultStore: meta?.defaultStore || null,
+          defaultStore: meta?.store || null,  // Backend sends "store"
           category: meta?.category || null,
         };
       });
