@@ -401,6 +401,38 @@ export default function ThaaliOrderReport() {
     return `${month}/${day}/${year.slice(2)}`;
   };
 
+  // Zone color mapping - dark, print-friendly colors
+  const getZoneColor = (zoneName: string | null): [number, number, number] => {
+    if (!zoneName) return [0, 0, 0]; // Black for unknown
+
+    // Normalize zone name for consistent matching
+    const normalized = zoneName.toLowerCase().replace(/_/g, ' ');
+
+    // Define distinct, dark colors for different zones (RGB values)
+    const zoneColors: Record<string, [number, number, number]> = {
+      'germantown': [0, 100, 0],           // Dark green
+      'frederick': [139, 0, 0],            // Dark red
+      'ellicott city columbia': [0, 0, 139], // Dark blue
+      'rockville': [128, 0, 128],          // Purple
+      'silver spring': [0, 128, 128],      // Teal
+      'baltimore': [139, 69, 19],          // Saddle brown
+      'gaithersburg': [75, 0, 130],        // Indigo
+      'bethesda': [0, 100, 100],           // Dark cyan
+      'laurel': [128, 64, 0],              // Dark orange/brown
+      'bowie': [100, 50, 100],             // Dark magenta
+    };
+
+    // Find matching zone color
+    for (const [zone, color] of Object.entries(zoneColors)) {
+      if (normalized.includes(zone)) {
+        return color;
+      }
+    }
+
+    // Default to dark gray for unrecognized zones
+    return [80, 80, 80];
+  };
+
   // Generate Avery 5136 labels PDF (1" x 2-5/8", 30 labels per sheet, 3 columns x 10 rows)
   const generateLabels = () => {
     if (!individualOrders || individualOrders.orders.length === 0) {
@@ -425,7 +457,7 @@ export default function ThaaliOrderReport() {
     const verticalGap = 0;
 
     // Collect labels (one per person with all their dishes)
-    type LabelData = { name: string; dishLines: string[]; zoneAndDate: string };
+    type LabelData = { name: string; dishLines: string[]; zoneAndDate: string; zoneName: string | null };
     const labels: LabelData[] = [];
 
     const formattedDate = formatLabelDate(event?.eventDate);
@@ -442,6 +474,7 @@ export default function ThaaliOrderReport() {
         name: order.personName,
         dishLines,
         zoneAndDate: `${zoneName} (${formattedDate})`,
+        zoneName: order.pickupZoneName,
       });
     }
 
@@ -513,10 +546,11 @@ export default function ThaaliOrderReport() {
         currentY += dishLineHeight;
       });
 
-      // Zone (Date) - positioned right after last dish (bold, centered)
+      // Zone (Date) - positioned right after last dish (bold, centered, colored by zone)
       doc.setFontSize(zoneFontSize);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(0);
+      const zoneColor = getZoneColor(label.zoneName);
+      doc.setTextColor(zoneColor[0], zoneColor[1], zoneColor[2]);
       doc.text(label.zoneAndDate, centerX, currentY, { align: 'center' });
 
       labelIndex++;
