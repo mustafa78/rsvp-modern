@@ -484,9 +484,9 @@ export default function ThaaliOrderReport() {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'italic');
       doc.setTextColor(0);
-      const lineHeight = 0.11;
+      const lineHeight = 0.14; // 10pt font needs ~0.14" line height
       const maxDishLines = 4; // Max dishes that fit
-      const startDishY = nameY + 0.13;
+      const startDishY = nameY + 0.15;
 
       const dishCount = Math.min(label.dishLines.length, maxDishLines);
       label.dishLines.slice(0, maxDishLines).forEach((dish, i) => {
