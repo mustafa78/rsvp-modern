@@ -532,9 +532,6 @@ export default function NiyazRsvpReport() {
         <button onClick={exportToPDF} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all shadow-sm hover:shadow-md">
           Export to PDF
         </button>
-        <button onClick={() => window.print()} className="px-4 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors">
-          Print Report
-        </button>
       </div>
 
       {/* Add RSVP Modal */}
