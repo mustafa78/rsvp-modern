@@ -1016,9 +1016,6 @@ export default function ThaaliOrderReport() {
             <button onClick={exportSummaryToPDF} className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-sm hover:shadow-md">
               Export to PDF
             </button>
-            <button onClick={() => window.print()} className="px-4 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors">
-              Print Report
-            </button>
           </div>
         </div>
       )}
