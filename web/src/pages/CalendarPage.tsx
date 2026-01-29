@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
+import { gregorianToHijri, getHijriShortMonthName, formatHijriDate } from '../lib/hijriDate';
 
 type EventType = 'NIYAZ' | 'THAALI';
 type EventStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED';
@@ -100,6 +101,22 @@ export default function CalendarPage() {
     return getCalendarDays(currentYear, currentMonth);
   }, [currentYear, currentMonth]);
 
+  // Get Hijri month range for the current view (first and last day of displayed month)
+  const hijriMonthRange = useMemo(() => {
+    const firstDay = new Date(currentYear, currentMonth, 1);
+    const lastDay = new Date(currentYear, currentMonth + 1, 0);
+    const hijriFirst = gregorianToHijri(firstDay);
+    const hijriLast = gregorianToHijri(lastDay);
+
+    if (hijriFirst.month === hijriLast.month && hijriFirst.year === hijriLast.year) {
+      return `${getHijriShortMonthName(hijriFirst.month)} ${hijriFirst.year}H`;
+    } else if (hijriFirst.year === hijriLast.year) {
+      return `${getHijriShortMonthName(hijriFirst.month)} - ${getHijriShortMonthName(hijriLast.month)} ${hijriFirst.year}H`;
+    } else {
+      return `${getHijriShortMonthName(hijriFirst.month)} ${hijriFirst.year}H - ${getHijriShortMonthName(hijriLast.month)} ${hijriLast.year}H`;
+    }
+  }, [currentYear, currentMonth]);
+
   // Navigation handlers
   const goToPrevMonth = () => {
     if (currentMonth === 0) {
@@ -174,9 +191,14 @@ export default function CalendarPage() {
             </button>
 
             <div className="flex items-center gap-4">
-              <h2 className="text-xl font-bold text-white">
-                {MONTHS[currentMonth]} {currentYear}
-              </h2>
+              <div className="text-center">
+                <h2 className="text-xl font-bold text-white">
+                  {MONTHS[currentMonth]} {currentYear}
+                </h2>
+                <p className="text-sm text-white/80">
+                  {hijriMonthRange}
+                </p>
+              </div>
               <button
                 onClick={goToToday}
                 className="px-3 py-1 text-sm font-medium rounded-lg bg-white/20 hover:bg-white/30 transition-colors text-white"
@@ -218,6 +240,7 @@ export default function CalendarPage() {
             const isInCurrentMonth = isCurrentMonth(date, currentYear, currentMonth);
             const visibleEvents = dayEvents.slice(0, 2);
             const moreCount = dayEvents.length - 2;
+            const hijriDate = gregorianToHijri(date);
 
             return (
               <div
@@ -230,15 +253,30 @@ export default function CalendarPage() {
                   ${index >= 35 ? 'border-b-0' : ''}
                 `}
               >
-                {/* Day Number */}
-                <div
-                  className={`
-                    text-sm font-medium mb-1
-                    ${isToday ? 'text-purple-600 font-bold' : ''}
-                    ${!isInCurrentMonth ? 'text-gray-400' : 'text-gray-700'}
-                  `}
-                >
-                  {date.getDate()}
+                {/* Day Numbers - Gregorian and Hijri */}
+                <div className="flex items-start justify-between mb-1">
+                  <div
+                    className={`
+                      text-sm font-medium
+                      ${isToday ? 'text-purple-600 font-bold' : ''}
+                      ${!isInCurrentMonth ? 'text-gray-400' : 'text-gray-700'}
+                    `}
+                  >
+                    {date.getDate()}
+                  </div>
+                  <div
+                    className={`
+                      text-xs text-right
+                      ${isToday ? 'text-purple-500' : ''}
+                      ${!isInCurrentMonth ? 'text-gray-300' : 'text-emerald-600'}
+                    `}
+                    title={formatHijriDate(hijriDate, 'long')}
+                  >
+                    {hijriDate.day === 1 ? (
+                      <span className="font-medium">{getHijriShortMonthName(hijriDate.month).slice(0, 3)}</span>
+                    ) : null}
+                    <span className={hijriDate.day === 1 ? 'ml-0.5' : ''}>{hijriDate.day}</span>
+                  </div>
                 </div>
 
                 {/* Events */}
@@ -289,6 +327,10 @@ export default function CalendarPage() {
         <div className="flex items-center gap-2">
           <span className="w-4 h-4 rounded ring-2 ring-purple-500 bg-purple-50/30"></span>
           <span>Today</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-emerald-600 font-medium">21</span>
+          <span>Hijri Date</span>
         </div>
       </div>
     </div>
