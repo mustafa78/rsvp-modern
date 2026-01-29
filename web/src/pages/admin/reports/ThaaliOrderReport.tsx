@@ -402,29 +402,27 @@ export default function ThaaliOrderReport() {
   };
 
   // Zone color mapping - dark, print-friendly colors
+  // Matches actual pickup_zones table values
   const getZoneColor = (zoneName: string | null): [number, number, number] => {
     if (!zoneName) return [0, 0, 0]; // Black for unknown
 
     // Normalize zone name for consistent matching
     const normalized = zoneName.toLowerCase().replace(/_/g, ' ');
 
-    // Define distinct, dark colors for different zones (RGB values)
+    // Define distinct, dark colors for actual zones in pickup_zones table (RGB values)
     const zoneColors: Record<string, [number, number, number]> = {
-      'germantown': [0, 100, 0],           // Dark green
-      'frederick': [139, 0, 0],            // Dark red
-      'ellicott city columbia': [0, 0, 139], // Dark blue
-      'rockville': [128, 0, 128],          // Purple
-      'silver spring': [0, 128, 128],      // Teal
-      'baltimore': [139, 69, 19],          // Saddle brown
-      'gaithersburg': [75, 0, 130],        // Indigo
-      'bethesda': [0, 100, 100],           // Dark cyan
-      'laurel': [128, 64, 0],              // Dark orange/brown
-      'bowie': [100, 50, 100],             // Dark magenta
+      'self pickup najmi masjid': [128, 0, 128],    // Purple
+      'north potomac rockville': [0, 100, 0],       // Dark green
+      'germantown': [0, 0, 139],                     // Dark blue
+      'washington dc': [139, 0, 0],                  // Dark red
+      'frederick': [139, 69, 19],                    // Saddle brown
+      'ellicott city columbia': [0, 128, 128],      // Teal
+      'clarksville': [75, 0, 130],                   // Indigo
     };
 
-    // Find matching zone color
+    // Find matching zone color (check for exact or partial match)
     for (const [zone, color] of Object.entries(zoneColors)) {
-      if (normalized.includes(zone)) {
+      if (normalized === zone || normalized.includes(zone) || zone.includes(normalized)) {
         return color;
       }
     }
@@ -521,6 +519,9 @@ export default function ThaaliOrderReport() {
       const topPadding = (labelHeight - totalContentHeight) / 2 * 0.7; // Slight top bias
       let currentY = y + topPadding + nameLineHeight;
 
+      // Get zone color for this label - applies to ALL text
+      const zoneColor = getZoneColor(label.zoneName);
+
       // Calculate font size for name based on length (auto-shrink for long names)
       let actualNameFontSize = nameFontSize;
       if (label.name.length > 28) {
@@ -529,27 +530,26 @@ export default function ThaaliOrderReport() {
         actualNameFontSize = 9;
       }
 
-      // Person name (bold, centered)
+      // Person name (bold, centered, zone colored)
       doc.setFontSize(actualNameFontSize);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(0);
+      doc.setTextColor(zoneColor[0], zoneColor[1], zoneColor[2]);
       doc.text(label.name, centerX, currentY, { align: 'center' });
       currentY += dishLineHeight; // Gap before first dish
 
-      // Dishes - each on its own line (italic, centered)
+      // Dishes - each on its own line (italic, centered, zone colored)
       doc.setFontSize(dishFontSize);
       doc.setFont('helvetica', 'italic');
-      doc.setTextColor(0);
+      doc.setTextColor(zoneColor[0], zoneColor[1], zoneColor[2]);
 
       label.dishLines.slice(0, 4).forEach((dish) => {
         doc.text(dish, centerX, currentY, { align: 'center' });
         currentY += dishLineHeight;
       });
 
-      // Zone (Date) - positioned right after last dish (bold, centered, colored by zone)
+      // Zone (Date) - positioned right after last dish (bold, centered, zone colored)
       doc.setFontSize(zoneFontSize);
       doc.setFont('helvetica', 'bold');
-      const zoneColor = getZoneColor(label.zoneName);
       doc.setTextColor(zoneColor[0], zoneColor[1], zoneColor[2]);
       doc.text(label.zoneAndDate, centerX, currentY, { align: 'center' });
 
