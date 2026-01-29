@@ -384,6 +384,23 @@ export default function ThaaliOrderReport() {
     return sortDirection === 'asc' ? comparison : -comparison;
   }) : [];
 
+  // Format zone name: replace underscores with spaces, convert to title case
+  const formatZoneName = (zoneName: string | null): string => {
+    if (!zoneName) return 'N/A';
+    return zoneName
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  // Format date as MM/DD/YY
+  const formatLabelDate = (dateStr: string | undefined): string => {
+    if (!dateStr) return '';
+    const [year, month, day] = dateStr.split('-');
+    return `${month}/${day}/${year.slice(2)}`;
+  };
+
   // Generate Avery 5136 labels PDF (1" x 2-5/8", 30 labels per sheet, 3 columns x 10 rows)
   const generateLabels = () => {
     if (!individualOrders || individualOrders.orders.length === 0) {
@@ -411,17 +428,20 @@ export default function ThaaliOrderReport() {
     type LabelData = { name: string; dishLines: string[]; zoneAndDate: string };
     const labels: LabelData[] = [];
 
+    const formattedDate = formatLabelDate(event?.eventDate);
+
     for (const order of sortedOrders) {
       // Format each dish on its own line with full size name
       const dishLines = order.items.map(item => {
-        const sizeName = item.size === 'LARGE' ? 'Large' : item.size === 'SMALL' ? 'Small' : 'Barakati';
+        const sizeName = item.size === 'LARGE' ? 'Large' : item.size === 'SMALL' ? 'Small' : 'Barakat';
         return `${sizeName} ${item.dishName || 'Unknown'}`;
       });
 
+      const zoneName = formatZoneName(order.pickupZoneName);
       labels.push({
         name: order.personName,
         dishLines,
-        zoneAndDate: `${order.pickupZoneName || 'N/A'} (${event?.eventDate || ''})`,
+        zoneAndDate: `${zoneName} (${formattedDate})`,
       });
     }
 
@@ -442,48 +462,43 @@ export default function ThaaliOrderReport() {
 
       const label = labels[labelIndex];
 
-      // Padding inside label
-      const padding = 0.06;
-      const contentX = x + padding;
-      const contentWidth = labelWidth - 2 * padding;
+      // Center X for this label
+      const centerX = x + labelWidth / 2;
 
       // Calculate font size for name based on length (auto-shrink for long names)
-      let nameFontSize = 10;
-      if (label.name.length > 25) {
+      let nameFontSize = 11;
+      if (label.name.length > 28) {
         nameFontSize = 8;
-      } else if (label.name.length > 20) {
+      } else if (label.name.length > 22) {
         nameFontSize = 9;
+      } else if (label.name.length > 18) {
+        nameFontSize = 10;
       }
 
-      // Person name (bold)
+      // Person name (bold, centered)
       doc.setFontSize(nameFontSize);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(0);
-      const nameY = y + 0.14;
-      doc.text(label.name, contentX, nameY, { maxWidth: contentWidth });
+      const nameY = y + 0.15;
+      doc.text(label.name, centerX, nameY, { align: 'center' });
 
-      // Dishes - each on its own line
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'normal');
+      // Dishes - each on its own line (italic, centered)
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'italic');
       doc.setTextColor(0);
-      const lineHeight = 0.11;
+      const lineHeight = 0.12;
       const maxDishLines = 4; // Max dishes that fit
-      const startDishY = nameY + 0.14;
+      const startDishY = nameY + 0.16;
 
       label.dishLines.slice(0, maxDishLines).forEach((dish, i) => {
-        // Truncate long dish names to fit
-        let displayDish = dish;
-        if (dish.length > 35) {
-          displayDish = dish.substring(0, 32) + '...';
-        }
-        doc.text(displayDish, contentX, startDishY + (i * lineHeight));
+        doc.text(dish, centerX, startDishY + (i * lineHeight), { align: 'center' });
       });
 
-      // Zone (Date) at bottom
-      doc.setFontSize(7);
-      doc.setTextColor(100);
-      doc.text(label.zoneAndDate, contentX, y + labelHeight - 0.08, { maxWidth: contentWidth });
+      // Zone (Date) at bottom (bold, centered)
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
       doc.setTextColor(0);
+      doc.text(label.zoneAndDate, centerX, y + labelHeight - 0.08, { align: 'center' });
 
       labelIndex++;
     }
