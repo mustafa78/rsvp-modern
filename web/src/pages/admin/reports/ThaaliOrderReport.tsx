@@ -466,39 +466,40 @@ export default function ThaaliOrderReport() {
       const centerX = x + labelWidth / 2;
 
       // Calculate font size for name based on length (auto-shrink for long names)
-      let nameFontSize = 11;
+      let nameFontSize = 10;
       if (label.name.length > 28) {
         nameFontSize = 8;
       } else if (label.name.length > 22) {
         nameFontSize = 9;
-      } else if (label.name.length > 18) {
-        nameFontSize = 10;
       }
 
-      // Person name (bold, centered)
+      // Person name (bold, centered) - 10pt
       doc.setFontSize(nameFontSize);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(0);
-      const nameY = y + 0.15;
+      const nameY = y + 0.14;
       doc.text(label.name, centerX, nameY, { align: 'center' });
 
-      // Dishes - each on its own line (italic, centered)
-      doc.setFontSize(9);
+      // Dishes - each on its own line (italic, centered) - 10pt
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'italic');
       doc.setTextColor(0);
-      const lineHeight = 0.12;
+      const lineHeight = 0.11;
       const maxDishLines = 4; // Max dishes that fit
-      const startDishY = nameY + 0.16;
+      const startDishY = nameY + 0.13;
 
+      const dishCount = Math.min(label.dishLines.length, maxDishLines);
       label.dishLines.slice(0, maxDishLines).forEach((dish, i) => {
         doc.text(dish, centerX, startDishY + (i * lineHeight), { align: 'center' });
       });
 
-      // Zone (Date) at bottom (bold, centered)
+      // Zone (Date) - positioned right after last dish (bold, centered) - 8pt
+      const lastDishY = startDishY + ((dishCount - 1) * lineHeight);
+      const zoneY = lastDishY + 0.14; // Small gap after last dish
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(0);
-      doc.text(label.zoneAndDate, centerX, y + labelHeight - 0.08, { align: 'center' });
+      doc.text(label.zoneAndDate, centerX, zoneY, { align: 'center' });
 
       labelIndex++;
     }
