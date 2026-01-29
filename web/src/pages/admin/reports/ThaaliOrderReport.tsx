@@ -465,41 +465,59 @@ export default function ThaaliOrderReport() {
       // Center X for this label
       const centerX = x + labelWidth / 2;
 
+      // Font sizes
+      const nameFontSize = 10;
+      const dishFontSize = 10;
+      const zoneFontSize = 8;
+
+      // Calculate line heights dynamically based on font size
+      // Standard typography: line height = font size * 1.2 to 1.4
+      // Converting points to inches: points / 72
+      const nameLineHeight = (nameFontSize / 72) * 1.3;
+      const dishLineHeight = (dishFontSize / 72) * 1.3;
+      const zoneLineHeight = (zoneFontSize / 72) * 1.3;
+
+      // Calculate total content height to center vertically
+      const dishCount = Math.min(label.dishLines.length, 4);
+      const totalContentHeight =
+        nameLineHeight + // Name
+        (dishCount * dishLineHeight) + // Dishes
+        zoneLineHeight; // Zone/date
+
+      // Start Y position (vertically centered in label with small top bias)
+      const topPadding = (labelHeight - totalContentHeight) / 2 * 0.7; // Slight top bias
+      let currentY = y + topPadding + nameLineHeight;
+
       // Calculate font size for name based on length (auto-shrink for long names)
-      let nameFontSize = 10;
+      let actualNameFontSize = nameFontSize;
       if (label.name.length > 28) {
-        nameFontSize = 8;
+        actualNameFontSize = 8;
       } else if (label.name.length > 22) {
-        nameFontSize = 9;
+        actualNameFontSize = 9;
       }
 
-      // Person name (bold, centered) - 10pt
-      doc.setFontSize(nameFontSize);
+      // Person name (bold, centered)
+      doc.setFontSize(actualNameFontSize);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(0);
-      const nameY = y + 0.14;
-      doc.text(label.name, centerX, nameY, { align: 'center' });
+      doc.text(label.name, centerX, currentY, { align: 'center' });
+      currentY += dishLineHeight; // Gap before first dish
 
-      // Dishes - each on its own line (italic, centered) - 10pt
-      doc.setFontSize(10);
+      // Dishes - each on its own line (italic, centered)
+      doc.setFontSize(dishFontSize);
       doc.setFont('helvetica', 'italic');
       doc.setTextColor(0);
-      const lineHeight = 0.14; // 10pt font needs ~0.14" line height
-      const maxDishLines = 4; // Max dishes that fit
-      const startDishY = nameY + 0.15;
 
-      const dishCount = Math.min(label.dishLines.length, maxDishLines);
-      label.dishLines.slice(0, maxDishLines).forEach((dish, i) => {
-        doc.text(dish, centerX, startDishY + (i * lineHeight), { align: 'center' });
+      label.dishLines.slice(0, 4).forEach((dish) => {
+        doc.text(dish, centerX, currentY, { align: 'center' });
+        currentY += dishLineHeight;
       });
 
-      // Zone (Date) - positioned right after last dish (bold, centered) - 8pt
-      const lastDishY = startDishY + ((dishCount - 1) * lineHeight);
-      const zoneY = lastDishY + 0.14; // Small gap after last dish
-      doc.setFontSize(8);
+      // Zone (Date) - positioned right after last dish (bold, centered)
+      doc.setFontSize(zoneFontSize);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(0);
-      doc.text(label.zoneAndDate, centerX, zoneY, { align: 'center' });
+      doc.text(label.zoneAndDate, centerX, currentY, { align: 'center' });
 
       labelIndex++;
     }
