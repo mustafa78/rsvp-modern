@@ -47,11 +47,10 @@ public class EmailService {
 
         Email from = new Email(fromEmail, fromName);
         Email toEmail = new Email(to);
-        Content content = new Content("text/html", htmlContent);
-        Mail mail = new Mail(from, subject, toEmail, content);
-
-        // Add plain text version
-        mail.addContent(new Content("text/plain", textContent));
+        // SendGrid requires: text/plain first, then text/html
+        Content plainContent = new Content("text/plain", textContent);
+        Mail mail = new Mail(from, subject, toEmail, plainContent);
+        mail.addContent(new Content("text/html", htmlContent));
 
         SendGrid sg = new SendGrid(sendGridApiKey);
         Request request = new Request();
