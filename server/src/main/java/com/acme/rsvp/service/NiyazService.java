@@ -63,6 +63,22 @@ public class NiyazService {
                 .orElse(null);
     }
 
+    @Transactional
+    public void deleteRsvp(Long eventId, Long personId) {
+        NiyazEvent e = eventRepo.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found: " + eventId));
+
+        // Check if registration is open
+        if (!e.isRegistrationOpen(java.time.OffsetDateTime.now())) {
+            throw new IllegalStateException("Registration is closed for this event");
+        }
+
+        NiyazRsvp rsvp = rsvpRepo.findByEventIdAndPersonId(eventId, personId)
+                .orElseThrow(() -> new IllegalArgumentException("RSVP not found"));
+
+        rsvpRepo.delete(rsvp);
+    }
+
     @Transactional(readOnly = true)
     public long totalAdults(Long eventId) {
         return rsvpRepo.totalAdults(eventId);

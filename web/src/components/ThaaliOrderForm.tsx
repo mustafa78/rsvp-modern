@@ -25,6 +25,7 @@ export default function ThaaliOrderForm({ eventId }: Props) {
   const [pickupZoneId, setPickupZoneId] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   // Fetch event details with menu
   const { data: event, isLoading: eventLoading } = useQuery<ThaaliEvent>({
@@ -98,6 +99,25 @@ export default function ThaaliOrderForm({ eventId }: Props) {
     },
     onError: (err: Error) => {
       setError(err.message || 'Failed to save thaali registration');
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: async () => {
+      return api.delete(`/thaali/${eventId}/orders/my`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-thaali-order', eventId] });
+      setError(null);
+      setShowCancelConfirm(false);
+      // Reset form to initial state
+      setSelections((prev) => prev.map((s) => ({ ...s, size: null })));
+      setNotes('');
+      alert('Your thaali registration has been cancelled.');
+    },
+    onError: (err: Error) => {
+      setError(err.message || 'Failed to cancel registration');
+      setShowCancelConfirm(false);
     },
   });
 
@@ -255,6 +275,47 @@ export default function ThaaliOrderForm({ eventId }: Props) {
           ? 'Update Thaali'
           : 'Register'}
       </button>
+
+      {existingOrder && (
+        <button
+          type="button"
+          onClick={() => setShowCancelConfirm(true)}
+          className="w-full mt-2 px-4 py-2 text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+          disabled={cancelMutation.isPending}
+        >
+          Cancel Registration
+        </button>
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold mb-2">Cancel Registration?</h3>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to cancel your thaali registration? This will remove your order for this event.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCancelConfirm(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                disabled={cancelMutation.isPending}
+              >
+                Keep Registration
+              </button>
+              <button
+                type="button"
+                onClick={() => cancelMutation.mutate()}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                disabled={cancelMutation.isPending}
+              >
+                {cancelMutation.isPending ? 'Cancelling...' : 'Yes, Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

@@ -12,6 +12,7 @@ export default function NiyazRsvpForm({ eventId }: Props) {
   const [adults, setAdults] = useState(1);
   const [kids, setKids] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   // Fetch user's existing RSVP
   const { data: existingRsvp } = useQuery<NiyazRsvp | null>({
@@ -45,6 +46,24 @@ export default function NiyazRsvpForm({ eventId }: Props) {
     },
     onError: (err: Error) => {
       setError(err.message || 'Failed to save RSVP');
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: async () => {
+      return api.delete(`/niyaz/${eventId}/rsvp/my`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-niyaz-rsvp', eventId] });
+      setError(null);
+      setShowCancelConfirm(false);
+      setAdults(1);
+      setKids(0);
+      alert('Your RSVP has been cancelled.');
+    },
+    onError: (err: Error) => {
+      setError(err.message || 'Failed to cancel RSVP');
+      setShowCancelConfirm(false);
     },
   });
 
@@ -146,6 +165,47 @@ export default function NiyazRsvpForm({ eventId }: Props) {
           ? 'Update RSVP'
           : 'Submit RSVP'}
       </button>
+
+      {existingRsvp && (
+        <button
+          type="button"
+          onClick={() => setShowCancelConfirm(true)}
+          className="w-full mt-2 px-4 py-2 text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+          disabled={cancelMutation.isPending}
+        >
+          Cancel RSVP
+        </button>
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold mb-2">Cancel RSVP?</h3>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to cancel your RSVP? This will remove your registration for this event.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCancelConfirm(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                disabled={cancelMutation.isPending}
+              >
+                Keep RSVP
+              </button>
+              <button
+                type="button"
+                onClick={() => cancelMutation.mutate()}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                disabled={cancelMutation.isPending}
+              >
+                {cancelMutation.isPending ? 'Cancelling...' : 'Yes, Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
