@@ -107,6 +107,8 @@ export default function ThaaliOrderForm({ eventId }: Props) {
       return api.delete(`/thaali/${eventId}/orders/my`);
     },
     onSuccess: () => {
+      // Immediately update cache to null so UI reflects cancellation
+      queryClient.setQueryData(['my-thaali-order', eventId], null);
       queryClient.invalidateQueries({ queryKey: ['my-thaali-order', eventId] });
       setError(null);
       setShowCancelConfirm(false);
