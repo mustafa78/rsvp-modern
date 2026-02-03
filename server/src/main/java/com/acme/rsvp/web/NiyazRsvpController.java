@@ -48,6 +48,18 @@ public class NiyazRsvpController {
         return rsvp != null ? ResponseEntity.ok(rsvp) : ResponseEntity.noContent().build();
     }
 
+    // Cancel the current user's RSVP
+    @DeleteMapping("/my")
+    public ResponseEntity<Void> cancelMyRsvp(
+            @PathVariable Long eventId,
+            @AuthenticationPrincipal Person user) {
+        if (!user.isHof()) {
+            throw new IllegalStateException("Only Head of Family (HOF) users can cancel RSVPs");
+        }
+        service.deleteRsvp(eventId, user.getId());
+        return ResponseEntity.noContent().build();
+    }
+
     // Admin: Get totals
     @GetMapping("/totals/adults")
     public long adults(@PathVariable Long eventId) {
