@@ -54,6 +54,8 @@ export default function NiyazRsvpForm({ eventId }: Props) {
       return api.delete(`/niyaz/${eventId}/rsvp/my`);
     },
     onSuccess: () => {
+      // Immediately update cache to null so UI reflects cancellation
+      queryClient.setQueryData(['my-niyaz-rsvp', eventId], null);
       queryClient.invalidateQueries({ queryKey: ['my-niyaz-rsvp', eventId] });
       setError(null);
       setShowCancelConfirm(false);
