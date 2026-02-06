@@ -389,7 +389,7 @@ export default function NiyazRsvpReport() {
 
   const totalAttendees = (adults || 0) + (kids || 0);
   const equivalentServings = (adults || 0) + (kids || 0) * 0.5;
-  const numberOfThaal = equivalentServings / 8;
+  const numberOfThaal = equivalentServings / 10;
   const isPast = isEventPast(event.eventDate);
 
   return (
@@ -438,7 +438,7 @@ export default function NiyazRsvpReport() {
           <li>• Expected adult servings: <strong>{adults || 0}</strong></li>
           <li>• Expected child servings (typically ½ portion): <strong>{kids || 0}</strong></li>
           <li>• Equivalent full servings: <strong>{equivalentServings.toFixed(1)}</strong></li>
-          <li className="text-base">• <strong className="text-purple-700">Number of Thaals: {numberOfThaal.toFixed(1)}</strong> <span className="text-gray-500">(8 persons per thaal)</span></li>
+          <li className="text-base">• <strong className="text-purple-700">Number of Thaals: {numberOfThaal.toFixed(1)}</strong> <span className="text-gray-500">(10 persons per thaal)</span></li>
         </ul>
       </div>
 
