@@ -215,7 +215,7 @@ export default function NiyazRsvpReport() {
 
     const totalAttendees = (adults || 0) + (kids || 0);
     const equivalentServings = (adults || 0) + (kids || 0) * 0.5;
-    const numberOfThaal = equivalentServings / 8;
+    const numberOfThaal = equivalentServings / 10;
 
     // Title
     doc.setFontSize(20);
@@ -285,7 +285,7 @@ export default function NiyazRsvpReport() {
       ['Expected adult servings', String(adults || 0)],
       ['Expected child servings (½ portion)', String(kids || 0)],
       ['Equivalent full servings', equivalentServings.toFixed(1)],
-      ['Number of Thaals (8 persons/thaal)', numberOfThaal.toFixed(1)],
+      ['Number of Thaals (10 persons/thaal)', numberOfThaal.toFixed(1)],
     ];
 
     autoTable(doc, {
