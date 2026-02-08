@@ -1,0 +1,19 @@
+# CODEOWNERS - Define who must review code changes
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+* @mustafa78
+
+# Backend (Java/Spring Boot)
+/server/ @mustafa78
+
+# Frontend (React/TypeScript)
+/web/ @mustafa78
+
+# Database migrations - extra careful review needed
+/server/src/main/resources/db/migration/ @mustafa78
+
+# Infrastructure/DevOps
+docker-compose*.yml @mustafa78
+Dockerfile* @mustafa78
+.github/ @mustafa78
