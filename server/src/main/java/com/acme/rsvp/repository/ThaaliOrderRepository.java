@@ -18,6 +18,9 @@ public interface ThaaliOrderRepository extends JpaRepository<ThaaliOrder, Long> 
     @Query("SELECT o FROM ThaaliOrder o WHERE o.event.id = :eventId")
     List<ThaaliOrder> findByEventId(@Param("eventId") Long eventId);
 
+    @Query("SELECT COUNT(o) FROM ThaaliOrder o WHERE o.event.id = :eventId")
+    long countByEventId(@Param("eventId") Long eventId);
+
     @Query("SELECT DISTINCT o FROM ThaaliOrder o " +
            "LEFT JOIN FETCH o.person " +
            "LEFT JOIN FETCH o.pickupZone " +
