@@ -13,6 +13,11 @@ type Event = {
   registrationOpenAt: string;
   registrationCloseAt: string;
   status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED';
+  // Niyaz RSVP counts (null for Thaali)
+  rsvpAdults: number | null;
+  rsvpKids: number | null;
+  // Thaali order count (null for Niyaz)
+  thaaliOrders: number | null;
 };
 
 type User = {
@@ -318,17 +323,30 @@ export default function EventList() {
                           >
                             {event.title}
                           </Link>
-                          <span
-                            className={`inline-flex items-center text-xs font-medium ${
-                              isPast
-                                ? 'text-gray-500'
-                                : isNiyaz
-                                ? 'text-purple-600'
-                                : 'text-blue-600'
-                            }`}
-                          >
-                            {isNiyaz ? 'Niyaz' : 'Thaali'}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`inline-flex items-center text-xs font-medium ${
+                                isPast
+                                  ? 'text-gray-500'
+                                  : isNiyaz
+                                  ? 'text-purple-600'
+                                  : 'text-blue-600'
+                              }`}
+                            >
+                              {isNiyaz ? 'Niyaz' : 'Thaali'}
+                            </span>
+                            {/* RSVP/Order counts */}
+                            {isNiyaz && event.rsvpAdults !== null && (
+                              <span className="text-xs text-gray-500">
+                                ({event.rsvpAdults} adults, {event.rsvpKids} kids)
+                              </span>
+                            )}
+                            {!isNiyaz && event.thaaliOrders !== null && (
+                              <span className="text-xs text-gray-500">
+                                ({event.thaaliOrders} {event.thaaliOrders === 1 ? 'thaali' : 'thaalis'})
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>

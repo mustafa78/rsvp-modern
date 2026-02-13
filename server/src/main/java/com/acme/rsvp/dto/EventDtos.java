@@ -66,7 +66,12 @@ public final class EventDtos {
             EventStatus status,
             // Niyaz-specific fields (null for Thaali)
             String miqaatName,
-            Boolean showRsvpSummary
+            Boolean showRsvpSummary,
+            // RSVP counts for Niyaz events (null for Thaali)
+            Long rsvpAdults,
+            Long rsvpKids,
+            // Order count for Thaali events (null for Niyaz)
+            Long thaaliOrders
     ) {}
 
     // Host info for Niyaz events
