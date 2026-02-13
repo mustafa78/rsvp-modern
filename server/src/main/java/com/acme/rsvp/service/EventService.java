@@ -37,8 +37,10 @@ import com.acme.rsvp.repository.DishRepository;
 import com.acme.rsvp.repository.EventRepository;
 import com.acme.rsvp.repository.MenuItemRepository;
 import com.acme.rsvp.repository.NiyazEventRepository;
+import com.acme.rsvp.repository.NiyazRsvpRepository;
 import com.acme.rsvp.repository.PersonRepository;
 import com.acme.rsvp.repository.ThaaliEventRepository;
+import com.acme.rsvp.repository.ThaaliOrderRepository;
 
 @Service
 public class EventService {
@@ -50,6 +52,8 @@ public class EventService {
     private final MenuItemRepository menuRepo;
     private final DishRepository dishRepo;
     private final PersonRepository personRepo;
+    private final NiyazRsvpRepository niyazRsvpRepo;
+    private final ThaaliOrderRepository thaaliOrderRepo;
     private final AnnouncementService announcementService;
 
     public EventService(EventRepository eventRepo,
@@ -59,6 +63,8 @@ public class EventService {
             MenuItemRepository menuRepo,
             DishRepository dishRepo,
             PersonRepository personRepo,
+            NiyazRsvpRepository niyazRsvpRepo,
+            ThaaliOrderRepository thaaliOrderRepo,
             AnnouncementService announcementService) {
         this.eventRepo = eventRepo;
         this.niyazRepo = niyazRepo;
@@ -67,6 +73,8 @@ public class EventService {
         this.menuRepo = menuRepo;
         this.dishRepo = dishRepo;
         this.personRepo = personRepo;
+        this.niyazRsvpRepo = niyazRsvpRepo;
+        this.thaaliOrderRepo = thaaliOrderRepo;
         this.announcementService = announcementService;
     }
 
@@ -74,19 +82,19 @@ public class EventService {
 
     @Transactional(readOnly = true)
     public List<EventSummaryDto> listAll() {
-        return eventRepo.findAll().stream().map(EventService::toSummary).toList();
+        return eventRepo.findAll().stream().map(this::toSummary).toList();
     }
 
     @Transactional(readOnly = true)
     public List<EventSummaryDto> listPublished() {
         return eventRepo.findByStatus(EventStatus.PUBLISHED).stream()
-                .map(EventService::toSummary)
+                .map(this::toSummary)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public EventSummaryDto getSummary(Long id) {
-        return eventRepo.findById(id).map(EventService::toSummary).orElseThrow();
+        return eventRepo.findById(id).map(this::toSummary).orElseThrow();
     }
 
     @Transactional(readOnly = true)
@@ -307,21 +315,29 @@ public class EventService {
         }
     }
 
-    private static EventSummaryDto toSummary(Event e) {
+    private EventSummaryDto toSummary(Event e) {
         String type = (e instanceof NiyazEvent) ? "NIYAZ" : (e instanceof ThaaliEvent) ? "THAALI" : "EVENT";
 
         // Include Niyaz-specific fields if applicable
         String miqaatName = null;
         Boolean showRsvpSummary = null;
+        Long rsvpAdults = null;
+        Long rsvpKids = null;
+        Long thaaliOrders = null;
+
         if (e instanceof NiyazEvent niyaz) {
             miqaatName = niyaz.getMiqaatName();
             showRsvpSummary = niyaz.isShowRsvpSummary();
+            rsvpAdults = niyazRsvpRepo.totalAdults(e.getId());
+            rsvpKids = niyazRsvpRepo.totalKids(e.getId());
+        } else if (e instanceof ThaaliEvent) {
+            thaaliOrders = thaaliOrderRepo.countByEventId(e.getId());
         }
 
         return new EventSummaryDto(
                 e.getId(), type, e.getTitle(), e.getDescription(), e.getEventDate(), e.getStartTime(),
                 e.getRegistrationOpenAt(), e.getRegistrationCloseAt(), e.getStatus(),
-                miqaatName, showRsvpSummary);
+                miqaatName, showRsvpSummary, rsvpAdults, rsvpKids, thaaliOrders);
     }
 
     private ThaaliEventDto toDto(ThaaliEvent e) {
