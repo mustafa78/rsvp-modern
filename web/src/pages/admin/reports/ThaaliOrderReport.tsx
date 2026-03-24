@@ -496,38 +496,48 @@ export default function ThaaliOrderReport() {
       // Center X for this label
       const centerX = x + labelWidth / 2;
 
-      // Font sizes
-      const nameFontSize = 10;
-      const dishFontSize = 10;
-      const zoneFontSize = 8;
+      // Adaptive font sizes based on number of dishes to prevent overflow
+      const dishCount = Math.min(label.dishLines.length, 6);
+      let nameFontSize: number;
+      let dishFontSize: number;
+      let zoneFontSize: number;
+
+      if (dishCount <= 2) {
+        nameFontSize = 10; dishFontSize = 9; zoneFontSize = 7;
+      } else if (dishCount === 3) {
+        nameFontSize = 9; dishFontSize = 8; zoneFontSize = 7;
+      } else if (dishCount === 4) {
+        nameFontSize = 8; dishFontSize = 7; zoneFontSize = 6;
+      } else {
+        // 5-6 dishes
+        nameFontSize = 7; dishFontSize = 6; zoneFontSize = 5.5;
+      }
 
       // Calculate line heights dynamically based on font size
-      // Standard typography: line height = font size * 1.2 to 1.4
-      // Converting points to inches: points / 72
-      const nameLineHeight = (nameFontSize / 72) * 1.3;
-      const dishLineHeight = (dishFontSize / 72) * 1.3;
-      const zoneLineHeight = (zoneFontSize / 72) * 1.3;
+      // Converting points to inches: points / 72, multiplied by line spacing factor
+      const nameLineHeight = (nameFontSize / 72) * 1.25;
+      const dishLineHeight = (dishFontSize / 72) * 1.25;
+      const zoneLineHeight = (zoneFontSize / 72) * 1.25;
 
       // Calculate total content height to center vertically
-      const dishCount = Math.min(label.dishLines.length, 4);
       const totalContentHeight =
         nameLineHeight + // Name
         (dishCount * dishLineHeight) + // Dishes
         zoneLineHeight; // Zone/date
 
-      // Start Y position (vertically centered in label with small top bias)
-      const topPadding = (labelHeight - totalContentHeight) / 2 * 0.7; // Slight top bias
+      // Start Y position (vertically centered in label)
+      const topPadding = (labelHeight - totalContentHeight) / 2;
       let currentY = y + topPadding + nameLineHeight;
 
       // Get zone color for this label - applies to ALL text
       const zoneColor = getZoneColor(label.zoneName);
 
-      // Calculate font size for name based on length (auto-shrink for long names)
+      // Shrink name font further for very long names
       let actualNameFontSize = nameFontSize;
       if (label.name.length > 28) {
-        actualNameFontSize = 8;
+        actualNameFontSize = Math.min(actualNameFontSize, 7);
       } else if (label.name.length > 22) {
-        actualNameFontSize = 9;
+        actualNameFontSize = Math.min(actualNameFontSize, 8);
       }
 
       // Person name (bold, centered, zone colored)
@@ -542,7 +552,7 @@ export default function ThaaliOrderReport() {
       doc.setFont('helvetica', 'italic');
       doc.setTextColor(zoneColor[0], zoneColor[1], zoneColor[2]);
 
-      label.dishLines.slice(0, 4).forEach((dish) => {
+      label.dishLines.slice(0, 6).forEach((dish) => {
         doc.text(dish, centerX, currentY, { align: 'center' });
         currentY += dishLineHeight;
       });
