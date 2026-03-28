@@ -537,8 +537,10 @@ export default function ThaaliOrderReport() {
         (dishCount * dishLineHeight) + // Dishes
         zoneLineHeight; // Zone/date
 
-      // Start Y position (vertically centered in label)
-      const topPadding = (labelHeight - totalContentHeight) / 2;
+      // Minimum inset from label edges to account for printer alignment drift
+      const minInset = 0.06; // ~1.5mm buffer at top and bottom
+      const usableHeight = labelHeight - 2 * minInset;
+      const topPadding = minInset + Math.max(0, (usableHeight - totalContentHeight) / 2);
       let currentY = y + topPadding + nameLineHeight;
 
       // Get zone color for this label - applies to ALL text
