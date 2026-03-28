@@ -460,9 +460,21 @@ export default function ThaaliOrderReport() {
 
     const formattedDate = formatLabelDate(event?.eventDate);
 
+    // Build menu item position lookup for consistent dish ordering across all labels
+    const menuItemOrder = new Map<number, number>();
+    if (individualOrders?.menuItems) {
+      individualOrders.menuItems.forEach((mi, idx) => menuItemOrder.set(mi.menuItemId, idx));
+    }
+
     for (const order of sortedOrders) {
-      // Format each dish on its own line with full size name
-      const dishLines = order.items.map(item => {
+      // Sort items by menu item position so dishes appear in the same order on every label
+      const sortedItems = [...order.items].sort((a, b) => {
+        const posA = menuItemOrder.get(a.menuItemId) ?? 999;
+        const posB = menuItemOrder.get(b.menuItemId) ?? 999;
+        return posA - posB;
+      });
+
+      const dishLines = sortedItems.map(item => {
         const sizeName = item.size === 'LARGE' ? 'Large' : item.size === 'SMALL' ? 'Small' : 'Barakat';
         return `${sizeName} ${item.dishName || 'Unknown'}`;
       });
