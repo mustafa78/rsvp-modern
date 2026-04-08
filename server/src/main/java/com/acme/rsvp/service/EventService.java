@@ -168,15 +168,20 @@ public class EventService {
         OffsetDateTime oldRegClose = e.getRegistrationCloseAt();
 
         // Capture old menu for comparison
+        var existingMenuItems = menuRepo.findByEvent_IdOrderByPositionAsc(id);
         Set<Long> oldDishIds = wasPublished
-                ? menuRepo.findByEvent_IdOrderByPositionAsc(id).stream()
+                ? existingMenuItems.stream()
                         .map(mi -> mi.getDish().getId())
                         .collect(Collectors.toSet())
                 : Set.of();
 
         applyBase(e, req);
         attachChefs(e, req.chefIds);
-        upsertMenu(e.getId(), req.menu);
+
+        // Only upsert menu if it actually changed — avoids CASCADE delete of order items
+        if (menuChanged(existingMenuItems, req.menu)) {
+            upsertMenu(e.getId(), req.menu);
+        }
 
         // Create announcements for significant changes on published events
         if (wasPublished && e.getStatus() == EventStatus.PUBLISHED) {
@@ -284,6 +289,60 @@ public class EventService {
                         .orElseThrow(() -> new IllegalArgumentException("Host not found: " + id)))
                 .collect(Collectors.toSet());
         e.setHosts(hosts);
+    }
+
+    /**
+     * Compare existing menu items with the incoming request to detect real changes.
+     * Returns true only if the menu has actually changed (different dishes, positions, or quarts).
+     * This prevents unnecessary delete+re-create which cascade-deletes order items.
+     */
+    private boolean menuChanged(List<MenuItem> existing, List<MenuAssignmentDto> incoming) {
+        if (incoming == null || incoming.isEmpty()) {
+            return !existing.isEmpty();
+        }
+        if (existing.size() != incoming.size()) {
+            return true;
+        }
+        // Sort both by position for consistent comparison
+        var sortedExisting = existing.stream()
+                .sorted((a, b) -> {
+                    Integer pa = a.getPosition();
+                    Integer pb = b.getPosition();
+                    if (pa == null && pb == null) return 0;
+                    if (pa == null) return 1;
+                    if (pb == null) return -1;
+                    return pa.compareTo(pb);
+                })
+                .toList();
+        var sortedIncoming = incoming.stream()
+                .sorted((a, b) -> {
+                    Integer pa = a.position();
+                    Integer pb = b.position();
+                    if (pa == null && pb == null) return 0;
+                    if (pa == null) return 1;
+                    if (pb == null) return -1;
+                    return pa.compareTo(pb);
+                })
+                .toList();
+
+        for (int i = 0; i < sortedExisting.size(); i++) {
+            MenuItem mi = sortedExisting.get(i);
+            MenuAssignmentDto dto = sortedIncoming.get(i);
+
+            // Different dish
+            if (!Objects.equals(mi.getDish().getId(), dto.dishId())) return true;
+            // Different position
+            if (!Objects.equals(mi.getPosition(), dto.position())) return true;
+            // Different quarts override
+            BigDecimal existingQuarts = mi.getQuartsPerThaaliUnit();
+            BigDecimal newQuarts = dto.quartsPerThaaliUnit() != null
+                    ? dto.quartsPerThaaliUnit()
+                    : (mi.getDish() != null ? mi.getDish().getDefaultQuartsPerThaaliUnit() : null);
+            if (existingQuarts == null && newQuarts == null) continue;
+            if (existingQuarts == null || newQuarts == null) return true;
+            if (existingQuarts.compareTo(newQuarts) != 0) return true;
+        }
+        return false;
     }
 
     private void upsertMenu(Long eventId, List<MenuAssignmentDto> items) {
