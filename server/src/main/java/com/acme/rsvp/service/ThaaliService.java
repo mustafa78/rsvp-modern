@@ -230,6 +230,13 @@ public class ThaaliService {
         Person person = personRepo.findById(request.personId())
                 .orElseThrow(() -> new IllegalArgumentException("Person not found: " + request.personId()));
 
+        // Defense-in-depth: the picker already hides ineligible users, but guard the
+        // create path in case a stale/expired personId is submitted directly.
+        if (!person.isEligibleForRegistration()) {
+            throw new IllegalStateException(
+                    "This user cannot be registered: only active, non-expired Head of Family members are eligible.");
+        }
+
         // Check if order already exists
         if (orderRepo.findByEventIdAndPersonId(eventId, request.personId()).isPresent()) {
             throw new IllegalStateException("Order already exists for this person. Use update instead.");

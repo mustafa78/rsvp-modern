@@ -226,4 +226,17 @@ public class Person extends Auditable {
 		}
 		return java.time.Instant.now().isAfter(accountExpiresAt);
 	}
+
+	/**
+	 * Whether this person may hold an event registration (Thaali order / Niyaz RSVP).
+	 * Single source of truth for the eligibility rule, mirroring the filter used by the
+	 * admin registration pickers (PersonRepository.findWithoutOrderForEvent /
+	 * findWithoutRsvpForEvent):
+	 *   - Head of Family only (only HOF users may register)
+	 *   - ACTIVE account status (excludes LOCKED / DISABLED)
+	 *   - access not expired (see isExpired())
+	 */
+	public boolean isEligibleForRegistration() {
+		return hof && accountStatus == AccountStatus.ACTIVE && !isExpired();
+	}
 }
