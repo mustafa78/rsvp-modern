@@ -1,6 +1,7 @@
 package com.acme.rsvp.service;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -318,7 +319,7 @@ public class ThaaliService {
         eventRepo.findById(eventId)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found: " + eventId));
 
-        return personRepo.findWithoutOrderForEvent(eventId).stream()
+        return personRepo.findWithoutOrderForEvent(eventId, Instant.now()).stream()
                 .map(p -> new PersonBasicDto(
                         p.getId(),
                         p.getItsNumber(),
