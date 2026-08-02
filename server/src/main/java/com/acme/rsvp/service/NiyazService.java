@@ -1,5 +1,6 @@
 package com.acme.rsvp.service;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 
@@ -163,7 +164,7 @@ public class NiyazService {
         eventRepo.findById(eventId)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found: " + eventId));
 
-        return personRepo.findWithoutRsvpForEvent(eventId).stream()
+        return personRepo.findWithoutRsvpForEvent(eventId, Instant.now()).stream()
                 .map(p -> new PersonBasicDto(
                         p.getId(),
                         p.getItsNumber(),
