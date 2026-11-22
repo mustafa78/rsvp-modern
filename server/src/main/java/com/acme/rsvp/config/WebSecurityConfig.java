@@ -47,7 +47,10 @@ public class WebSecurityConfig {
 	    	            "/api/auth/pickup-zones",
 	    	            "/api/events/public",
 	    	            "/api/events/{id}",
-	    	            "/api/niyaz/{eventId}/rsvp/summary").permitAll()
+	    	            "/api/niyaz/{eventId}/rsvp/summary",
+	    	            "/api/webinars/public/**").permitAll()
+	    	        .requestMatchers("/api/webinars/admin/**", "/api/admin/family-members/**")
+	    	            .hasAnyRole("ADMIN", "WEBINAR_COORDINATOR")
 	    	        .anyRequest().authenticated()
 	      );
 	    http.addFilterBefore(sessionAuthFilter,
