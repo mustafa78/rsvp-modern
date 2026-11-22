@@ -22,6 +22,7 @@ import com.acme.rsvp.model.PasswordResetToken;
 import com.acme.rsvp.model.Person;
 import com.acme.rsvp.model.UserType;
 import com.acme.rsvp.model.SessionToken;
+import com.acme.rsvp.repository.FamilyMemberRepository;
 import com.acme.rsvp.repository.PasswordResetTokenRepository;
 import com.acme.rsvp.repository.PersonRepository;
 import com.acme.rsvp.repository.PickupZoneRepository;
@@ -38,17 +39,19 @@ public class AuthService {
 	private final SessionTokenRepository tokenRepo;
 	private final PasswordResetTokenRepository prtRepo;
 	private final PickupZoneRepository zoneRepo;
+	private final FamilyMemberRepository familyMemberRepo;
 	private final PasswordEncoder encoder;
 	private final EntityManager em;
 	private final EmailService emailService;
 
 	public AuthService(PersonRepository personRepo, SessionTokenRepository tokenRepo,
-			PasswordResetTokenRepository prtRepo, PickupZoneRepository zoneRepo, PasswordEncoder encoder,
-			EntityManager em, EmailService emailService) {
+			PasswordResetTokenRepository prtRepo, PickupZoneRepository zoneRepo,
+			FamilyMemberRepository familyMemberRepo, PasswordEncoder encoder, EntityManager em, EmailService emailService) {
 		this.personRepo = personRepo;
 		this.tokenRepo = tokenRepo;
 		this.prtRepo = prtRepo;
 		this.zoneRepo = zoneRepo;
+		this.familyMemberRepo = familyMemberRepo;
 		this.encoder = encoder;
 		this.em = em;
 		this.emailService = emailService;
@@ -62,6 +65,9 @@ public class AuthService {
 		Person p = findByItsNumber(req.itsNumber()).orElse(null);
 		if (p != null)
 			throw new IllegalArgumentException("User already exists");
+		if (familyMemberRepo.existsByItsNumber(req.itsNumber()))
+			throw new IllegalArgumentException(
+					"This ITS number is already on file as a family member. Please contact an administrator.");
 		
 		p = new Person();
 		p.setItsNumber(req.itsNumber());
