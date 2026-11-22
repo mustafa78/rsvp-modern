@@ -24,10 +24,13 @@ import com.acme.rsvp.dto.WebinarDtos.InviteResult;
 import com.acme.rsvp.dto.WebinarDtos.LinkResponse;
 import com.acme.rsvp.dto.WebinarDtos.SaveWebinarRequest;
 import com.acme.rsvp.dto.WebinarDtos.WebinarSummary;
+import com.acme.rsvp.dto.WebinarDtos.ZoomImportRequest;
+import com.acme.rsvp.dto.WebinarDtos.ZoomSyncRow;
 import com.acme.rsvp.service.WebinarInviteService;
 import com.acme.rsvp.service.WebinarReportService;
 import com.acme.rsvp.service.WebinarSeatService;
 import com.acme.rsvp.service.WebinarService;
+import com.acme.rsvp.service.WebinarZoomSyncService;
 
 /** ADMIN / WEBINAR_COORDINATOR only, enforced by the URL rule in WebSecurityConfig. */
 @RestController
@@ -38,13 +41,26 @@ public class WebinarAdminController {
   private final WebinarSeatService seats;
   private final WebinarInviteService invites;
   private final WebinarReportService reports;
+  private final WebinarZoomSyncService zoomSync;
 
   public WebinarAdminController(WebinarService webinars, WebinarSeatService seats,
-      WebinarInviteService invites, WebinarReportService reports) {
+      WebinarInviteService invites, WebinarReportService reports,
+      WebinarZoomSyncService zoomSync) {
     this.webinars = webinars;
     this.seats = seats;
     this.invites = invites;
     this.reports = reports;
+    this.zoomSync = zoomSync;
+  }
+
+  @GetMapping("/zoom/preview")
+  public List<ZoomSyncRow> zoomPreview(@RequestParam(defaultValue = "meetings") String kind) {
+    return zoomSync.preview(kind);
+  }
+
+  @PostMapping("/zoom/import")
+  public WebinarSummary zoomImport(@RequestBody ZoomImportRequest req) {
+    return zoomSync.importOne(req);
   }
 
   @GetMapping
