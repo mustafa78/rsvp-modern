@@ -82,6 +82,7 @@ class WebinarInviteServiceTest extends PostgresIntegrationTest {
     seatService.giveSeat(w.getId(), hof.getId(), fm2.getId());
     seatService.giveSeat(w.getId(), member.getId(), null);
 
+    when(email.isEnabled()).thenReturn(true);
     when(email.sendWebinarInvite(any(), any(), any(), any(), any())).thenReturn(true);
     InviteResult result = invites.sendInvites(w.getId(), now);
 
@@ -103,6 +104,24 @@ class WebinarInviteServiceTest extends PostgresIntegrationTest {
   }
 
   @Test
+  void refusesToSendWhenEmailIsNotConfiguredAndReissuesNothing() {
+    Person p = data.person(false);
+    Webinar w = webinar();
+    WebinarSeat seat = seatService.giveSeat(w.getId(), p.getId(), null);
+    String before = invites.issueLink(w.getId(), seat.getId(), now);
+    String rawBefore = before.substring(before.lastIndexOf('/') + 1);
+    when(email.isEnabled()).thenReturn(false);
+
+    assertThatThrownBy(() -> invites.sendInvites(w.getId(), now))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessage("Email sending is not configured on this server. "
+            + "Copy each person's link from the Attendees screen instead.");
+
+    assertThat(launch.resolveToken(rawBefore, now).getSeat().getId()).isEqualTo(seat.getId());
+    verify(email, org.mockito.Mockito.never()).sendWebinarInvite(any(), any(), any(), any(), any());
+  }
+
+  @Test
   void refusesToSendForAnUnpublishedWebinar() {
     Webinar w = webinar();
     w.setStatus(WebinarStatus.DRAFT);
@@ -117,6 +136,7 @@ class WebinarInviteServiceTest extends PostgresIntegrationTest {
     Webinar w = webinar();
     seatService.giveSeat(w.getId(), a.getId(), null);
     seatService.giveSeat(w.getId(), b.getId(), null);
+    when(email.isEnabled()).thenReturn(true);
     when(email.sendWebinarInvite(eq(a.getEmail()), any(), any(), any(), any())).thenReturn(false);
     when(email.sendWebinarInvite(eq(b.getEmail()), any(), any(), any(), any())).thenReturn(true);
 
@@ -135,6 +155,7 @@ class WebinarInviteServiceTest extends PostgresIntegrationTest {
     Webinar w = webinar();
     seatService.giveSeat(w.getId(), a.getId(), null);
     seatService.giveSeat(w.getId(), b.getId(), null);
+    when(email.isEnabled()).thenReturn(true);
     when(email.sendWebinarInvite(eq(a.getEmail()), any(), any(), any(), any()))
         .thenThrow(new RuntimeException("boom"));
     when(email.sendWebinarInvite(eq(b.getEmail()), any(), any(), any(), any())).thenReturn(true);
@@ -151,6 +172,7 @@ class WebinarInviteServiceTest extends PostgresIntegrationTest {
     Person p = data.person(false);
     Webinar w = webinar();
     seatService.giveSeat(w.getId(), p.getId(), null);
+    when(email.isEnabled()).thenReturn(true);
     when(email.sendWebinarInvite(any(), any(), any(), any(), any())).thenReturn(true);
     ArgumentCaptor<List<InviteLink>> links = ArgumentCaptor.forClass(List.class);
 

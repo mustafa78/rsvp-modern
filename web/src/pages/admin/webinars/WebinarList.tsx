@@ -41,6 +41,8 @@ export default function WebinarList() {
 
   const runConfirmed = () => {
     if (!confirm) return;
+    setNotice(null);
+    setError(null);
     if (confirm.kind === 'invite') sendInvites.mutate(confirm.webinar.id);
     else remove.mutate(confirm.webinar.id);
     setConfirm(null);
@@ -99,7 +101,13 @@ export default function WebinarList() {
                 <td className="px-4 py-3 whitespace-nowrap space-x-3">
                   <Link className="text-blue-700 hover:underline" to={`/admin/webinars/${w.id}/edit`}>Edit</Link>
                   <Link className="text-blue-700 hover:underline" to={`/admin/webinars/${w.id}/attendees`}>Attendees</Link>
-                  <button className="text-blue-700 hover:underline" onClick={() => setConfirm({ kind: 'invite', webinar: w })}>Send Invites</button>
+                  <button
+                    className="text-blue-700 hover:underline disabled:cursor-not-allowed disabled:text-gray-400 disabled:no-underline"
+                    disabled={sendInvites.isPending}
+                    onClick={() => setConfirm({ kind: 'invite', webinar: w })}
+                  >
+                    {sendInvites.isPending && sendInvites.variables === w.id ? 'Sending…' : 'Send Invites'}
+                  </button>
                   <Link className="text-blue-700 hover:underline" to={`/admin/webinars/${w.id}/report`}>Report</Link>
                   <button className="text-red-600 hover:underline" onClick={() => setConfirm({ kind: 'delete', webinar: w })}>Delete</button>
                 </td>

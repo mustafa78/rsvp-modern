@@ -547,7 +547,7 @@ SENDGRID_ENABLED=true
 
 - `ZOOM_IMPORT_USER_ID` is the Zoom user whose schedule is imported. `me` is the app owner.
 - `FRONTEND_URL` must be `https://fmb.dcjamaat.com` in production, because join links are built from it.
-- `SENDGRID_ENABLED` must be `true` before sending invites. With SendGrid disabled, invite emails (including the join links) are written to the server log instead of being sent.
+- `SENDGRID_ENABLED` must be `true` and `SENDGRID_API_KEY` must be set before sending invites. Until both are set, Send Invites is refused (no links are reissued and nothing is written to the log); meanwhile each person's link can be copied individually from the webinar's Attendees screen.
 - Both compose files pass every setting in the table below to the server container. If you add a new variable to the app, also list it under the server service, otherwise a value in `.env` is not visible to the app.
 
 Optional settings (all have defaults, set them in `.env` only to change them):

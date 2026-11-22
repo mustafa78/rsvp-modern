@@ -11,8 +11,15 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
-/** A magic join link for one seat. Only the SHA-256 hash of the raw token is stored. */
+import org.hibernate.annotations.DynamicUpdate;
+
+/**
+ * A magic join link for one seat. Only the SHA-256 hash of the raw token is stored.
+ * DynamicUpdate: a launch bumps use_count/last_used_at only, so it can never write back a stale
+ * revoked_at (null) over a revoke committed while the launch was in flight.
+ */
 @Entity
+@DynamicUpdate
 @Table(name = "webinar_join_tokens")
 public class WebinarJoinToken {
 

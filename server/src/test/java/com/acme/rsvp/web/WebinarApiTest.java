@@ -107,7 +107,8 @@ class WebinarApiTest extends PostgresIntegrationTest {
         .andExpect(jsonPath("$.joinedCount").value(0));
 
     mvc.perform(post("/api/webinars/admin/{id}/send-invites", w.getId()).cookie(session))
-        .andExpect(status().isOk()).andExpect(jsonPath("$.sent").value(1));
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error").value(containsString("Email sending is not configured")));
 
     mvc.perform(delete("/api/webinars/admin/{id}", 999999L).cookie(session))
         .andExpect(status().isNotFound());

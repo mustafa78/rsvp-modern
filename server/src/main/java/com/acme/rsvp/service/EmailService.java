@@ -45,9 +45,14 @@ public class EmailService {
         deliver(to, subject, htmlContent, textContent);
     }
 
+    /** True only when sending is switched on and an API key is present; otherwise emails are logged, not sent. */
+    public boolean isEnabled() {
+        return enabled && sendGridApiKey != null && !sendGridApiKey.isBlank();
+    }
+
     /** Returns true when accepted by SendGrid or when sending is disabled (logged instead); false on failure. */
     private boolean deliver(String to, String subject, String htmlContent, String textContent) {
-        if (!enabled || sendGridApiKey == null || sendGridApiKey.isBlank()) {
+        if (!isEnabled()) {
             log.info("Email sending disabled or API key not configured. Would have sent to: {}, subject: {}", to, subject);
             log.info("Email content: {}", textContent);
             return true;
@@ -144,6 +149,8 @@ public class EmailService {
 
     public boolean sendWebinarInvite(String to, String title, String hostName, String whenText,
             List<InviteLink> links) {
+        // Invites carry join links: never fall through to the log-instead path.
+        if (!isEnabled()) return false;
         String subject = "Your webinar link: " + title;
 
         StringBuilder text = new StringBuilder();
