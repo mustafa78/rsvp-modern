@@ -15,8 +15,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.acme.rsvp.dto.WebinarDtos.WebinarSummary;
 import com.acme.rsvp.dto.WebinarDtos.ZoomImportRequest;
-import com.acme.rsvp.dto.WebinarDtos.ZoomSyncRow;
-import com.acme.rsvp.repository.WebinarRepository;
 import com.acme.rsvp.support.PostgresIntegrationTest;
 import com.acme.rsvp.zoom.ZoomClient;
 import com.acme.rsvp.zoom.ZoomMeeting;
@@ -25,7 +23,6 @@ class WebinarZoomSyncServiceTest extends PostgresIntegrationTest {
 
   @Autowired WebinarZoomSyncService sync;
   @Autowired WebinarService webinarService;
-  @Autowired WebinarRepository webinars;
   @MockitoBean ZoomClient zoom;
 
   private final OffsetDateTime start = OffsetDateTime.parse("2031-03-01T23:00:00Z");
@@ -45,7 +42,7 @@ class WebinarZoomSyncServiceTest extends PostgresIntegrationTest {
     assertThat(created.status()).isEqualTo("DRAFT");
     assertThat(webinarService.require(created.id()).getJoinUrl()).isEqualTo("https://zoom.us/j/555?pwd=first");
 
-    assertThat(sync.preview("meetings")).singleElement().satisfies(ZoomSyncRow::alreadyImported);
+    assertThat(sync.preview("meetings")).singleElement().satisfies(r -> assertThat(r.alreadyImported()).isTrue());
 
     when(zoom.listScheduled(eq("meetings"), any())).thenReturn(List.of(
         new ZoomMeeting("555", "Majlis (renamed)", start, start.plusMinutes(90), "https://zoom.us/j/555?pwd=second")));

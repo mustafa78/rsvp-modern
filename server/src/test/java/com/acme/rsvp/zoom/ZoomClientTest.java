@@ -6,6 +6,7 @@ import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import java.time.OffsetDateTime;
@@ -13,6 +14,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -76,5 +78,21 @@ class ZoomClientTest {
     ZoomClient client = new ZoomClient(off, RestClient.builder());
     assertThatThrownBy(() -> client.listScheduled("meetings", now))
         .isInstanceOf(IllegalStateException.class).hasMessageContaining("not configured");
+  }
+
+  @Test
+  void aRejectedListCallFailsWithAFixedMessageThatLeaksNothing() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+    server.expect(requestTo("https://zoom.us/oauth/token?grant_type=account_credentials&account_id=acct"))
+        .andRespond(withSuccess("{\"access_token\":\"tok1\",\"expires_in\":3600}", MediaType.APPLICATION_JSON));
+    server.expect(requestTo("https://api.zoom.us/v2/users/me/meetings?type=scheduled&page_size=300"))
+        .andRespond(withStatus(HttpStatus.UNAUTHORIZED));
+    ZoomClient client = new ZoomClient(PROPS, builder);
+
+    assertThatThrownBy(() -> client.listScheduled("meetings", now))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessage("Could not read the schedule from Zoom. Please try again.")
+        .message().doesNotContain("tok1");
   }
 }

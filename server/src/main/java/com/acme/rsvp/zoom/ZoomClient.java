@@ -3,9 +3,12 @@ package com.acme.rsvp.zoom;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -13,6 +16,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 /** Zoom Server-to-Server OAuth client. Read-only: it lists scheduled sessions and nothing else. */
 @Component
 public class ZoomClient {
+
+  private static final Logger log = LoggerFactory.getLogger(ZoomClient.class);
 
   @JsonIgnoreProperties(ignoreUnknown = true)
   record TokenResponse(@JsonProperty("access_token") String accessToken,
@@ -46,6 +51,7 @@ public class ZoomClient {
             .retrieve()
             .body(TokenResponse.class);
       } catch (RestClientException e) {
+        log.warn("Zoom token request failed: {}", describe(e));
         throw new IllegalStateException("Could not sign in to Zoom. Check the Zoom credentials.");
       }
       if (t == null || t.accessToken() == null) {
@@ -74,16 +80,28 @@ public class ZoomClient {
           .retrieve()
           .body(ListResponse.class);
     } catch (RestClientException e) {
+      log.warn("Zoom schedule request failed: {}", describe(e));
       throw new IllegalStateException("Could not read the schedule from Zoom. Please try again.");
     }
     List<Item> items = response == null ? null : webinars ? response.webinars() : response.meetings();
     if (items == null) return List.of();
-    return items.stream()
+    List<ZoomMeeting> usable = items.stream()
         .filter(i -> i.id() != null && i.startTime() != null && i.joinUrl() != null && !i.joinUrl().isBlank())
         .map(i -> new ZoomMeeting(i.id(), i.topic(), i.startTime(),
             i.startTime().plusMinutes(i.duration() == null || i.duration() <= 0 ? 60 : i.duration()),
             i.joinUrl()))
         .toList();
+    if (usable.size() < items.size()) {
+      log.warn("Zoom {} list: {} items returned, {} usable (others lacked an id, start time or join URL)",
+          kind, items.size(), usable.size());
+    }
+    return usable;
+  }
+
+  /** Only the HTTP status or the exception type: never a body, URL, credential or message. */
+  private static String describe(RestClientException e) {
+    return e instanceof RestClientResponseException r
+        ? "HTTP " + r.getStatusCode().value() : e.getClass().getSimpleName();
   }
 
   private void requireConfigured() {
