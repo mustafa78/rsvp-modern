@@ -6,6 +6,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -121,7 +122,11 @@ public class WebinarLaunchService {
     if (lock == null) lock = new WebinarActiveLock(p, fm);
     lock.setWebinar(w);
     lock.setLockedUntil(w.joinWindowEnd());
-    locks.save(lock);
+    try {
+      locks.saveAndFlush(lock);
+    } catch (DataIntegrityViolationException e) {
+      throw new IllegalStateException("Another join is already in progress. Please try again.");
+    }
 
     logs.save(new WebinarJoinLog(seat, now, source));
     return appendDisplayName(w.getJoinUrl(), seat.displayName());
