@@ -9,10 +9,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.acme.rsvp.model.FamilyMember;
 import com.acme.rsvp.model.Person;
 import com.acme.rsvp.model.SessionToken;
+import com.acme.rsvp.model.Webinar;
+import com.acme.rsvp.model.WebinarAccessMode;
+import com.acme.rsvp.model.WebinarStatus;
+import com.acme.rsvp.repository.FamilyMemberRepository;
 import com.acme.rsvp.repository.PersonRepository;
 import com.acme.rsvp.repository.SessionTokenRepository;
+import com.acme.rsvp.repository.WebinarRepository;
 
 import jakarta.servlet.http.Cookie;
 
@@ -24,6 +30,8 @@ public class TestData {
 
   @Autowired PersonRepository persons;
   @Autowired SessionTokenRepository sessions;
+  @Autowired WebinarRepository webinars;
+  @Autowired FamilyMemberRepository familyMembers;
 
   public static String nextIts() {
     return "9" + String.format("%07d", SEQ.incrementAndGet());
@@ -47,5 +55,27 @@ public class TestData {
     SessionToken t = new SessionToken(UUID.randomUUID(), p, now, now.plusHours(1));
     sessions.saveAndFlush(t);
     return new Cookie("RSVP_SESSION", t.getId().toString());
+  }
+
+  /** A published, one-hour webinar with a join URL. */
+  public Webinar webinar(WebinarAccessMode mode, OffsetDateTime start) {
+    Webinar w = new Webinar();
+    w.setTitle("Test Webinar");
+    w.setHostName("Host");
+    w.setScheduledStart(start);
+    w.setScheduledEnd(start.plusHours(1));
+    w.setStatus(WebinarStatus.PUBLISHED);
+    w.setAccessMode(mode);
+    w.setJoinUrl("https://zoom.us/j/123?pwd=abc");
+    return webinars.saveAndFlush(w);
+  }
+
+  public FamilyMember familyMember(Person hof) {
+    FamilyMember fm = new FamilyMember();
+    fm.setHof(hof);
+    fm.setFirstName("Family");
+    fm.setLastName("Member");
+    fm.setItsNumber(nextIts());
+    return familyMembers.saveAndFlush(fm);
   }
 }
