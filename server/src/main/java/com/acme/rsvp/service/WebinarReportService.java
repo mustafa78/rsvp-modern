@@ -48,6 +48,8 @@ public class WebinarReportService {
     List<WebinarSeat> all = new ArrayList<>(seats.findByWebinarIdWithAttendees(webinarId));
     all.sort(Comparator
         .comparing((WebinarSeat s) -> fullName(s.getPerson()), String.CASE_INSENSITIVE_ORDER)
+        // Two heads of family with the same name must not interleave their families' rows.
+        .thenComparing((WebinarSeat s) -> s.getPerson().getItsNumber())
         .thenComparing(WebinarSeat::isFamilySeat)
         .thenComparing(WebinarSeat::attendeeName, String.CASE_INSENSITIVE_ORDER));
 

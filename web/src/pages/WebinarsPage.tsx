@@ -6,7 +6,7 @@ import { MemberWebinar, fmtDateTime, fmtTime } from '../lib/webinars';
 export default function WebinarsPage() {
   const [params] = useSearchParams();
   const joinError = params.get('joinError');
-  const { data, isLoading } = useQuery<MemberWebinar[]>({
+  const { data, isLoading, isError } = useQuery<MemberWebinar[]>({
     queryKey: ['my-webinars'],
     queryFn: async () => (await api.get('/webinars')).data,
     refetchInterval: 30_000, // keeps the Join button in step with the join window
@@ -26,7 +26,12 @@ export default function WebinarsPage() {
       )}
 
       {isLoading && <div className="text-gray-500">Loading...</div>}
-      {!isLoading && (data?.length ?? 0) === 0 && (
+      {!isLoading && !data && isError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center text-sm text-red-800">
+          Could not load your webinars. Please refresh the page to try again.
+        </div>
+      )}
+      {!isLoading && data?.length === 0 && (
         <div className="rounded-xl border bg-white p-8 text-center text-gray-500">
           You have no upcoming webinars.
         </div>

@@ -26,6 +26,27 @@ class WebinarReportServiceTest extends PostgresIntegrationTest {
   @Autowired WebinarSeatService seatService;
   @Autowired WebinarJoinLogRepository logs;
   @Autowired TestData data;
+  @Autowired com.acme.rsvp.repository.PersonRepository persons;
+
+  @Test
+  void headsOfFamilyWithTheSameNameKeepTheirFamiliesTogether() {
+    Person hofA = data.person(true);
+    Person hofB = data.person(true); // created second, so a higher ITS number
+    for (Person p : java.util.List.of(hofA, hofB)) {
+      p.setFirstName("Same");
+      p.setLastName("Name");
+      persons.saveAndFlush(p);
+    }
+    FamilyMember fmA = data.familyMember(hofA);
+    FamilyMember fmB = data.familyMember(hofB);
+    Webinar w = data.webinar(WebinarAccessMode.ASSIGNED, OffsetDateTime.now().plusDays(1));
+    seatService.giveSeat(w.getId(), hofB.getId(), fmB.getId());
+    seatService.giveSeat(w.getId(), hofB.getId(), null);
+    seatService.giveSeat(w.getId(), hofA.getId(), fmA.getId());
+
+    assertThat(reports.report(w.getId()).rows()).extracting(AttendeeRow::itsNumber)
+        .containsExactly(fmA.getItsNumber(), hofB.getItsNumber(), fmB.getItsNumber());
+  }
 
   @Test
   void listsEachFamilyMemberSeparatelyWithJoinDetails() {

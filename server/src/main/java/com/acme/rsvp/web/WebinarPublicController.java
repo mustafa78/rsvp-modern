@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +28,7 @@ import com.acme.rsvp.service.WebinarLaunchService;
 public class WebinarPublicController {
 
   private static final String INVALID_LINK = "This webinar's Zoom link is invalid. Please contact the coordinator.";
+  private static final String JOIN_IN_PROGRESS = "Another join is already in progress. Please try again.";
 
   private final WebinarLaunchService launchService;
   private final String frontendUrl;
@@ -55,6 +57,10 @@ public class WebinarPublicController {
     } catch (IllegalStateException | NotFoundException e) {
       target = frontendUrl + "/j/" + URLEncoder.encode(token, StandardCharsets.UTF_8)
           + "?joinError=" + URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
+    } catch (DataAccessException e) {
+      // Concurrent launches for the same attendee. Never echo the database message.
+      target = frontendUrl + "/j/" + URLEncoder.encode(token, StandardCharsets.UTF_8)
+          + "?joinError=" + URLEncoder.encode(JOIN_IN_PROGRESS, StandardCharsets.UTF_8);
     }
     return redirect(target, token);
   }

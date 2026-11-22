@@ -102,10 +102,10 @@ public class WebinarService {
     w.setScheduledStart(req.scheduledStart());
     w.setScheduledEnd(req.scheduledEnd());
     if (req.status() != null && !req.status().isBlank()) {
-      w.setStatus(WebinarStatus.valueOf(req.status()));
+      w.setStatus(WebinarStatus.parse(req.status()));
     }
     if (req.accessMode() != null && !req.accessMode().isBlank()) {
-      w.setAccessMode(WebinarAccessMode.valueOf(req.accessMode()));
+      w.setAccessMode(WebinarAccessMode.parse(req.accessMode()));
     }
     if (req.joinWindowBeforeMin() != null) {
       if (req.joinWindowBeforeMin() < 0) throw new IllegalArgumentException("Join window cannot be negative");

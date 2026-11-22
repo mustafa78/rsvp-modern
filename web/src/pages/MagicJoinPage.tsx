@@ -7,7 +7,7 @@ export default function MagicJoinPage() {
   const { token } = useParams();
   const [params] = useSearchParams();
   const joinError = params.get('joinError');
-  const { data, isLoading, isError } = useQuery<MagicJoinInfo>({
+  const { data, isLoading } = useQuery<MagicJoinInfo>({
     queryKey: ['magic-join', token],
     queryFn: async () => (await api.get(`/webinars/public/${encodeURIComponent(token ?? '')}`)).data,
     retry: false,
@@ -16,7 +16,8 @@ export default function MagicJoinPage() {
 
   if (isLoading) return <div className="text-center text-gray-500 py-12">Loading...</div>;
 
-  if (isError || !data) {
+  // Only when nothing valid is held: a failed background refetch keeps showing the last good data.
+  if (!data) {
     return (
       <div className="rounded-xl border bg-white p-8 text-center">
         <h1 className="text-xl font-semibold text-gray-900 mb-2">This link is invalid or has expired</h1>

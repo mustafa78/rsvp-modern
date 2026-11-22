@@ -7,6 +7,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +29,7 @@ import com.acme.rsvp.service.WebinarService;
 public class WebinarController {
 
   private static final String INVALID_LINK = "This webinar's Zoom link is invalid. Please contact the coordinator.";
+  private static final String JOIN_IN_PROGRESS = "Another join is already in progress. Please try again.";
 
   private final WebinarService webinars;
   private final WebinarLaunchService launchService;
@@ -53,6 +55,9 @@ public class WebinarController {
       target = launchService.launchForMember(id, me.getId(), OffsetDateTime.now());
     } catch (IllegalStateException | NotFoundException e) {
       target = frontendUrl + "/webinars?joinError=" + URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
+    } catch (DataAccessException e) {
+      // e.g. two first joins racing to create the same OPEN seat. Never echo the database message.
+      target = frontendUrl + "/webinars?joinError=" + URLEncoder.encode(JOIN_IN_PROGRESS, StandardCharsets.UTF_8);
     }
     return redirect(target);
   }

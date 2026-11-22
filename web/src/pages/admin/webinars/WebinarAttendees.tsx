@@ -13,7 +13,7 @@ export default function WebinarAttendees() {
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [link, setLink] = useState<{ name: string; url: string } | null>(null);
+  const [link, setLink] = useState<{ seatId: number; name: string; url: string } | null>(null);
   const [addingFor, setAddingFor] = useState<number | null>(null);
   const [newMember, setNewMember] = useState<NewMember>(EMPTY_MEMBER);
   const [copyFrom, setCopyFrom] = useState('');
@@ -52,7 +52,11 @@ export default function WebinarAttendees() {
   });
   const removeSeat = useMutation({
     mutationFn: async (seatId: number) => api.delete(`/webinars/admin/${id}/seats/${seatId}`),
-    onSuccess: () => ok(),
+    onSuccess: (_r, seatId) => {
+      // The removed seat's link no longer works; do not keep showing it.
+      setLink((current) => (current?.seatId === seatId ? null : current));
+      ok();
+    },
     onError: fail,
   });
   const addMember = useMutation({
@@ -70,7 +74,7 @@ export default function WebinarAttendees() {
   const makeLink = useMutation({
     mutationFn: async (v: { seatId: number; name: string }) => {
       const url: string = (await api.post(`/webinars/admin/${id}/seats/${v.seatId}/link`, {})).data.link;
-      return { name: v.name, url };
+      return { seatId: v.seatId, name: v.name, url };
     },
     onSuccess: async (r) => {
       setError(null);

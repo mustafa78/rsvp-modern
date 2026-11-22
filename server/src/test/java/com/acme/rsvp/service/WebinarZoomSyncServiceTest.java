@@ -54,6 +54,17 @@ class WebinarZoomSyncServiceTest extends PostgresIntegrationTest {
   }
 
   @Test
+  void unknownListTypeOrAccessModeIsRefusedBeforeZoomIsCalled() {
+    assertThatThrownBy(() -> sync.preview("users"))
+        .isInstanceOf(IllegalArgumentException.class).hasMessage("Unknown Zoom list type");
+    assertThatThrownBy(() -> sync.importOne(new ZoomImportRequest("users", "555", start, "OPEN")))
+        .isInstanceOf(IllegalArgumentException.class).hasMessage("Unknown Zoom list type");
+    assertThatThrownBy(() -> sync.importOne(new ZoomImportRequest("meetings", "555", start, "PUBLIC")))
+        .isInstanceOf(IllegalArgumentException.class).hasMessage("Unknown access mode");
+    org.mockito.Mockito.verifyNoInteractions(zoom);
+  }
+
+  @Test
   void importFailsCleanlyWhenTheSessionIsNoLongerOnZoom() {
     when(zoom.listScheduled(eq("meetings"), any())).thenReturn(List.of());
     assertThatThrownBy(() -> sync.importOne(new ZoomImportRequest("meetings", "555", start, "OPEN")))

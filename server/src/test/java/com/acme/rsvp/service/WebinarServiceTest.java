@@ -42,6 +42,17 @@ class WebinarServiceTest extends PostgresIntegrationTest {
   }
 
   @Test
+  void unknownStatusOrAccessModeIsAPlainMessage() {
+    OffsetDateTime start = OffsetDateTime.now().plusDays(2);
+    assertThatThrownBy(() -> service.create(new SaveWebinarRequest("Majlis", null, null, start, start.plusHours(1),
+        "LIVE", null, null, null, null)))
+        .isInstanceOf(IllegalArgumentException.class).hasMessage("Unknown status");
+    assertThatThrownBy(() -> service.create(new SaveWebinarRequest("Majlis", null, null, start, start.plusHours(1),
+        null, "PUBLIC", null, null, null)))
+        .isInstanceOf(IllegalArgumentException.class).hasMessage("Unknown access mode");
+  }
+
+  @Test
   void createAppliesDefaultsAndNeverExposesJoinUrl() {
     WebinarSummary s = service.create(req("https://zoom.us/j/1"));
     assertThat(s.status()).isEqualTo("DRAFT");

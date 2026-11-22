@@ -38,6 +38,7 @@ public class WebinarZoomSyncService {
   /** What is scheduled on Zoom, without join URLs, flagged if already imported. */
   @Transactional(readOnly = true)
   public List<ZoomSyncRow> preview(String kind) {
+    requireKnownKind(kind);
     return zoom.listScheduled(kind, OffsetDateTime.now()).stream()
         .map(m -> new ZoomSyncRow(m.id(), m.topic(), m.start(), m.end(),
             webinars.findByZoomMeetingIdAndScheduledStart(m.id(), m.start()).isPresent()))
@@ -53,6 +54,9 @@ public class WebinarZoomSyncService {
     if (req.zoomMeetingId() == null || req.start() == null) {
       throw new IllegalArgumentException("Zoom session id and start time are required");
     }
+    requireKnownKind(req.kind());
+    WebinarAccessMode accessMode = req.accessMode() != null && !req.accessMode().isBlank()
+        ? WebinarAccessMode.parse(req.accessMode()) : null;
     ZoomMeeting m = zoom.listScheduled(req.kind(), OffsetDateTime.now()).stream()
         .filter(x -> x.id().equals(req.zoomMeetingId()) && x.start().isEqual(req.start()))
         .findFirst()
@@ -73,9 +77,14 @@ public class WebinarZoomSyncService {
     w.setScheduledEnd(m.end());
     w.setJoinUrl(m.joinUrl());
     w.setManagedByZoom(true);
-    if (req.accessMode() != null && !req.accessMode().isBlank()) {
-      w.setAccessMode(WebinarAccessMode.valueOf(req.accessMode()));
-    }
+    if (accessMode != null) w.setAccessMode(accessMode);
     return webinarService.toSummary(webinars.save(w));
+  }
+
+  /** Only the two Zoom list types are accepted, so no other value reaches the Zoom client or its log. */
+  private static void requireKnownKind(String kind) {
+    if (!"meetings".equals(kind) && !"webinars".equals(kind)) {
+      throw new IllegalArgumentException("Unknown Zoom list type");
+    }
   }
 }
