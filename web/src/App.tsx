@@ -19,7 +19,7 @@ type User = {
 };
 
 // Public routes that don't require authentication
-const PUBLIC_ROUTES = ['/', '/login', '/forgot-password', '/reset-password'];
+const PUBLIC_ROUTES = ['/', '/login', '/forgot-password', '/reset-password', '/j/'];
 
 export default function App() {
   const navigate = useNavigate();
@@ -49,7 +49,7 @@ export default function App() {
 
   // Check if user has any admin role
   const hasAdminRole = user?.roles?.some(role =>
-    ['ADMIN', 'NIYAZ_COORDINATOR', 'THAALI_COORDINATOR', 'SHOPPING_COORDINATOR', 'DANA_COORDINATOR'].includes(role)
+    ['ADMIN', 'NIYAZ_COORDINATOR', 'THAALI_COORDINATOR', 'SHOPPING_COORDINATOR', 'DANA_COORDINATOR', 'WEBINAR_COORDINATOR'].includes(role)
   );
 
   // User dropdown state - must be declared before any conditional returns (Rules of Hooks)
@@ -80,6 +80,8 @@ export default function App() {
         navigate('/events', { replace: true });
       } else if (hasAdminRole) {
         navigate('/admin', { replace: true });
+      } else {
+        navigate('/webinars', { replace: true });
       }
     }
     // Non-HOF users should be redirected to admin if they try to access events
@@ -180,6 +182,7 @@ export default function App() {
   // Check if current route is active
   const isEventsActive = location.pathname.startsWith('/events') && !location.pathname.startsWith('/admin');
   const isCalendarActive = location.pathname === '/calendar';
+  const isWebinarsActive = location.pathname.startsWith('/webinars');
   const isAdminActive = location.pathname.startsWith('/admin');
 
   // Authenticated layout
@@ -225,6 +228,16 @@ export default function App() {
                   </Link>
                 </>
               )}
+              <Link
+                to="/webinars"
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isWebinarsActive
+                    ? 'bg-white/20 text-white'
+                    : 'text-white/80 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                Webinars
+              </Link>
               {hasAdminRole && (
                 <Link
                   to="/admin"

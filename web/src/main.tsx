@@ -16,6 +16,8 @@ import ResetPassword from './pages/ResetPassword'
 import ChangePassword from './pages/ChangePassword'
 import AnnouncementsPage from './pages/AnnouncementsPage'
 import ProfilePage from './pages/ProfilePage'
+import WebinarsPage from './pages/WebinarsPage'
+import MagicJoinPage from './pages/MagicJoinPage'
 // Admin pages
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -54,6 +56,8 @@ const router = createBrowserRouter([
       { path: 'thaali/quick-register', element: <BulkThaaliRegistration /> },
       { path: 'announcements', element: <AnnouncementsPage /> },
       { path: 'profile', element: <ProfilePage /> },
+      { path: 'webinars', element: <WebinarsPage /> },
+      { path: 'j/:token', element: <MagicJoinPage /> },
       {
         path: 'admin',
         element: <AdminLayout />,
