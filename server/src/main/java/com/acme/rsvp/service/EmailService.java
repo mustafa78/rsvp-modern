@@ -13,6 +13,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.List;
+import org.springframework.web.util.HtmlUtils;
+import com.acme.rsvp.dto.WebinarDtos.InviteLink;
 
 @Service
 public class EmailService {
@@ -130,5 +133,46 @@ public class EmailService {
             </body>
             </html>
             """.formatted(link);
+    }
+
+    public void sendWebinarInvite(String to, String title, String hostName, String whenText,
+            List<InviteLink> links) {
+        String subject = "Your webinar link: " + title;
+
+        StringBuilder text = new StringBuilder();
+        text.append(title).append("\n");
+        if (hostName != null && !hostName.isBlank()) text.append("Host: ").append(hostName).append("\n");
+        text.append("When: ").append(whenText).append("\n\n");
+        for (InviteLink link : links) {
+            text.append(link.label()).append(": ").append(link.url()).append("\n");
+        }
+        text.append("\nEach link is personal. Please forward each family member their own link. ")
+            .append("Links work only around the scheduled time.");
+
+        StringBuilder html = new StringBuilder();
+        html.append("<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">")
+            .append("<div style=\"background: #6d28d9; padding: 24px; text-align: center;\">")
+            .append("<h1 style=\"color: #ffffff; margin: 0; font-size: 22px;\">")
+            .append(HtmlUtils.htmlEscape(title)).append("</h1></div>")
+            .append("<div style=\"padding: 24px; color: #333333;\">");
+        if (hostName != null && !hostName.isBlank()) {
+            html.append("<p style=\"margin: 0 0 8px 0;\"><strong>Host:</strong> ")
+                .append(HtmlUtils.htmlEscape(hostName)).append("</p>");
+        }
+        html.append("<p style=\"margin: 0 0 20px 0;\"><strong>When:</strong> ")
+            .append(HtmlUtils.htmlEscape(whenText)).append("</p>");
+        for (InviteLink link : links) {
+            html.append("<p style=\"margin: 0 0 14px 0;\">")
+                .append(HtmlUtils.htmlEscape(link.label())).append("<br>")
+                .append("<a href=\"").append(HtmlUtils.htmlEscape(link.url()))
+                .append("\" style=\"color: #2563eb; font-weight: bold;\">Join webinar</a></p>");
+        }
+        html.append("<p style=\"color: #666666; font-size: 13px; margin-top: 24px;\">")
+            .append("Each link is personal. Please forward each family member their own link. ")
+            .append("Links work only around the scheduled time.</p>")
+            .append("</div><div style=\"background: #f8f8f8; padding: 16px; text-align: center; ")
+            .append("color: #999999; font-size: 12px;\">Anjuman-e-Ezzi, Washington DC</div></div>");
+
+        sendEmail(to, subject, html.toString(), text.toString());
     }
 }
