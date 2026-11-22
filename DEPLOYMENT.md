@@ -548,7 +548,20 @@ SENDGRID_ENABLED=true
 - `ZOOM_IMPORT_USER_ID` is the Zoom user whose schedule is imported. `me` is the app owner.
 - `FRONTEND_URL` must be `https://fmb.dcjamaat.com` in production, because join links are built from it.
 - `SENDGRID_ENABLED` must be `true` before sending invites. With SendGrid disabled, invite emails (including the join links) are written to the server log instead of being sent.
-- `docker-compose.yml` must list each variable under the server service, otherwise a value in `.env` is not visible to the app. This is already done for the variables above and `WEBINAR_DISPLAY_ZONE`.
+- Both compose files pass every setting in the table below to the server container. If you add a new variable to the app, also list it under the server service, otherwise a value in `.env` is not visible to the app.
+
+Optional settings (all have defaults, set them in `.env` only to change them):
+
+| Variable | Default | What it does |
+|---|---|---|
+| `WEBINAR_JOIN_WINDOW_BEFORE_MIN` | `10` | Minutes before the start time that joining opens |
+| `WEBINAR_JOIN_WINDOW_AFTER_MIN` | `15` | Minutes after the start time that joining stays open |
+| `WEBINAR_DISPLAY_ZONE` | `America/New_York` | Time zone used to show webinar times in emails |
+| `ZOOM_IMPORT_USER_ID` | `me` | Zoom user whose meetings are imported |
+| `ZOOM_WEBINAR_IMPORT_USER_ID` | empty | Zoom user whose webinars are imported. If empty, `ZOOM_IMPORT_USER_ID` is used |
+| `ZOOM_DEFAULT_HOST_NAME` | `FMB` | Host name shown when Zoom does not provide one |
+| `ZOOM_OAUTH_URL` | `https://zoom.us/oauth/token` | Zoom token endpoint. Normally never needs changing |
+| `ZOOM_BASE_URL` | `https://api.zoom.us` | Zoom API base URL. Normally never needs changing |
 
 After changing `.env`, recreate the server container (`docker compose up -d server`) so it picks up the new values.
 
@@ -567,7 +580,22 @@ Admin, then Settings, then Users, edit the user, and tick `WEBINAR_COORDINATOR`.
 
 ### Deploy note
 
-The V37 migration is applied by both the `flyway` container and the app on start. If Flyway reports a checksum mismatch on an older migration, repair the Flyway history for that database (`cd server && ./gradlew flywayRepair`). Do not edit V37 or any other migration file to work around it.
+The V37 migration is applied by both the `flyway` container and the app on start. If Flyway reports a checksum mismatch on an older migration, repair the Flyway history of the affected database. Never edit V37 or any other migration file to work around it.
+
+Production: run repair through the compose `flyway` service, which uses the same database settings and migration location as its normal `migrate` run:
+
+```bash
+docker compose run --rm flyway -connectRetries=60 -locations=filesystem:/flyway/sql repair
+```
+
+Dev: `./gradlew flywayRepair` uses the `flyway {}` block in `server/build.gradle.kts`, which reads `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` and `SPRING_DATASOURCE_PASSWORD` and otherwise falls back to `localhost:5432`. The dev database is exposed on port 5433, so point Gradle at it:
+
+```bash
+cd server
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/rsvp \
+SPRING_DATASOURCE_USERNAME=rsvp SPRING_DATASOURCE_PASSWORD=rsvp \
+./gradlew flywayRepair
+```
 
 ---
 
