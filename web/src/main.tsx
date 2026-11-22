@@ -43,6 +43,7 @@ import WebinarList from './pages/admin/webinars/WebinarList'
 import CreateWebinar from './pages/admin/webinars/CreateWebinar'
 import WebinarAttendees from './pages/admin/webinars/WebinarAttendees'
 import FamilyMembers from './pages/admin/webinars/FamilyMembers'
+import WebinarReport from './pages/admin/webinars/WebinarReport'
 import './styles/index.css'
 
 const router = createBrowserRouter([
@@ -91,6 +92,7 @@ const router = createBrowserRouter([
           { path: 'webinars/new', element: <CreateWebinar /> },
           { path: 'webinars/family-members', element: <FamilyMembers /> },
           { path: 'webinars/:id/attendees', element: <WebinarAttendees /> },
+          { path: 'webinars/:id/report', element: <WebinarReport /> },
           { path: 'webinars/:id/edit', element: <CreateWebinar /> },
         ],
       },
