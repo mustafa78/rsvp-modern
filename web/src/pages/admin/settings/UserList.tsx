@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { api } from '../../../api/client';
 
 // Format phone number as (xxx) xxx-xxxx
@@ -619,6 +620,16 @@ export default function UserList() {
                 </div>
               </label>
             </div>
+            {isEditing && formData.isHof && (
+              <div className="text-sm">
+                <Link
+                  to={`/admin/webinars/family-members?search=${encodeURIComponent(formData.itsNumber)}`}
+                  className="text-blue-700 hover:underline"
+                >
+                  Manage this family's members for webinars
+                </Link>
+              </div>
+            )}
 
             {/* Quick Actions for Student/Mehmaan (Edit mode only) */}
             {isEditing && formData.userType !== 'REGISTERED' && (

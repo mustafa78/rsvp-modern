@@ -41,6 +41,8 @@ import ShoppingListGenerator from './pages/admin/reports/ShoppingListGenerator'
 import AnnouncementList from './pages/admin/announcements/AnnouncementList'
 import WebinarList from './pages/admin/webinars/WebinarList'
 import CreateWebinar from './pages/admin/webinars/CreateWebinar'
+import WebinarAttendees from './pages/admin/webinars/WebinarAttendees'
+import FamilyMembers from './pages/admin/webinars/FamilyMembers'
 import './styles/index.css'
 
 const router = createBrowserRouter([
@@ -87,6 +89,8 @@ const router = createBrowserRouter([
           { path: 'announcements', element: <AnnouncementList /> },
           { path: 'webinars', element: <WebinarList /> },
           { path: 'webinars/new', element: <CreateWebinar /> },
+          { path: 'webinars/family-members', element: <FamilyMembers /> },
+          { path: 'webinars/:id/attendees', element: <WebinarAttendees /> },
           { path: 'webinars/:id/edit', element: <CreateWebinar /> },
         ],
       },
