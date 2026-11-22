@@ -86,14 +86,19 @@ public class WebinarInviteService {
       }
       // Own seat first, then family members by name.
       family.sort(Comparator.comparing(WebinarSeat::isFamilySeat).thenComparing(WebinarSeat::attendeeName));
+      // Links are reissued (old ones revoked) before sending. If the email then fails, the recipient is
+      // listed in `skipped` so the coordinator can resend or copy a link; old links are not restored.
       List<InviteLink> links = new ArrayList<>();
       for (WebinarSeat s : family) {
         String label = s.isFamilySeat() ? s.attendeeName() + " (" + s.attendeeIts() + ")" : "Your link";
         links.add(new InviteLink(label, issue(s, now)));
       }
       try {
-        email.sendWebinarInvite(contact.getEmail(), w.getTitle(), w.getHostName(), whenText, links);
-        sent++;
+        if (email.sendWebinarInvite(contact.getEmail(), w.getTitle(), w.getHostName(), whenText, links)) {
+          sent++;
+        } else {
+          skipped.add(contactName + " (email failed)");
+        }
       } catch (RuntimeException e) {
         log.error("Failed to send webinar invite for webinar {} to person {}", webinarId, contact.getId(), e);
         skipped.add(contactName + " (email failed)");

@@ -42,10 +42,15 @@ public class EmailService {
     }
 
     public void sendEmail(String to, String subject, String htmlContent, String textContent) {
+        deliver(to, subject, htmlContent, textContent);
+    }
+
+    /** Returns true when accepted by SendGrid or when sending is disabled (logged instead); false on failure. */
+    private boolean deliver(String to, String subject, String htmlContent, String textContent) {
         if (!enabled || sendGridApiKey == null || sendGridApiKey.isBlank()) {
             log.info("Email sending disabled or API key not configured. Would have sent to: {}, subject: {}", to, subject);
             log.info("Email content: {}", textContent);
-            return;
+            return true;
         }
 
         Email from = new Email(fromEmail, fromName);
@@ -66,11 +71,13 @@ public class EmailService {
 
             if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
                 log.info("Email sent successfully to: {}, subject: {}", to, subject);
-            } else {
-                log.error("Failed to send email. Status: {}, Body: {}", response.getStatusCode(), response.getBody());
+                return true;
             }
+            log.error("Failed to send email. Status: {}, Body: {}", response.getStatusCode(), response.getBody());
+            return false;
         } catch (IOException e) {
             log.error("Error sending email to: {}", to, e);
+            return false;
         }
     }
 
@@ -135,7 +142,7 @@ public class EmailService {
             """.formatted(link);
     }
 
-    public void sendWebinarInvite(String to, String title, String hostName, String whenText,
+    public boolean sendWebinarInvite(String to, String title, String hostName, String whenText,
             List<InviteLink> links) {
         String subject = "Your webinar link: " + title;
 
@@ -173,6 +180,6 @@ public class EmailService {
             .append("</div><div style=\"background: #f8f8f8; padding: 16px; text-align: center; ")
             .append("color: #999999; font-size: 12px;\">Anjuman-e-Ezzi, Washington DC</div></div>");
 
-        sendEmail(to, subject, html.toString(), text.toString());
+        return deliver(to, subject, html.toString(), text.toString());
     }
 }
