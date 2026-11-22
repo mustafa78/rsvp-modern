@@ -510,6 +510,67 @@ sudo systemctl start rsvp.service
 
 ---
 
+## Webinars and Zoom
+
+The webinar module lets coordinators publish Zoom sessions and give seats to members and their family members. Each seat gets its own join link, and the Zoom display name is set to the ITS number and name of the person holding the seat.
+
+### Creating the Zoom app
+
+Zoom is optional (see below). To use "Sync from Zoom":
+
+1. In the Zoom App Marketplace, sign in as the Zoom account that owns the meetings.
+2. Choose Develop, then Build App, then Server-to-Server OAuth.
+3. Add read scopes for listing meetings and webinars. The expected scope names are:
+   - `meeting:read:list_meetings:admin`
+   - `webinar:read:list_webinars:admin`
+
+   These names are not fully confirmed. The meetings scope came from a Zoom developer-forum thread, not the official reference. Confirm the exact names in the App Marketplace when creating the app.
+4. Activate the app and copy the Account ID, Client ID and Client Secret.
+
+The format of Zoom's list responses has not yet been verified against a live account. On first setup, open "Sync from Zoom" in the admin Webinars page. If the list is empty while sessions exist in Zoom, check the server log for the line reporting how many items Zoom returned versus how many were usable.
+
+### Production environment
+
+Add these to the production `.env` on the server. They never go in git.
+
+```
+ZOOM_ENABLED=true
+ZOOM_ACCOUNT_ID=your_account_id
+ZOOM_CLIENT_ID=your_client_id
+ZOOM_CLIENT_SECRET=your_client_secret
+ZOOM_IMPORT_USER_ID=me
+# Optional: Zoom user whose webinars are imported, if different
+ZOOM_WEBINAR_IMPORT_USER_ID=
+FRONTEND_URL=https://fmb.dcjamaat.com
+SENDGRID_ENABLED=true
+```
+
+- `ZOOM_IMPORT_USER_ID` is the Zoom user whose schedule is imported. `me` is the app owner.
+- `FRONTEND_URL` must be `https://fmb.dcjamaat.com` in production, because join links are built from it.
+- `SENDGRID_ENABLED` must be `true` before sending invites. With SendGrid disabled, invite emails (including the join links) are written to the server log instead of being sent.
+- `docker-compose.yml` must list each variable under the server service, otherwise a value in `.env` is not visible to the app. This is already done for the variables above and `WEBINAR_DISPLAY_ZONE`.
+
+After changing `.env`, recreate the server container (`docker compose up -d server`) so it picks up the new values.
+
+### Zoom is optional
+
+With `ZOOM_ENABLED=false`, no Zoom API calls are made. Coordinators create webinars by hand and paste the Zoom link, and everything else works. The pasted link must be a complete `https://` URL with no spaces.
+
+### Granting the coordinator role
+
+Admin, then Settings, then Users, edit the user, and tick `WEBINAR_COORDINATOR`.
+
+### Behaviour to know about
+
+- A seat cannot be removed after its attendee has joined, so that attendance records are kept.
+- When an invite email fails, that family is listed as skipped, and their previous links no longer work until invites are resent or a link is copied for them.
+
+### Deploy note
+
+The V37 migration is applied by both the `flyway` container and the app on start. If Flyway reports a checksum mismatch on an older migration, repair the Flyway history for that database (`cd server && ./gradlew flywayRepair`). Do not edit V37 or any other migration file to work around it.
+
+---
+
 ## Quick Reference
 
 ### URLs (Development)
