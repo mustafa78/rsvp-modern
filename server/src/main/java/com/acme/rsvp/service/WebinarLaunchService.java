@@ -112,6 +112,15 @@ public class WebinarLaunchService {
       throw new IllegalStateException("This webinar has no Zoom link yet. Please contact the coordinator.");
     }
 
+    // Validate the final redirect target before anything is written, so a stored link that cannot
+    // form a valid URI never leaves a join log or an active lock behind.
+    String url = appendDisplayName(w.getJoinUrl(), seat.displayName());
+    try {
+      java.net.URI.create(url);
+    } catch (IllegalArgumentException e) {
+      throw new IllegalStateException("This webinar's Zoom link is invalid. Please contact the coordinator.");
+    }
+
     WebinarActiveLock lock = (fm == null
         ? locks.findByPersonIdAndFamilyMemberIsNull(p.getId())
         : locks.findByFamilyMemberId(fm.getId())).orElse(null);
@@ -129,7 +138,7 @@ public class WebinarLaunchService {
     }
 
     logs.save(new WebinarJoinLog(seat, now, source));
-    return appendDisplayName(w.getJoinUrl(), seat.displayName());
+    return url;
   }
 
   /**

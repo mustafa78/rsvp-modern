@@ -32,6 +32,7 @@ import com.acme.rsvp.support.TestData;
 class WebinarApiTest extends PostgresIntegrationTest {
 
   @Autowired MockMvc mvc;
+  @Autowired com.acme.rsvp.repository.WebinarRepository webinarRepo;
   @Autowired TestData data;
   @Autowired WebinarSeatService seatService;
   @Autowired WebinarInviteService invites;
@@ -132,6 +133,21 @@ class WebinarApiTest extends PostgresIntegrationTest {
         .andExpect(status().isFound())
         .andExpect(header().string("Location",
             allOf(startsWith("http://localhost:5173/webinars?joinError="), not(containsString("zoom.us")))));
+  }
+
+  @Test
+  void unparseableStoredZoomLinkRedirectsBackAndNeverLeaksTheUrl() throws Exception {
+    Person member = data.person(false);
+    Webinar bad = data.webinar(WebinarAccessMode.OPEN, now.plusMinutes(5));
+    bad.setJoinUrl("https://zoom.us/j/1 2?pwd=secretpwd");
+    webinarRepo.saveAndFlush(bad);
+
+    mvc.perform(get("/api/webinars/{id}/launch", bad.getId()).cookie(data.session(member)))
+        .andExpect(status().isFound())
+        .andExpect(header().string("Location", allOf(
+            startsWith("http://localhost:5173/webinars?joinError="),
+            not(containsString("secretpwd")), not(containsString("zoom.us")))))
+        .andExpect(content().string(not(containsString("secretpwd"))));
   }
 
   @Test

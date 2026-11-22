@@ -35,6 +35,13 @@ class WebinarServiceTest extends PostgresIntegrationTest {
   }
 
   @Test
+  void rejectsJoinUrlThatIsNotAParseableUrlWithoutEchoingIt() {
+    assertThatThrownBy(() -> service.create(req("https://zoom.us/j/1 2?pwd=x")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageNotContaining("zoom.us");
+  }
+
+  @Test
   void createAppliesDefaultsAndNeverExposesJoinUrl() {
     WebinarSummary s = service.create(req("https://zoom.us/j/1"));
     assertThat(s.status()).isEqualTo("DRAFT");

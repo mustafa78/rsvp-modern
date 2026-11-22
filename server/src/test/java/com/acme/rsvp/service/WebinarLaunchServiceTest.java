@@ -31,6 +31,7 @@ class WebinarLaunchServiceTest extends PostgresIntegrationTest {
   @Autowired WebinarSeatService seatService;
   @Autowired WebinarJoinTokenRepository tokens;
   @Autowired WebinarJoinLogRepository logs;
+  @Autowired com.acme.rsvp.repository.WebinarRepository webinarRepo;
   @Autowired TestData data;
 
   private final OffsetDateTime now = OffsetDateTime.now();
@@ -54,6 +55,20 @@ class WebinarLaunchServiceTest extends PostgresIntegrationTest {
     assertThat(url).isEqualTo("https://zoom.us/j/123?pwd=a%2Bb&uname=30702040%20Fatema%20Kanchwala#frag");
     assertThat(WebinarLaunchService.appendDisplayName("https://zoom.us/j/123", "1 A B"))
         .isEqualTo("https://zoom.us/j/123?uname=1%20A%20B");
+  }
+
+  @Test
+  void unparseableStoredLinkIsRefusedBeforeAnyJoinLogIsWritten() {
+    Person member = data.person(false);
+    Webinar w = live(WebinarAccessMode.OPEN);
+    w.setJoinUrl("https://zoom.us/j/1 2?pwd=secretpwd");
+    webinarRepo.saveAndFlush(w);
+
+    assertThatThrownBy(() -> launch.launchForMember(w.getId(), member.getId(), now))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Zoom link is invalid")
+        .hasMessageNotContaining("secretpwd");
+    assertThat(logs.findByWebinarId(w.getId())).isEmpty();
   }
 
   @Test

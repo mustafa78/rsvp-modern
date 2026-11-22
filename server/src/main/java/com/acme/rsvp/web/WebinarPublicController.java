@@ -26,6 +26,8 @@ import com.acme.rsvp.service.WebinarLaunchService;
 @RequestMapping("/api/webinars/public")
 public class WebinarPublicController {
 
+  private static final String INVALID_LINK = "This webinar's Zoom link is invalid. Please contact the coordinator.";
+
   private final WebinarLaunchService launchService;
   private final String frontendUrl;
 
@@ -54,9 +56,21 @@ public class WebinarPublicController {
       target = frontendUrl + "/j/" + URLEncoder.encode(token, StandardCharsets.UTF_8)
           + "?joinError=" + URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
     }
+    return redirect(target, token);
+  }
+
+  private ResponseEntity<Void> redirect(String target, String token) {
+    URI location;
+    try {
+      location = URI.create(target);
+    } catch (IllegalArgumentException e) {
+      // Never echo the parser's message: it contains the Zoom URL.
+      location = URI.create(frontendUrl + "/j/" + URLEncoder.encode(token, StandardCharsets.UTF_8)
+          + "?joinError=" + URLEncoder.encode(INVALID_LINK, StandardCharsets.UTF_8));
+    }
     return ResponseEntity.status(HttpStatus.FOUND)
         .cacheControl(CacheControl.noStore())
-        .location(URI.create(target))
+        .location(location)
         .build();
   }
 }

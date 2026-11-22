@@ -121,6 +121,13 @@ public class WebinarService {
       if (!url.startsWith("https://")) {
         throw new IllegalArgumentException("Zoom link must start with https://");
       }
+      try {
+        if (new java.net.URI(url).getHost() == null) {
+          throw new IllegalArgumentException("Zoom link is not a valid URL");
+        }
+      } catch (java.net.URISyntaxException e) {
+        throw new IllegalArgumentException("Zoom link is not a valid URL");
+      }
       w.setJoinUrl(url);
     }
   }
