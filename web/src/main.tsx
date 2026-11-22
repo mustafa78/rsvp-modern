@@ -39,6 +39,8 @@ import ThaaliOrderReport from './pages/admin/reports/ThaaliOrderReport'
 import NiyazRsvpReport from './pages/admin/reports/NiyazRsvpReport'
 import ShoppingListGenerator from './pages/admin/reports/ShoppingListGenerator'
 import AnnouncementList from './pages/admin/announcements/AnnouncementList'
+import WebinarList from './pages/admin/webinars/WebinarList'
+import CreateWebinar from './pages/admin/webinars/CreateWebinar'
 import './styles/index.css'
 
 const router = createBrowserRouter([
@@ -83,6 +85,9 @@ const router = createBrowserRouter([
           { path: 'reports/rsvps/:eventId', element: <NiyazRsvpReport /> },
           { path: 'reports/shopping-list', element: <ShoppingListGenerator /> },
           { path: 'announcements', element: <AnnouncementList /> },
+          { path: 'webinars', element: <WebinarList /> },
+          { path: 'webinars/new', element: <CreateWebinar /> },
+          { path: 'webinars/:id/edit', element: <CreateWebinar /> },
         ],
       },
       { path: 'login', element: <Login /> },

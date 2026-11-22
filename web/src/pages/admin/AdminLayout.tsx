@@ -22,6 +22,7 @@ const isThaaliCoordinator = (roles: string[]) => hasRole(roles, 'THAALI_COORDINA
 const isMenuCoordinator = (roles: string[]) => hasRole(roles, 'MENU_COORDINATOR');
 const isShoppingCoordinator = (roles: string[]) => hasRole(roles, 'SHOPPING_COORDINATOR');
 const isDanaCoordinator = (roles: string[]) => hasRole(roles, 'DANA_COORDINATOR');
+const isWebinarCoordinator = (roles: string[]) => hasRole(roles, 'WEBINAR_COORDINATOR');
 
 // Build navigation items based on user roles
 const getNavItems = (roles: string[]): NavItem[] => {
@@ -103,6 +104,18 @@ const getNavItems = (roles: string[]): NavItem[] => {
   // Announcements - admin and coordinators
   if (admin || niyazCoord || thaaliCoord) {
     items.push({ label: 'Announcements', path: '/admin/announcements' });
+  }
+
+  // Webinars - admin and webinar coordinators
+  if (admin || isWebinarCoordinator(roles)) {
+    items.push({
+      label: 'Webinars',
+      children: [
+        { label: 'All Webinars', path: '/admin/webinars' },
+        { label: 'New Webinar', path: '/admin/webinars/new' },
+        { label: 'Family Members', path: '/admin/webinars/family-members' },
+      ],
+    });
   }
 
   // Settings - admin only
