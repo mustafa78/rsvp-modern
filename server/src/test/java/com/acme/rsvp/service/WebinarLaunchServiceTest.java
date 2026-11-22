@@ -182,4 +182,45 @@ class WebinarLaunchServiceTest extends PostgresIntegrationTest {
     assertThat(launch.launchForToken(tokenFor(familyOnB), now)).contains("uname=");
     assertThat(logs.findByWebinarId(a.getId())).hasSize(2);
   }
+
+  @Test
+  void attendeeCanJoinTheNextWebinarOnceTheFirstHasReachedItsScheduledEnd() {
+    Person p = data.person(false);
+    // A ran from 70 to 10 minutes ago; its late-join allowance (15 min after the end) is still open.
+    Webinar a = data.webinar(WebinarAccessMode.OPEN, now.minusMinutes(70));
+    Webinar b = live(WebinarAccessMode.OPEN);
+    assertThat(a.isJoinOpen(now)).isTrue();
+
+    launch.launchForMember(a.getId(), p.getId(), now.minusMinutes(30));
+
+    assertThat(launch.launchForMember(b.getId(), p.getId(), now)).contains("uname=");
+    assertThat(logs.findByWebinarId(b.getId())).hasSize(1);
+  }
+
+  @Test
+  void cancellingTheJoinedWebinarReleasesTheAttendee() {
+    Person p = data.person(false);
+    Webinar a = live(WebinarAccessMode.OPEN);
+    Webinar b = live(WebinarAccessMode.OPEN);
+    launch.launchForMember(a.getId(), p.getId(), now);
+
+    a.setStatus(WebinarStatus.CANCELLED);
+    webinarRepo.saveAndFlush(a);
+
+    assertThat(launch.launchForMember(b.getId(), p.getId(), now)).contains("uname=");
+  }
+
+  @Test
+  void movingTheJoinedWebinarsEndIntoThePastReleasesTheAttendee() {
+    Person p = data.person(false);
+    Webinar a = live(WebinarAccessMode.OPEN);
+    Webinar b = live(WebinarAccessMode.OPEN);
+    launch.launchForMember(a.getId(), p.getId(), now);
+
+    a.setScheduledStart(now.minusMinutes(60));
+    a.setScheduledEnd(now.minusMinutes(1));
+    webinarRepo.saveAndFlush(a);
+
+    assertThat(launch.launchForMember(b.getId(), p.getId(), now)).contains("uname=");
+  }
 }

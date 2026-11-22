@@ -33,6 +33,10 @@ public class WebinarActiveLock {
   @JoinColumn(name = "webinar_id", nullable = false)
   private Webinar webinar;
 
+  /**
+   * Informational only: the joined webinar's scheduled end at the time of joining. The launch check
+   * reads the live Webinar (status and scheduled end) instead of this value.
+   */
   @Column(name = "locked_until", nullable = false)
   private OffsetDateTime lockedUntil;
 

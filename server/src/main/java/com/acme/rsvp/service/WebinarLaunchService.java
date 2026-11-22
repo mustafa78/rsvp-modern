@@ -124,13 +124,18 @@ public class WebinarLaunchService {
     WebinarActiveLock lock = (fm == null
         ? locks.findByPersonIdAndFamilyMemberIsNull(p.getId())
         : locks.findByFamilyMemberId(fm.getId())).orElse(null);
-    if (lock != null && lock.getLockedUntil().isAfter(now)
-        && !lock.getWebinar().getId().equals(w.getId())) {
-      throw new IllegalStateException("You are already joined to another webinar.");
+    // One webinar at a time: the attendee is blocked only while the session they last joined is
+    // still running, judged from that webinar as it is now (status and scheduled end), not from the
+    // value stored when they joined. Cancelling, unpublishing or rescheduling it takes effect at once.
+    if (lock != null && !lock.getWebinar().getId().equals(w.getId())) {
+      Webinar held = lock.getWebinar();
+      if (held.getStatus() == WebinarStatus.PUBLISHED && !now.isAfter(held.getScheduledEnd())) {
+        throw new IllegalStateException("You are already joined to another webinar.");
+      }
     }
     if (lock == null) lock = new WebinarActiveLock(p, fm);
     lock.setWebinar(w);
-    lock.setLockedUntil(w.joinWindowEnd());
+    lock.setLockedUntil(w.getScheduledEnd());
     try {
       locks.saveAndFlush(lock);
     } catch (DataIntegrityViolationException e) {
