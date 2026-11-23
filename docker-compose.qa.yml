@@ -1,0 +1,43 @@
+# QA / shared test environment.
+#
+# Use this file, not docker-compose.dev.yml, on any machine that other people
+# reach over a network. The frontend is built once and served as static files
+# by nginx. No Vite dev server runs here: a dev server reachable from the
+# internet can be taken over remotely (this happened to QA in November 2026).
+#
+#   docker compose --env-file ./.env.dev -f docker-compose.qa.yml up -d --build
+#
+# Same project name as the dev file, so QA keeps its existing database volume.
+name: rsvp-dev
+
+services:
+  db:
+    extends:
+      file: docker-compose.dev.yml
+      service: db
+
+  server:
+    extends:
+      file: docker-compose.dev.yml
+      service: server
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.prod
+    volumes:
+      - ./web/nginx.qa.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      # The only port open to the network. Database and API stay on 127.0.0.1.
+      - "${QA_WEB_PORT:-5173}:80"
+    depends_on:
+      - server
+    restart: unless-stopped
+
+volumes:
+  rsvp_pgdata_dev:
+  gradle-cache:
