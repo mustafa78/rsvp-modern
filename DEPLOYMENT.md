@@ -100,8 +100,15 @@ docker compose --env-file ./.env.dev -f docker-compose.qa.yml ps
 docker compose --env-file ./.env.dev -f docker-compose.qa.yml logs -f
 ```
 
-After pulling new code, run the same `up -d --build` command again; the frontend
-is rebuilt and the backend restarts. There is no hot reload on QA.
+After pulling new code, add `--force-recreate`:
+
+```bash
+docker compose --env-file ./.env.dev -f docker-compose.qa.yml up -d --build --force-recreate
+```
+
+Without `--force-recreate` only the frontend is rebuilt. The backend container
+keeps running the code it started with, because its settings have not changed.
+There is no hot reload on QA.
 
 Elsewhere in this guide, commands that say `-f docker-compose.dev.yml` should be
 run with `-f docker-compose.qa.yml` on a server.
