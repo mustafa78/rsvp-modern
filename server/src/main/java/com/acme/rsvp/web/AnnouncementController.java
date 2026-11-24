@@ -4,7 +4,6 @@ import com.acme.rsvp.dto.AnnouncementDtos.*;
 import com.acme.rsvp.model.Person;
 import com.acme.rsvp.service.AnnouncementService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -62,7 +61,6 @@ public class AnnouncementController {
 
     // Admin/Coordinators: Create a manual announcement
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'NIYAZ_COORDINATOR', 'THAALI_COORDINATOR')")
     public AnnouncementDto createAnnouncement(
             @RequestBody CreateAnnouncementRequest request,
             @AuthenticationPrincipal Person me) {
@@ -71,14 +69,12 @@ public class AnnouncementController {
 
     // Admin/Coordinators: Get all announcements with stats
     @GetMapping("/admin")
-    @PreAuthorize("hasAnyRole('ADMIN', 'NIYAZ_COORDINATOR', 'THAALI_COORDINATOR')")
     public List<AdminAnnouncementDto> getAdminAnnouncements() {
         return announcementService.getAllAnnouncementsForAdmin();
     }
 
     // Admin/Coordinators: Update an announcement
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'NIYAZ_COORDINATOR', 'THAALI_COORDINATOR')")
     public AdminAnnouncementDto updateAnnouncement(
             @PathVariable Long id,
             @RequestBody UpdateAnnouncementRequest request) {
@@ -87,7 +83,6 @@ public class AnnouncementController {
 
     // Admin/Coordinators: Delete an announcement
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'NIYAZ_COORDINATOR', 'THAALI_COORDINATOR')")
     public ResponseEntity<?> deleteAnnouncement(@PathVariable Long id) {
         announcementService.deleteAnnouncement(id);
         return ResponseEntity.ok(Map.of("ok", true));
@@ -95,7 +90,6 @@ public class AnnouncementController {
 
     // Admin/Coordinators: Toggle active status
     @PostMapping("/{id}/toggle-active")
-    @PreAuthorize("hasAnyRole('ADMIN', 'NIYAZ_COORDINATOR', 'THAALI_COORDINATOR')")
     public AdminAnnouncementDto toggleActive(@PathVariable Long id) {
         return announcementService.toggleActive(id);
     }

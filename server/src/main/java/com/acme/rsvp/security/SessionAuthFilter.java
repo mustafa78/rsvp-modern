@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -43,8 +44,8 @@ public class SessionAuthFilter extends OncePerRequestFilter {
 		"/api/events/public"
 	);
 
-	// Patterns for paths with path variables
-	private static final String EVENT_DETAIL_PATTERN = "/api/events/";
+	// GET /api/events/{id} only. Longer paths such as /api/events/{id}/menu need the logged-in user.
+	private static final Pattern EVENT_DETAIL_PATH = Pattern.compile("/api/events/[^/]+");
 
 	@Override
 	protected void doFilterInternal(HttpServletRequest req, HttpServletResponse resp, FilterChain chain)
@@ -66,7 +67,7 @@ public class SessionAuthFilter extends OncePerRequestFilter {
 		}
 
 		// Skip for GET /api/events/{id} (event detail page)
-		if ("GET".equalsIgnoreCase(method) && path.startsWith(EVENT_DETAIL_PATTERN) && !path.contains("/rsvp")) {
+		if ("GET".equalsIgnoreCase(method) && EVENT_DETAIL_PATH.matcher(path).matches()) {
 			chain.doFilter(req, resp);
 			return;
 		}
