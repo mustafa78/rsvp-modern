@@ -1,10 +1,22 @@
 package com.acme.rsvp;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
-class RsvpApplicationTests {
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.acme.rsvp.model.Person;
+import com.acme.rsvp.support.PostgresIntegrationTest;
+import com.acme.rsvp.support.TestData;
+
+class RsvpApplicationTests extends PostgresIntegrationTest {
+
+  @Autowired TestData data;
+
   @Test
-  void contextLoads() {}
+  void contextLoadsAndAllMigrationsApply() {
+    Person p = data.person(true);
+    assertThat(p.getId()).isNotNull();
+    assertThat(data.session(p).getValue()).isNotBlank();
+  }
 }

@@ -30,6 +30,26 @@ public class WebSecurityConfig {
 		this.sessionAuthFilter = sessionAuthFilter;
 	}
 
+	// Role names as stored in the roles table. SessionAuthFilter turns each into ROLE_<name>.
+	private static final String ADMIN = "ADMIN";
+	private static final String NIYAZ = "NIYAZ_COORDINATOR";
+	private static final String THAALI = "THAALI_COORDINATOR";
+	private static final String MENU = "MENU_COORDINATOR";
+	private static final String SHOPPING = "SHOPPING_COORDINATOR";
+	private static final String DANA = "DANA_COORDINATOR";
+
+	/** Everyone who works in the admin area. */
+	private static final String[] STAFF = { ADMIN, NIYAZ, THAALI, MENU, SHOPPING, DANA };
+
+	/**
+	 * Who may call what. This is the only place access is decided.
+	 *
+	 * <p>Rules are checked top to bottom and the first match wins, so a specific path must come
+	 * before a wider one that would also match it.
+	 *
+	 * <p><b>Any /api endpoint without a rule here is ADMIN only.</b> When you add an endpoint that
+	 * members or coordinators need, add its rule here and a line in EndpointAccessTest.
+	 */
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 	    http
@@ -37,18 +57,82 @@ public class WebSecurityConfig {
 	      .cors(Customizer.withDefaults())
 	      .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 	      .authorizeHttpRequests(auth -> auth
-	    	        .requestMatchers(HttpMethod.POST,
-	    	            "/api/auth/login",
-	    	            "/api/auth/register",
-	    	            "/api/auth/password/reset/request",
-	    	            "/api/auth/password/reset/confirm",
-	    	            "/api/auth/password/change-unauthenticated").permitAll()
-	    	        .requestMatchers(HttpMethod.GET,
-	    	            "/api/auth/pickup-zones",
-	    	            "/api/events/public",
-	    	            "/api/events/{id}",
-	    	            "/api/niyaz/{eventId}/rsvp/summary").permitAll()
-	    	        .anyRequest().authenticated()
+
+	        // ---- No login needed
+	        .requestMatchers(HttpMethod.POST,
+	            "/api/auth/login",
+	            "/api/auth/register",
+	            "/api/auth/password/reset/request",
+	            "/api/auth/password/reset/confirm",
+	            "/api/auth/password/change-unauthenticated").permitAll()
+	        .requestMatchers(HttpMethod.GET,
+	            "/api/auth/pickup-zones",
+	            "/api/events/public",
+	            "/api/events/{id}",
+	            "/api/niyaz/{eventId}/rsvp/summary").permitAll()
+
+	        // ---- Any logged-in member: own account, own RSVP, own thaali order
+	        .requestMatchers("/api/auth/**", "/api/profile/**").authenticated()
+	        .requestMatchers(HttpMethod.GET,
+	            "/api/thaali/{id}",
+	            "/api/niyaz/{id}",
+	            "/api/pickup-zones", "/api/pickup-zones/**",
+	            "/api/announcements", "/api/announcements/unread-count").authenticated()
+	        .requestMatchers(HttpMethod.POST,
+	            "/api/niyaz/{eventId}/rsvp",
+	            "/api/thaali/{eventId}/orders",
+	            "/api/announcements/{id}/read", "/api/announcements/read-all").authenticated()
+	        .requestMatchers("/api/niyaz/{eventId}/rsvp/my", "/api/thaali/{eventId}/orders/my").authenticated()
+
+	        // ---- Events
+	        .requestMatchers(HttpMethod.GET, "/api/events").hasAnyRole(STAFF)
+	        .requestMatchers("/api/events/niyaz", "/api/events/niyaz/**").hasAnyRole(ADMIN, NIYAZ)
+	        .requestMatchers("/api/events/thaali", "/api/events/thaali/**").hasAnyRole(ADMIN, THAALI)
+	        .requestMatchers(HttpMethod.POST, "/api/events/{id}/publish", "/api/events/{id}/cancel")
+	            .hasAnyRole(ADMIN, NIYAZ, THAALI)
+	        .requestMatchers(HttpMethod.GET, "/api/events/{id}/chefs", "/api/events/{id}/menu").hasAnyRole(STAFF)
+	        .requestMatchers(HttpMethod.POST, "/api/events/{id}/chefs", "/api/events/{id}/menu")
+	            .hasAnyRole(ADMIN, THAALI, MENU)
+
+	        // ---- Niyaz RSVP report, and RSVPs entered on a member's behalf
+	        .requestMatchers("/api/niyaz/{eventId}/rsvp/**").hasAnyRole(ADMIN, NIYAZ, DANA)
+
+	        // ---- Thaali reports. Shopping coordinator: totals and shopping lists, not individual families.
+	        .requestMatchers(HttpMethod.GET,
+	            "/api/thaali/{eventId}/orders/counts",
+	            "/api/thaali/{eventId}/orders/detailed-report",
+	            "/api/thaali/{eventId}/orders/shopping-list",
+	            "/api/thaali/{eventId}/orders/shopping-list-per-dish").hasAnyRole(ADMIN, THAALI, SHOPPING)
+	        .requestMatchers("/api/thaali/{eventId}/orders", "/api/thaali/{eventId}/orders/**")
+	            .hasAnyRole(ADMIN, THAALI)
+
+	        // ---- Catalog: every staff role may read; who may change depends on the list
+	        .requestMatchers(HttpMethod.GET,
+	            "/api/dishes", "/api/dishes/**",
+	            "/api/chefs", "/api/chefs/**",
+	            "/api/ingredients", "/api/ingredients/**",
+	            "/api/ingredient-lookups/**").hasAnyRole(STAFF)
+	        .requestMatchers("/api/dishes", "/api/dishes/**", "/api/chefs", "/api/chefs/**")
+	            .hasAnyRole(ADMIN, MENU)
+	        .requestMatchers("/api/ingredients", "/api/ingredients/**",
+	            "/api/ingredient-lookups/categories", "/api/ingredient-lookups/categories/**",
+	            "/api/ingredient-lookups/units", "/api/ingredient-lookups/units/**")
+	            .hasAnyRole(ADMIN, MENU, SHOPPING)
+	        .requestMatchers(
+	            "/api/ingredient-lookups/stores", "/api/ingredient-lookups/stores/**",
+	            "/api/ingredient-lookups/storage-locations", "/api/ingredient-lookups/storage-locations/**")
+	            .hasAnyRole(ADMIN, SHOPPING)
+
+	        // ---- Announcements: creating and managing (reading is in the member block above)
+	        .requestMatchers("/api/announcements", "/api/announcements/**").hasAnyRole(ADMIN, NIYAZ, THAALI)
+
+	        // ---- User list, read only: a Niyaz coordinator picks the event host from it
+	        .requestMatchers(HttpMethod.GET, "/api/admin/users").hasAnyRole(ADMIN, NIYAZ)
+
+	        // ---- Everything else under /api is ADMIN only: users, roles, pickup zone changes,
+	        //      and any endpoint added later without a rule of its own.
+	        .requestMatchers("/api/**").hasRole(ADMIN)
+	        .anyRequest().authenticated()
 	      );
 	    http.addFilterBefore(sessionAuthFilter,
 	        UsernamePasswordAuthenticationFilter.class);
