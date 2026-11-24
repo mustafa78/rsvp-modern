@@ -82,16 +82,32 @@ POSTGRES_DB=rsvp
 
 ### Step 4: Start the Application
 
+> **Security warning.** On a server, always start with `docker-compose.qa.yml`.
+> Never run `docker-compose.dev.yml` on a machine other people can reach: it
+> starts the Vite dev server, and a dev server reachable from the internet can
+> be taken over remotely. This happened to the QA site in November 2026.
+> `docker-compose.qa.yml` builds the frontend once and serves it with nginx.
+> The database and API are bound to `127.0.0.1` and are not reachable from outside.
+
 ```bash
-# Start the dev environment
-docker compose --env-file ./.env.dev -f docker-compose.dev.yml up -d --build
+# Start the QA environment (database and backend settings come from docker-compose.dev.yml)
+docker compose --env-file ./.env.dev -f docker-compose.qa.yml up -d --build
 
 # Check if containers are running
-docker compose -f docker-compose.dev.yml ps
+docker compose --env-file ./.env.dev -f docker-compose.qa.yml ps
 
 # View logs if needed
-docker compose -f docker-compose.dev.yml logs -f
+docker compose --env-file ./.env.dev -f docker-compose.qa.yml logs -f
 ```
+
+After pulling new code, run the same `up -d --build` command again; the frontend
+is rebuilt and the backend restarts. There is no hot reload on QA.
+
+Elsewhere in this guide, commands that say `-f docker-compose.dev.yml` should be
+run with `-f docker-compose.qa.yml` on a server.
+
+Set a strong `POSTGRES_PASSWORD` in `.env.dev` on a server. Do not keep the
+default `rsvp`.
 
 ### Step 5: Configure Firewall
 
@@ -99,8 +115,8 @@ docker compose -f docker-compose.dev.yml logs -f
 ```bash
 sudo apt install -y ufw
 sudo ufw allow 22/tcp    # SSH
-sudo ufw allow 5173/tcp  # Frontend (dev)
-sudo ufw allow 8080/tcp  # Backend API
+sudo ufw allow 5173/tcp  # Frontend (nginx, static files)
+# Do NOT open 8080 (API) or 5433 (database). The frontend proxies /api itself.
 sudo ufw enable
 sudo ufw status
 ```
@@ -108,7 +124,7 @@ sudo ufw status
 #### Using iptables
 ```bash
 sudo iptables -A INPUT -p tcp --dport 5173 -j ACCEPT
-sudo iptables -A INPUT -p tcp --dport 8080 -j ACCEPT
+# Do NOT open 8080 (API) or 5433 (database).
 ```
 
 ### Step 6: Configure CORS for Domain Access
@@ -249,8 +265,8 @@ Once everything is running:
 | Service | URL |
 |---------|-----|
 | Frontend | `http://YOUR_SERVER_IP:5173` |
-| Backend API | `http://YOUR_SERVER_IP:8080/api` |
-| Database | `localhost:5433` (internal only) |
+| Backend API | `http://YOUR_SERVER_IP:5173/api` (through the frontend; port 8080 is local only) |
+| Database | `localhost:5433` (on the server only) |
 
 Default admin credentials:
 - **ITS**: 30702039

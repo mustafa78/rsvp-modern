@@ -5,7 +5,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    host: '0.0.0.0', // Allow external connections
+    // Listens on localhost only. Never expose the dev server to a network:
+    // it can be taken over remotely. Shared environments use docker-compose.qa.yml.
     allowedHosts: [
       'localhost',
       'fmbqa.dcjamaat.com',
