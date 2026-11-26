@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../api/client';
 import { AssignableRow, FamilySeats, WebinarSummary, errMsg, fmtDateTime } from '../../../lib/webinars';
+import { copyText, copyTextWhenReady } from '../../../lib/clipboard';
 
 type NewMember = { firstName: string; lastName: string; itsNumber: string };
 const EMPTY_MEMBER: NewMember = { firstName: '', lastName: '', itsNumber: '' };
@@ -14,6 +15,8 @@ export default function WebinarAttendees() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [link, setLink] = useState<{ seatId: number; name: string; url: string } | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [makingLinkFor, setMakingLinkFor] = useState<number | null>(null);
   const [addingFor, setAddingFor] = useState<number | null>(null);
   const [newMember, setNewMember] = useState<NewMember>(EMPTY_MEMBER);
   const [copyFrom, setCopyFrom] = useState('');
@@ -71,24 +74,39 @@ export default function WebinarAttendees() {
       ok(`Copied ${r.added} seat${r.added === 1 ? '' : 's'}.` + (r.skipped ? ` Skipped ${r.skipped} (already seated or no longer eligible).` : '')),
     onError: fail,
   });
-  const makeLink = useMutation({
-    mutationFn: async (v: { seatId: number; name: string }) => {
-      const url: string = (await api.post(`/webinars/admin/${id}/seats/${v.seatId}/link`, {})).data.link;
-      return { seatId: v.seatId, name: v.name, url };
-    },
-    onSuccess: async (r) => {
+  // Issues a new join link for the seat (which cancels that person's previous link) and copies it.
+  // The copy is started inside the click, before the request finishes, so browsers allow it.
+  const copyNewLink = async (seatId: number, name: string) => {
+    if (makingLinkFor !== null) return;
+    setMakingLinkFor(seatId);
+    const url: Promise<string> = api.post(`/webinars/admin/${id}/seats/${seatId}/link`, {}).then((r) => r.data.link);
+    const copiedInClick = copyTextWhenReady(url);
+    try {
+      const newUrl = await url;
+      const copied = (await copiedInClick) || (await copyText(newUrl));
       setError(null);
-      setLink(r);
-      try { await navigator.clipboard.writeText(r.url); setNotice(`Link for ${r.name} copied.`); }
-      catch { setNotice(`Link for ${r.name} is shown below. Copy it manually.`); }
-    },
-    onError: fail,
-  });
+      setLink({ seatId, name, url: newUrl });
+      setLinkCopied(copied);
+      setNotice(copied
+        ? `New link for ${name} copied. Any link sent to them earlier no longer works.`
+        : `New link for ${name} is ready below. Press Copy to copy it.`);
+    } catch (e) {
+      fail(e);
+    } finally {
+      setMakingLinkFor(null);
+    }
+  };
+  // Copies the link already shown. Does not issue a new one.
+  const copyShownLink = async () => {
+    if (!link) return;
+    setLinkCopied(await copyText(link.url));
+  };
 
   const seatButtons = (seatId: number, name: string) => (
     <span className="space-x-3 whitespace-nowrap">
       <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Seat</span>
-      <button className="text-blue-700 hover:underline" onClick={() => makeLink.mutate({ seatId, name })}>Copy link</button>
+      <button className="text-blue-700 hover:underline disabled:opacity-50" disabled={makingLinkFor !== null}
+        onClick={() => copyNewLink(seatId, name)}>{makingLinkFor === seatId ? 'Copying…' : 'Copy link'}</button>
       <button className="text-red-600 hover:underline" onClick={() => removeSeat.mutate(seatId)}>Remove</button>
     </span>
   );
@@ -108,7 +126,12 @@ export default function WebinarAttendees() {
       {link && (
         <div className="mb-3 rounded-lg border bg-white px-4 py-3 text-sm">
           <div className="text-gray-700 mb-1">Link for {link.name}. Copying a new link cancels this person's previous one.</div>
-          <input readOnly className="input font-mono text-xs" value={link.url} onFocus={(e) => e.target.select()} />
+          <div className="flex gap-2">
+            <input readOnly className="input font-mono text-xs flex-1" value={link.url} onFocus={(e) => e.target.select()}
+              aria-label={`Join link for ${link.name}`} />
+            <button className="rounded-lg border px-3 text-sm font-medium text-blue-700 hover:bg-blue-50 whitespace-nowrap"
+              onClick={copyShownLink}>{linkCopied ? 'Copied' : 'Copy'}</button>
+          </div>
         </div>
       )}
 
