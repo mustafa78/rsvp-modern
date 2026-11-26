@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../api/client';
 import { FamilyMember, Hof, errMsg } from '../../../lib/webinars';
+import { BanIcon, CheckCircleIcon, EditIcon, iconAction } from '../../../components/ActionIcons';
 
 type Form = { id: number | null; firstName: string; lastName: string; itsNumber: string };
 const EMPTY: Form = { id: null, firstName: '', lastName: '', itsNumber: '' };
@@ -82,10 +83,16 @@ export default function FamilyMembers() {
             {members?.map((m) => (
               <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
                 <span className={m.active ? '' : 'text-gray-400 line-through'}>{m.firstName} {m.lastName} ({m.itsNumber})</span>
-                <span className="space-x-3">
-                  <button className="text-blue-700 hover:underline" onClick={() => setForm({ id: m.id, firstName: m.firstName, lastName: m.lastName, itsNumber: m.itsNumber })}>Edit</button>
-                  <button className={m.active ? 'text-red-600 hover:underline' : 'text-green-700 hover:underline'} onClick={() => setActive.mutate({ id: m.id, active: !m.active })}>
-                    {m.active ? 'Deactivate' : 'Reactivate'}
+                <span className="inline-flex items-center gap-1">
+                  <button type="button" className={iconAction()} title={`Edit ${m.firstName} ${m.lastName}`} aria-label={`Edit ${m.firstName} ${m.lastName}`}
+                    onClick={() => setForm({ id: m.id, firstName: m.firstName, lastName: m.lastName, itsNumber: m.itsNumber })}>
+                    <EditIcon />
+                  </button>
+                  <button type="button" className={iconAction(m.active ? 'red' : 'green')}
+                    title={`${m.active ? 'Deactivate' : 'Reactivate'} ${m.firstName} ${m.lastName}`}
+                    aria-label={`${m.active ? 'Deactivate' : 'Reactivate'} ${m.firstName} ${m.lastName}`}
+                    onClick={() => setActive.mutate({ id: m.id, active: !m.active })}>
+                    {m.active ? <BanIcon /> : <CheckCircleIcon />}
                   </button>
                 </span>
               </li>

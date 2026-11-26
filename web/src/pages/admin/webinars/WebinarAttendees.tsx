@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../api/client';
 import { AssignableRow, FamilySeats, WebinarSummary, errMsg, fmtDateTime } from '../../../lib/webinars';
 import { copyText, copyTextWhenReady } from '../../../lib/clipboard';
+import { CopyIcon, SpinnerIcon, TrashIcon, iconAction } from '../../../components/ActionIcons';
 
 type NewMember = { firstName: string; lastName: string; itsNumber: string };
 const EMPTY_MEMBER: NewMember = { firstName: '', lastName: '', itsNumber: '' };
@@ -17,6 +18,7 @@ export default function WebinarAttendees() {
   const [link, setLink] = useState<{ seatId: number; name: string; url: string } | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const [makingLinkFor, setMakingLinkFor] = useState<number | null>(null);
+  const [removing, setRemoving] = useState<{ seatId: number; name: string } | null>(null);
   const [addingFor, setAddingFor] = useState<number | null>(null);
   const [newMember, setNewMember] = useState<NewMember>(EMPTY_MEMBER);
   const [copyFrom, setCopyFrom] = useState('');
@@ -103,11 +105,16 @@ export default function WebinarAttendees() {
   };
 
   const seatButtons = (seatId: number, name: string) => (
-    <span className="space-x-3 whitespace-nowrap">
-      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Seat</span>
-      <button className="text-blue-700 hover:underline disabled:opacity-50" disabled={makingLinkFor !== null}
-        onClick={() => copyNewLink(seatId, name)}>{makingLinkFor === seatId ? 'Copying…' : 'Copy link'}</button>
-      <button className="text-red-600 hover:underline" onClick={() => removeSeat.mutate(seatId)}>Remove</button>
+    <span className="inline-flex items-center gap-1 whitespace-nowrap">
+      <span className="mr-2 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Seat</span>
+      <button type="button" title={`Copy a new join link for ${name}`} aria-label={`Copy a new join link for ${name}`}
+        className={iconAction()} disabled={makingLinkFor !== null} onClick={() => copyNewLink(seatId, name)}>
+        {makingLinkFor === seatId ? <SpinnerIcon /> : <CopyIcon />}
+      </button>
+      <button type="button" title={`Remove ${name}'s seat`} aria-label={`Remove ${name}'s seat`}
+        className={iconAction('red')} onClick={() => setRemoving({ seatId, name })}>
+        <TrashIcon />
+      </button>
     </span>
   );
 
@@ -214,6 +221,21 @@ export default function WebinarAttendees() {
           ))}
         </ul>
       </div>
+      {removing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="remove-seat-title">
+          <div className="w-full max-w-md rounded-xl bg-white p-6">
+            <h2 id="remove-seat-title" className="text-lg font-semibold text-gray-900">Remove seat</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Remove {removing.name}'s seat for this webinar? Their join link will stop working. You can give them a seat again later, but they will need a new link.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button onClick={() => setRemoving(null)} className="rounded-lg bg-gray-500 px-4 py-2 text-sm text-white">Cancel</button>
+              <button onClick={() => { removeSeat.mutate(removing.seatId); setRemoving(null); }}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white">Remove seat</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

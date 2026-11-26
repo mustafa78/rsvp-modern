@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { api } from '../../../api/client';
+import { EditIcon, iconAction } from '../../../components/ActionIcons';
 
 type Ingredient = { id: number; name: string; unit: string };
 type DishIngredient = {
@@ -466,11 +467,8 @@ export default function DishList() {
                     )}
                   </td>
                   <td className="py-3 px-4 text-center">
-                    <button
-                      onClick={() => startEdit(dish)}
-                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
-                    >
-                      Edit
+                    <button type="button" onClick={() => startEdit(dish)} className={iconAction()} title={`Edit ${dish.name}`} aria-label={`Edit ${dish.name}`}>
+                      <EditIcon />
                     </button>
                   </td>
                 </tr>

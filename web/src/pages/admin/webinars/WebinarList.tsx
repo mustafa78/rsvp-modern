@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../api/client';
 import { WebinarSummary, errMsg, fmtDateTime } from '../../../lib/webinars';
 import ZoomSyncModal from './ZoomSyncModal';
+import { EditIcon, MailIcon, PeopleIcon, ReportIcon, SpinnerIcon, TrashIcon, iconAction } from '../../../components/ActionIcons';
 
 const STATUS_STYLE: Record<string, string> = {
   PUBLISHED: 'bg-green-100 text-green-800',
@@ -98,18 +99,26 @@ export default function WebinarList() {
                     {w.status.charAt(0) + w.status.slice(1).toLowerCase()}
                   </span>
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap space-x-3">
-                  <Link className="text-blue-700 hover:underline" to={`/admin/webinars/${w.id}/edit`}>Edit</Link>
-                  <Link className="text-blue-700 hover:underline" to={`/admin/webinars/${w.id}/attendees`}>Attendees</Link>
-                  <button
-                    className="text-blue-700 hover:underline disabled:cursor-not-allowed disabled:text-gray-400 disabled:no-underline"
-                    disabled={sendInvites.isPending}
-                    onClick={() => setConfirm({ kind: 'invite', webinar: w })}
-                  >
-                    {sendInvites.isPending && sendInvites.variables === w.id ? 'Sending…' : 'Send Invites'}
-                  </button>
-                  <Link className="text-blue-700 hover:underline" to={`/admin/webinars/${w.id}/report`}>Report</Link>
-                  <button className="text-red-600 hover:underline" onClick={() => setConfirm({ kind: 'delete', webinar: w })}>Delete</button>
+                <td className="px-4 py-2">
+                  <div className="flex items-center gap-1">
+                    <Link className={iconAction()} to={`/admin/webinars/${w.id}/edit`} title="Edit webinar" aria-label={`Edit ${w.title}`}>
+                      <EditIcon />
+                    </Link>
+                    <Link className={iconAction()} to={`/admin/webinars/${w.id}/attendees`} title="Attendees and seats" aria-label={`Attendees and seats for ${w.title}`}>
+                      <PeopleIcon />
+                    </Link>
+                    <button type="button" className={iconAction()} title="Send invites by email" aria-label={`Send invites for ${w.title}`}
+                      disabled={sendInvites.isPending} onClick={() => setConfirm({ kind: 'invite', webinar: w })}>
+                      {sendInvites.isPending && sendInvites.variables === w.id ? <SpinnerIcon /> : <MailIcon />}
+                    </button>
+                    <Link className={iconAction()} to={`/admin/webinars/${w.id}/report`} title="Attendance report" aria-label={`Attendance report for ${w.title}`}>
+                      <ReportIcon />
+                    </Link>
+                    <button type="button" className={iconAction('red')} title="Delete webinar" aria-label={`Delete ${w.title}`}
+                      onClick={() => setConfirm({ kind: 'delete', webinar: w })}>
+                      <TrashIcon />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

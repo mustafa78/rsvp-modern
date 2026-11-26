@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../../api/client';
+import { EditIcon, iconAction } from '../../../components/ActionIcons';
 
 // Format phone number as (xxx) xxx-xxxx
 function formatPhoneNumber(value: string): string {
@@ -897,11 +898,8 @@ export default function UserList() {
 
                   {/* Actions */}
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => startEdit(user)}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-800"
-                    >
-                      Edit
+                    <button type="button" onClick={() => startEdit(user)} className={iconAction()} title="Edit user" aria-label={`Edit user ${user.itsNumber}`}>
+                      <EditIcon />
                     </button>
                   </td>
                 </tr>

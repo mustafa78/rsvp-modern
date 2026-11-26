@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { api } from '../../../api/client';
+import { EditIcon, iconAction } from '../../../components/ActionIcons';
 
 // Format phone number as (xxx) xxx-xxxx
 function formatPhoneNumber(value: string): string {
@@ -295,11 +296,8 @@ export default function ChefList() {
                       </span>
                     </td>
                     <td className="py-4 px-4">
-                      <button
-                        onClick={() => startEdit(chef)}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
-                      >
-                        Edit
+                      <button type="button" onClick={() => startEdit(chef)} className={iconAction()} title={`Edit ${chef.name}`} aria-label={`Edit ${chef.name}`}>
+                        <EditIcon />
                       </button>
                     </td>
                   </tr>

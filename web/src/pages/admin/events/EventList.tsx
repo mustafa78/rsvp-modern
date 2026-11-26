@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../../api/client';
+import { EyeIcon, ListIcon, PublishIcon, ReportIcon, XCircleIcon, iconAction } from '../../../components/ActionIcons';
 
 type Event = {
   id: number;
@@ -407,14 +408,16 @@ export default function EventList() {
 
                     {/* Actions */}
                     <td className="px-4 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1">
                         {/* Details link - hidden for Shopping Coordinator */}
                         {canManageEvents && (
                           <Link
                             to={`/admin/events/${event.id}`}
-                            className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
+                            className={iconAction('gray')}
+                            title="Event details"
+                            aria-label={`Details of ${event.title}`}
                           >
-                            Details
+                            <EyeIcon />
                           </Link>
                         )}
 
@@ -424,10 +427,12 @@ export default function EventList() {
                             {event.status === 'DRAFT' && canManageEvents && (
                               <button
                                 onClick={() => handlePublish(event.id)}
-                                className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700"
+                                className={iconAction('green')}
+                                title="Publish event"
+                                aria-label={`Publish ${event.title}`}
                                 disabled={publishMutation.isPending}
                               >
-                                Publish
+                                <PublishIcon />
                               </button>
                             )}
                             {event.status === 'PUBLISHED' && (
@@ -435,26 +440,32 @@ export default function EventList() {
                                 {event.type === 'THAALI' && (
                                   <Link
                                     to={`/admin/reports/orders/${event.id}`}
-                                    className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700"
+                                    className={iconAction()}
+                                    title="Thaali signups"
+                                    aria-label={`Signups for ${event.title}`}
                                   >
-                                    Signups
+                                    <ListIcon />
                                   </Link>
                                 )}
                                 {event.type === 'NIYAZ' && canManageEvents && (
                                   <Link
                                     to={`/admin/reports/rsvps/${event.id}`}
-                                    className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-white bg-purple-600 rounded hover:bg-purple-700"
+                                    className={iconAction('purple')}
+                                    title="Niyaz RSVPs"
+                                    aria-label={`RSVPs for ${event.title}`}
                                   >
-                                    RSVPs
+                                    <ListIcon />
                                   </Link>
                                 )}
                                 {canManageEvents && (
                                   <button
                                     onClick={() => handleCancel(event.id)}
-                                    className="text-xs text-red-600 hover:text-red-800 hover:underline ml-1"
+                                    className={iconAction('red')}
+                                    title="Cancel event"
+                                    aria-label={`Cancel ${event.title}`}
                                     disabled={cancelMutation.isPending}
                                   >
-                                    Cancel
+                                    <XCircleIcon />
                                   </button>
                                 )}
                               </>
@@ -466,9 +477,11 @@ export default function EventList() {
                         {isPast && event.status === 'PUBLISHED' && (canManageEvents || event.type === 'THAALI') && (
                           <Link
                             to={event.type === 'THAALI' ? `/admin/reports/orders/${event.id}` : `/admin/reports/rsvps/${event.id}`}
-                            className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded hover:bg-gray-200"
+                            className={iconAction('gray')}
+                            title="Event summary"
+                            aria-label={`Summary of ${event.title}`}
                           >
-                            Summary
+                            <ReportIcon />
                           </Link>
                         )}
                       </div>

@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { api } from '../../../api/client';
+import { EditIcon, iconAction } from '../../../components/ActionIcons';
 
 type Ingredient = {
   id: number;
@@ -409,11 +410,8 @@ export default function IngredientList() {
                     {ingredient.notes || '-'}
                   </td>
                   <td className="py-3 px-4 text-center">
-                    <button
-                      onClick={() => startEdit(ingredient)}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-800"
-                    >
-                      Edit
+                    <button type="button" onClick={() => startEdit(ingredient)} className={iconAction()} title={`Edit ${ingredient.name}`} aria-label={`Edit ${ingredient.name}`}>
+                      <EditIcon />
                     </button>
                   </td>
                 </tr>
