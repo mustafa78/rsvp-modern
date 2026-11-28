@@ -120,7 +120,7 @@ export default function WebinarAttendees() {
 
   return (
     <div className="max-w-4xl">
-      <Link to="/admin/webinars" className="text-sm text-blue-700 hover:underline">← All webinars</Link>
+      <Link to="/admin/webinars" className="text-sm text-blue-700 hover:underline">← All meetings</Link>
       <h1 className="text-2xl font-bold text-gray-900 mt-1">Attendees</h1>
       {webinar && (
         <p className="text-sm text-gray-600 mb-4">
@@ -174,9 +174,9 @@ export default function WebinarAttendees() {
       </div>
 
       <div className="rounded-xl border bg-white p-4 mb-4 flex flex-wrap items-end gap-3">
-        <label className="text-sm font-medium text-gray-700">Copy seats from a previous webinar
+        <label className="text-sm font-medium text-gray-700">Copy seats from a previous meeting
           <select className="input mt-1" value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)}>
-            <option value="">Choose a webinar</option>
+            <option value="">Choose a meeting</option>
             {others?.filter((o) => String(o.id) !== id).map((o) => (
               <option key={o.id} value={o.id}>{o.title} · {fmtDateTime(o.scheduledStart)} · {o.seatCount} seats</option>
             ))}

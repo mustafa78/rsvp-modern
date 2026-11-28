@@ -57,14 +57,14 @@ public class WebinarLaunchService {
 
   @Transactional
   public String launchForMember(Long webinarId, Long personId, OffsetDateTime now) {
-    Webinar w = webinars.findById(webinarId).orElseThrow(() -> new NotFoundException("Webinar not found"));
+    Webinar w = webinars.findById(webinarId).orElseThrow(() -> new NotFoundException("Meeting not found"));
     Person p = persons.findById(personId).orElseThrow(() -> new NotFoundException("Person not found"));
     if (w.getStatus() != WebinarStatus.PUBLISHED) {
-      throw new IllegalStateException("This webinar is not available.");
+      throw new IllegalStateException("This meeting is not available.");
     }
     WebinarSeat seat = seatService.ensureOwnSeat(w, p);
     if (seat == null) {
-      throw new IllegalStateException("You do not have access to this webinar.");
+      throw new IllegalStateException("You do not have access to this meeting.");
     }
     return launchSeat(seat, JoinSource.PORTAL, now);
   }
@@ -101,15 +101,15 @@ public class WebinarLaunchService {
       throw new IllegalStateException("This seat is no longer active.");
     }
     if (w.getStatus() != WebinarStatus.PUBLISHED) {
-      throw new IllegalStateException("This webinar is not available.");
+      throw new IllegalStateException("This meeting is not available.");
     }
     if (!w.isJoinOpen(now)) {
       throw new IllegalStateException(now.isBefore(w.joinWindowStart())
-          ? "This webinar is not open for joining yet."
-          : "This webinar has ended.");
+          ? "This meeting is not open for joining yet."
+          : "This meeting has ended.");
     }
     if (w.getJoinUrl() == null || w.getJoinUrl().isBlank()) {
-      throw new IllegalStateException("This webinar has no Zoom link yet. Please contact the coordinator.");
+      throw new IllegalStateException("This meeting has no link yet. Please contact the coordinator.");
     }
 
     // Validate the final redirect target before anything is written, so a stored link that cannot
@@ -118,7 +118,7 @@ public class WebinarLaunchService {
     try {
       java.net.URI.create(url);
     } catch (IllegalArgumentException e) {
-      throw new IllegalStateException("This webinar's Zoom link is invalid. Please contact the coordinator.");
+      throw new IllegalStateException("This meeting's link is invalid. Please contact the coordinator.");
     }
 
     WebinarActiveLock lock = (fm == null
@@ -130,7 +130,7 @@ public class WebinarLaunchService {
     if (lock != null && !lock.getWebinar().getId().equals(w.getId())) {
       Webinar held = lock.getWebinar();
       if (held.getStatus() == WebinarStatus.PUBLISHED && !now.isAfter(held.getScheduledEnd())) {
-        throw new IllegalStateException("You are already joined to another webinar.");
+        throw new IllegalStateException("You are already joined to another meeting.");
       }
     }
     if (lock == null) lock = new WebinarActiveLock(p, fm);

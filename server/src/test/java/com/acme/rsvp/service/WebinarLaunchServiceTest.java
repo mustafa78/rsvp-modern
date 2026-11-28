@@ -66,7 +66,7 @@ class WebinarLaunchServiceTest extends PostgresIntegrationTest {
 
     assertThatThrownBy(() -> launch.launchForMember(w.getId(), member.getId(), now))
         .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("Zoom link is invalid")
+        .hasMessageContaining("link is invalid")
         .hasMessageNotContaining("secretpwd");
     assertThat(logs.findByWebinarId(w.getId())).isEmpty();
   }
@@ -111,7 +111,7 @@ class WebinarLaunchServiceTest extends PostgresIntegrationTest {
     Webinar noLink = live(WebinarAccessMode.OPEN);
     noLink.setJoinUrl(null);
     assertThatThrownBy(() -> launch.launchForMember(noLink.getId(), p.getId(), now))
-        .isInstanceOf(IllegalStateException.class).hasMessageContaining("no Zoom link");
+        .isInstanceOf(IllegalStateException.class).hasMessageContaining("has no link yet");
   }
 
   @Test
@@ -176,7 +176,7 @@ class WebinarLaunchServiceTest extends PostgresIntegrationTest {
     launch.launchForMember(a.getId(), hof.getId(), now.plusMinutes(1)); // rejoin same webinar is fine
 
     assertThatThrownBy(() -> launch.launchForMember(b.getId(), hof.getId(), now))
-        .isInstanceOf(IllegalStateException.class).hasMessageContaining("another webinar");
+        .isInstanceOf(IllegalStateException.class).hasMessageContaining("another meeting");
 
     // The family member is a different attendee and is not blocked by the HOF's lock.
     assertThat(launch.launchForToken(tokenFor(familyOnB), now)).contains("uname=");

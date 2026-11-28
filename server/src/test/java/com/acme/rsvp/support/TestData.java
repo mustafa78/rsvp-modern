@@ -60,7 +60,7 @@ public class TestData {
   /** A published, one-hour webinar with a join URL. */
   public Webinar webinar(WebinarAccessMode mode, OffsetDateTime start) {
     Webinar w = new Webinar();
-    w.setTitle("Test Webinar");
+    w.setTitle("Test Meeting");
     w.setHostName("Host");
     w.setScheduledStart(start);
     w.setScheduledEnd(start.plusHours(1));

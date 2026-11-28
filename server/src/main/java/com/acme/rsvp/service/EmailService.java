@@ -151,7 +151,7 @@ public class EmailService {
             List<InviteLink> links) {
         // Invites carry join links: never fall through to the log-instead path.
         if (!isEnabled()) return false;
-        String subject = "Your webinar link: " + title;
+        String subject = "Your meeting link: " + title;
 
         StringBuilder text = new StringBuilder();
         text.append(title).append("\n");
@@ -179,7 +179,7 @@ public class EmailService {
             html.append("<p style=\"margin: 0 0 14px 0;\">")
                 .append(HtmlUtils.htmlEscape(link.label())).append("<br>")
                 .append("<a href=\"").append(HtmlUtils.htmlEscape(link.url()))
-                .append("\" style=\"color: #2563eb; font-weight: bold;\">Join webinar</a></p>");
+                .append("\" style=\"color: #2563eb; font-weight: bold;\">Join meeting</a></p>");
         }
         html.append("<p style=\"color: #666666; font-size: 13px; margin-top: 24px;\">")
             .append("Each link is personal. Please forward each family member their own link. ")

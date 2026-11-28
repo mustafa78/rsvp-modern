@@ -141,7 +141,7 @@ public class WebinarSeatService {
   @Transactional
   public CopySeatsResult copyFrom(Long webinarId, Long otherWebinarId) {
     if (webinarId.equals(otherWebinarId)) {
-      throw new IllegalArgumentException("Choose a different webinar to copy from");
+      throw new IllegalArgumentException("Choose a different meeting to copy from");
     }
     Webinar w = webinarService.require(webinarId);
     webinarService.require(otherWebinarId);

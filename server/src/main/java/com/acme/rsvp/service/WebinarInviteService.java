@@ -119,7 +119,7 @@ public class WebinarInviteService {
   private InvitePlan planInvites(Long webinarId) {
     Webinar w = webinarService.require(webinarId);
     if (w.getStatus() != WebinarStatus.PUBLISHED) {
-      throw new IllegalStateException("Publish the webinar before sending invites");
+      throw new IllegalStateException("Publish the meeting before sending invites");
     }
     String whenText = WHEN.format(w.getScheduledStart().atZoneSameInstant(ZoneId.of(props.displayZone())));
 

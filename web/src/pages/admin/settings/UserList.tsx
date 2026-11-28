@@ -55,6 +55,8 @@ type Role = {
 
 // Format role name for display (e.g., NIYAZ_COORDINATOR -> Niyaz Coordinator)
 const formatRoleName = (name: string): string => {
+  // The role's code keeps its original name; people see "Meeting".
+  if (name === 'WEBINAR_COORDINATOR') return 'Meeting Coordinator';
   return name
     .split('_')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -627,7 +629,7 @@ export default function UserList() {
                   to={`/admin/webinars/family-members?search=${encodeURIComponent(formData.itsNumber)}`}
                   className="text-blue-700 hover:underline"
                 >
-                  Manage this family's members for webinars
+                  Manage this family's members for meetings
                 </Link>
               </div>
             )}

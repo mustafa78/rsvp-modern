@@ -28,7 +28,7 @@ import com.acme.rsvp.service.WebinarService;
 @RequestMapping("/api/webinars")
 public class WebinarController {
 
-  private static final String INVALID_LINK = "This webinar's Zoom link is invalid. Please contact the coordinator.";
+  private static final String INVALID_LINK = "This meeting's link is invalid. Please contact the coordinator.";
   private static final String JOIN_IN_PROGRESS = "Another join is already in progress. Please try again.";
 
   private final WebinarService webinars;

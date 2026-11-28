@@ -54,7 +54,7 @@ export default function FamilyMembers() {
     <div className="max-w-3xl">
       <h1 className="text-2xl font-bold text-gray-900 mb-1">Family Members</h1>
       <p className="text-sm text-gray-500 mb-4">
-        Family members saved under a head of family can be given their own webinar seats. They are not users and cannot log in.
+        Family members saved under a head of family can be given their own meeting seats. They are not users and cannot log in.
       </p>
       {error && <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>}
 

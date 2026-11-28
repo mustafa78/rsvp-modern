@@ -47,7 +47,7 @@ export default function MagicJoinPage() {
             href={`${API_BASE}/api/webinars/public/${encodeURIComponent(token ?? '')}/launch`}
             className="block rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-5 py-3 text-center font-semibold text-white"
           >
-            Join Zoom
+            Join meeting
           </a>
         ) : (
           <div className="rounded-lg bg-gray-100 px-5 py-3 text-center text-gray-600">

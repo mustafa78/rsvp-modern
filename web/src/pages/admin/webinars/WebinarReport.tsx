@@ -28,7 +28,7 @@ export default function WebinarReport() {
 
   const hofText = (r: AttendeeRow) => (r.hofName ? `${r.hofName} (${r.hofIts})` : '');
   const joinedText = (r: AttendeeRow) => (r.firstJoinedAt ? fmtDateTime(r.firstJoinedAt) : '');
-  const fileBase = `webinar-attendance-${(data?.webinar.title ?? 'report').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
+  const fileBase = `meeting-attendance-${(data?.webinar.title ?? 'report').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
 
   const exportExcel = () => {
     if (!data) return;
@@ -67,7 +67,7 @@ export default function WebinarReport() {
 
   return (
     <div>
-      <Link to="/admin/webinars" className="text-sm text-blue-700 hover:underline">← All webinars</Link>
+      <Link to="/admin/webinars" className="text-sm text-blue-700 hover:underline">← All meetings</Link>
       <div className="flex flex-wrap items-center justify-between gap-3 mt-1 mb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>

@@ -106,13 +106,13 @@ const getNavItems = (roles: string[]): NavItem[] => {
     items.push({ label: 'Announcements', path: '/admin/announcements' });
   }
 
-  // Webinars - admin and webinar coordinators
+  // Meetings (webinars in the code) - admin and webinar coordinators
   if (admin || isWebinarCoordinator(roles)) {
     items.push({
-      label: 'Webinars',
+      label: 'Meetings',
       children: [
-        { label: 'All Webinars', path: '/admin/webinars' },
-        { label: 'New Webinar', path: '/admin/webinars/new' },
+        { label: 'All Meetings', path: '/admin/webinars' },
+        { label: 'New Meeting', path: '/admin/webinars/new' },
         { label: 'Family Members', path: '/admin/webinars/family-members' },
       ],
     });

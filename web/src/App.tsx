@@ -43,7 +43,7 @@ export default function App() {
 
   const unreadCount = unreadCountData?.count || 0;
 
-  // Upcoming webinars for the badge on the Webinars tab. Shares its cache with the Webinars page.
+  // Upcoming meetings (webinars in the code) for the badge on the Meetings tab. Shares its cache with that page.
   const { data: myWebinars } = useQuery<unknown[]>({
     queryKey: ['my-webinars'],
     queryFn: async () => (await api.get('/webinars')).data,
@@ -246,7 +246,7 @@ export default function App() {
                     : 'text-white/80 hover:bg-white/10 hover:text-white'
                 }`}
               >
-                Webinars
+                Meetings
                 {webinarCount > 0 && (
                   <span className="rounded-full bg-white px-1.5 text-xs font-semibold leading-5 text-purple-700">
                     <span aria-hidden="true">{webinarCount}</span>

@@ -63,7 +63,7 @@ public class WebinarService {
 
   @Transactional(readOnly = true)
   public Webinar require(Long id) {
-    return webinars.findById(id).orElseThrow(() -> new NotFoundException("Webinar not found"));
+    return webinars.findById(id).orElseThrow(() -> new NotFoundException("Meeting not found"));
   }
 
   /** Published webinars whose join window has not closed, that are OPEN or where the person holds their own seat. */
@@ -119,14 +119,14 @@ public class WebinarService {
     if (req.joinUrl() != null && !req.joinUrl().isBlank()) {
       String url = req.joinUrl().trim();
       if (!url.startsWith("https://")) {
-        throw new IllegalArgumentException("Zoom link must start with https://");
+        throw new IllegalArgumentException("Meeting link must start with https://");
       }
       try {
         if (new java.net.URI(url).getHost() == null) {
-          throw new IllegalArgumentException("Zoom link is not a valid URL");
+          throw new IllegalArgumentException("Meeting link is not a valid URL");
         }
       } catch (java.net.URISyntaxException e) {
-        throw new IllegalArgumentException("Zoom link is not a valid URL");
+        throw new IllegalArgumentException("Meeting link is not a valid URL");
       }
       w.setJoinUrl(url);
     }

@@ -73,7 +73,7 @@ export default function CreateWebinar() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-4">{isEdit ? 'Edit Webinar' : 'New Webinar'}</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-4">{isEdit ? 'Edit Meeting' : 'New Meeting'}</h1>
       {error && <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>}
 
       <form
@@ -97,10 +97,10 @@ export default function CreateWebinar() {
             <input type="datetime-local" className="input mt-1" value={form.end} onChange={set('end')} required />
           </label>
         </div>
-        <label className="block text-sm font-medium text-gray-700">Zoom link
+        <label className="block text-sm font-medium text-gray-700">Meeting link
           <input
             className="input mt-1" value={form.joinUrl} onChange={set('joinUrl')} autoComplete="off"
-            placeholder={isEdit && existing?.hasJoinUrl ? 'A link is saved. Leave blank to keep it.' : 'https://zoom.us/j/...'}
+            placeholder={isEdit && existing?.hasJoinUrl ? 'A link is saved. Leave blank to keep it.' : 'https://... (Zoom, Google Meet, Webex or similar)'}
           />
           <span className="mt-1 block text-xs font-normal text-gray-500">
             Attendees never see this link. It is not shown again after saving.
