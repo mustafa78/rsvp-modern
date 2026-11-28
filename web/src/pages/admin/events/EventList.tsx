@@ -281,7 +281,7 @@ export default function EventList() {
       </div>
 
       {/* Events Table */}
-      <div className="card overflow-hidden p-0">
+      <div className="card overflow-x-auto p-0">
         {displayedEvents.length === 0 ? (
           <p className="text-gray-500 p-6">
             {timeFilter === 'upcoming' ? 'No upcoming events' : 'No past events'}
@@ -290,94 +290,18 @@ export default function EventList() {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Event</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">Registration</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider w-40">Actions</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Event</th>
+                <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                <th className="hidden xl:table-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Registration</th>
+                <th className="hidden md:table-cell px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                <th className="px-2 sm:px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {displayedEvents.map((event, idx) => {
                 const isNiyaz = event.type === 'NIYAZ';
                 const isPast = isEventPast(event.eventDate);
-                return (
-                  <tr key={event.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} ${isPast ? 'opacity-75' : ''}`}>
-                    {/* Event Info */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`flex-shrink-0 w-2 h-10 rounded-full ${
-                            isPast
-                              ? 'bg-gray-400'
-                              : isNiyaz
-                              ? 'bg-purple-500'
-                              : 'bg-blue-500'
-                          }`}
-                        />
-                        <div className="min-w-0">
-                          <Link
-                            to={`/admin/events/${event.id}`}
-                            className={`font-medium block truncate ${
-                              isPast ? 'text-gray-600 hover:text-gray-800' : 'text-gray-900 hover:text-blue-600'
-                            }`}
-                          >
-                            {event.title}
-                          </Link>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`inline-flex items-center text-xs font-medium ${
-                                isPast
-                                  ? 'text-gray-500'
-                                  : isNiyaz
-                                  ? 'text-purple-600'
-                                  : 'text-blue-600'
-                              }`}
-                            >
-                              {isNiyaz ? 'Niyaz' : 'Thaali'}
-                            </span>
-                            {/* RSVP/Order counts */}
-                            {isNiyaz && event.rsvpAdults !== null && (
-                              <span className="text-xs text-gray-500">
-                                ({event.rsvpAdults} adults, {event.rsvpKids} kids)
-                              </span>
-                            )}
-                            {!isNiyaz && event.thaaliOrders !== null && (
-                              <span className="text-xs text-gray-500">
-                                ({event.thaaliOrders} {event.thaaliOrders === 1 ? 'thaali' : 'thaalis'})
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Date */}
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <div className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-900'}`}>
-                        {formatDate(event.eventDate)}
-                        {event.startTime && (
-                          <span className="text-gray-500"> · {formatTime(event.startTime)}</span>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Registration Period */}
-                    <td className="px-4 py-4">
-                      <div className="text-xs text-gray-600">
-                        <span className={isPast ? 'text-gray-500' : 'text-green-600'}>
-                          {formatShortDate(event.registrationOpenAt)}
-                        </span>
-                        <span className="text-gray-400 mx-1">-</span>
-                        <span className={isPast ? 'text-gray-500' : 'text-red-600'}>
-                          {formatShortDate(event.registrationCloseAt)}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-4 py-4 text-center">
-                      {isPast && event.status === 'PUBLISHED' ? (
+                const statusBadge = isPast && event.status === 'PUBLISHED' ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
                           <span className="w-1.5 h-1.5 rounded-full bg-gray-500 mr-1.5" />
                           Completed
@@ -403,11 +327,94 @@ export default function EventList() {
                           )}
                           {event.status.charAt(0) + event.status.slice(1).toLowerCase()}
                         </span>
-                      )}
+                      );
+                return (
+                  <tr key={event.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} ${isPast ? 'opacity-75' : ''}`}>
+                    {/* Event Info */}
+                    <td className="px-3 sm:px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`flex-shrink-0 w-2 h-10 rounded-full ${
+                            isPast
+                              ? 'bg-gray-400'
+                              : isNiyaz
+                              ? 'bg-purple-500'
+                              : 'bg-blue-500'
+                          }`}
+                        />
+                        <div className="min-w-0">
+                          <Link
+                            to={`/admin/events/${event.id}`}
+                            className={`font-medium block break-words ${
+                              isPast ? 'text-gray-600 hover:text-gray-800' : 'text-gray-900 hover:text-blue-600'
+                            }`}
+                          >
+                            {event.title}
+                          </Link>
+                          <div className="flex flex-wrap items-center gap-x-2">
+                            <span
+                              className={`inline-flex items-center text-xs font-medium ${
+                                isPast
+                                  ? 'text-gray-500'
+                                  : isNiyaz
+                                  ? 'text-purple-600'
+                                  : 'text-blue-600'
+                              }`}
+                            >
+                              {isNiyaz ? 'Niyaz' : 'Thaali'}
+                            </span>
+                            {/* RSVP/Order counts */}
+                            {isNiyaz && event.rsvpAdults !== null && (
+                              <span className="text-xs text-gray-500">
+                                ({event.rsvpAdults} adults, {event.rsvpKids} kids)
+                              </span>
+                            )}
+                            {!isNiyaz && event.thaaliOrders !== null && (
+                              <span className="text-xs text-gray-500">
+                                ({event.thaaliOrders} {event.thaaliOrders === 1 ? 'thaali' : 'thaalis'})
+                              </span>
+                            )}
+                          </div>
+                          {/* On narrow screens the Date and Status columns are hidden, so show them here */}
+                          <div className="lg:hidden text-xs text-gray-600 mt-0.5">
+                            {formatDate(event.eventDate)}
+                            {event.startTime && <span className="text-gray-500"> · {formatTime(event.startTime)}</span>}
+                          </div>
+                          <div className="md:hidden mt-1">{statusBadge}</div>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Date */}
+                    <td className="hidden lg:table-cell px-4 py-4 whitespace-nowrap">
+                      <div className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-900'}`}>
+                        {formatDate(event.eventDate)}
+                        {event.startTime && (
+                          <span className="text-gray-500"> · {formatTime(event.startTime)}</span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Registration Period */}
+                    <td className="hidden xl:table-cell px-4 py-4 whitespace-nowrap">
+                      <div className="text-xs text-gray-600">
+                        <span className={isPast ? 'text-gray-500' : 'text-green-600'}>
+                          {formatShortDate(event.registrationOpenAt)}
+                        </span>
+                        <span className="text-gray-400 mx-1">-</span>
+                        <span className={isPast ? 'text-gray-500' : 'text-red-600'}>
+                          {formatShortDate(event.registrationCloseAt)}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Status */}
+                    <td className="hidden md:table-cell px-4 py-4 text-center">
+                      {statusBadge}
                     </td>
 
                     {/* Actions */}
-                    <td className="px-4 py-4 text-right">
+                    <td className="px-2 sm:px-4 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         {/* Details link - hidden for Shopping Coordinator */}
                         {canManageEvents && (

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
@@ -215,10 +215,45 @@ export default function AdminLayout() {
     return getNavItems(user?.roles || []);
   }, [user?.roles]);
 
+  // On phones the menu is a drawer opened from the bar below; from md up it is always shown.
+  const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => { setMenuOpen(false); }, [location.pathname]);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
+
   return (
-    <div className="flex min-h-[calc(100vh-7rem)]">
+    <div className="md:flex min-h-[calc(100vh-7rem)]">
+      {/* Phone-only bar with the menu button */}
+      <div className="md:hidden sticky top-16 z-30 flex items-center gap-3 bg-gray-900 px-4 py-2 text-white">
+        <button
+          type="button"
+          onClick={() => setMenuOpen((o) => !o)}
+          aria-expanded={menuOpen}
+          aria-controls="admin-menu"
+          className="inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-purple-300"
+        >
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            {menuOpen ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+          </svg>
+          {menuOpen ? 'Close menu' : 'Admin menu'}
+        </button>
+      </div>
+      {menuOpen && (
+        <div className="md:hidden fixed inset-0 top-16 z-30 bg-black/40" onClick={() => setMenuOpen(false)} aria-hidden="true" />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-56 lg:w-64 bg-gradient-to-b from-gray-900 via-gray-900 to-purple-900 text-white flex-shrink-0">
+      <aside
+        id="admin-menu"
+        className={`fixed bottom-0 left-0 top-16 z-40 w-64 max-w-[85vw] overflow-y-auto transition-[transform,visibility] duration-200 md:static md:z-auto md:w-56 md:max-w-none md:translate-x-0 md:visible md:overflow-visible lg:w-64 bg-gradient-to-b from-gray-900 via-gray-900 to-purple-900 text-white flex-shrink-0 ${
+          menuOpen ? 'translate-x-0 visible' : '-translate-x-full invisible'
+        }`}
+      >
         <div className="p-4 border-b border-white/10">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
@@ -238,7 +273,7 @@ export default function AdminLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 bg-gray-50 p-4 lg:p-8 overflow-x-auto">
+      <main className="flex-1 min-w-0 bg-gray-50 p-4 lg:p-8 overflow-x-auto">
         <div className="max-w-[1600px]">
           <Outlet />
         </div>
