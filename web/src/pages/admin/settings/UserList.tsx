@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { api } from '../../../api/client';
+import { EditIcon, iconAction } from '../../../components/ActionIcons';
 
 // Format phone number as (xxx) xxx-xxxx
 function formatPhoneNumber(value: string): string {
@@ -53,6 +55,8 @@ type Role = {
 
 // Format role name for display (e.g., NIYAZ_COORDINATOR -> Niyaz Coordinator)
 const formatRoleName = (name: string): string => {
+  // The role's code keeps its original name; people see "Meeting".
+  if (name === 'WEBINAR_COORDINATOR') return 'Meeting Coordinator';
   return name
     .split('_')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -619,6 +623,16 @@ export default function UserList() {
                 </div>
               </label>
             </div>
+            {isEditing && formData.isHof && (
+              <div className="text-sm">
+                <Link
+                  to={`/admin/webinars/family-members?search=${encodeURIComponent(formData.itsNumber)}`}
+                  className="text-blue-700 hover:underline"
+                >
+                  Manage this family's members for meetings
+                </Link>
+              </div>
+            )}
 
             {/* Quick Actions for Student/Mehmaan (Edit mode only) */}
             {isEditing && formData.userType !== 'REGISTERED' && (
@@ -886,11 +900,8 @@ export default function UserList() {
 
                   {/* Actions */}
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => startEdit(user)}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-800"
-                    >
-                      Edit
+                    <button type="button" onClick={() => startEdit(user)} className={iconAction()} title="Edit user" aria-label={`Edit user ${user.itsNumber}`}>
+                      <EditIcon />
                     </button>
                   </td>
                 </tr>

@@ -37,9 +37,10 @@ public class WebSecurityConfig {
 	private static final String MENU = "MENU_COORDINATOR";
 	private static final String SHOPPING = "SHOPPING_COORDINATOR";
 	private static final String DANA = "DANA_COORDINATOR";
+	private static final String WEBINAR = "WEBINAR_COORDINATOR";
 
 	/** Everyone who works in the admin area. */
-	private static final String[] STAFF = { ADMIN, NIYAZ, THAALI, MENU, SHOPPING, DANA };
+	private static final String[] STAFF = { ADMIN, NIYAZ, THAALI, MENU, SHOPPING, DANA, WEBINAR };
 
 	/**
 	 * Who may call what. This is the only place access is decided.
@@ -69,7 +70,8 @@ public class WebSecurityConfig {
 	            "/api/auth/pickup-zones",
 	            "/api/events/public",
 	            "/api/events/{id}",
-	            "/api/niyaz/{eventId}/rsvp/summary").permitAll()
+	            "/api/niyaz/{eventId}/rsvp/summary",
+	            "/api/webinars/public/**").permitAll()   // join links: the token in the path is the credential
 
 	        // ---- Any logged-in member: own account, own RSVP, own thaali order
 	        .requestMatchers("/api/auth/**", "/api/profile/**").authenticated()
@@ -83,6 +85,12 @@ public class WebSecurityConfig {
 	            "/api/thaali/{eventId}/orders",
 	            "/api/announcements/{id}/read", "/api/announcements/read-all").authenticated()
 	        .requestMatchers("/api/niyaz/{eventId}/rsvp/my", "/api/thaali/{eventId}/orders/my").authenticated()
+
+	        // ---- Webinars: managing them, and family members
+	        .requestMatchers("/api/webinars/admin", "/api/webinars/admin/**",
+	            "/api/admin/family-members", "/api/admin/family-members/**").hasAnyRole(ADMIN, WEBINAR)
+	        // ---- Webinars: a member's own list and joining from the portal
+	        .requestMatchers(HttpMethod.GET, "/api/webinars", "/api/webinars/{id}/launch").authenticated()
 
 	        // ---- Events
 	        .requestMatchers(HttpMethod.GET, "/api/events").hasAnyRole(STAFF)

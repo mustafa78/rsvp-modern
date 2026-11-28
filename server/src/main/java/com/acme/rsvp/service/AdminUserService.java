@@ -20,6 +20,7 @@ import com.acme.rsvp.dto.AdminUserDtos.UserListDto;
 import com.acme.rsvp.model.AccountStatus;
 import com.acme.rsvp.model.Person;
 import com.acme.rsvp.model.UserType;
+import com.acme.rsvp.repository.FamilyMemberRepository;
 import com.acme.rsvp.repository.PersonRepository;
 import com.acme.rsvp.repository.PickupZoneRepository;
 
@@ -29,12 +30,14 @@ public class AdminUserService {
 
     private final PersonRepository personRepository;
     private final PickupZoneRepository pickupZoneRepository;
+    private final FamilyMemberRepository familyMemberRepository;
     private final PasswordEncoder passwordEncoder;
 
     public AdminUserService(PersonRepository personRepository, PickupZoneRepository pickupZoneRepository,
-            PasswordEncoder passwordEncoder) {
+            FamilyMemberRepository familyMemberRepository, PasswordEncoder passwordEncoder) {
         this.personRepository = personRepository;
         this.pickupZoneRepository = pickupZoneRepository;
+        this.familyMemberRepository = familyMemberRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -49,6 +52,10 @@ public class AdminUserService {
         // Check for duplicate ITS number
         if (personRepository.existsByItsNumber(request.itsNumber())) {
             throw new IllegalArgumentException("ITS number already exists: " + request.itsNumber());
+        }
+        if (familyMemberRepository.existsByItsNumber(request.itsNumber())) {
+            throw new IllegalArgumentException("ITS number " + request.itsNumber()
+                    + " is saved as a family member. Remove or change that family member first.");
         }
         // Check for duplicate email
         if (personRepository.existsByEmail(request.email())) {

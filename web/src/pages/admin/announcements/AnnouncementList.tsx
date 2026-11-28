@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../api/client';
+import { BanIcon, CheckCircleIcon, EditIcon, TrashIcon, iconAction } from '../../../components/ActionIcons';
 
 type AnnouncementType = 'MANUAL' | 'EVENT_UPDATE';
 
@@ -463,26 +464,15 @@ export default function AnnouncementList() {
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => startEdit(announcement)}
-                        className="text-sm text-blue-600 hover:text-blue-800"
-                      >
-                        Edit
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button type="button" onClick={() => startEdit(announcement)} className={iconAction()} title="Edit announcement" aria-label="Edit announcement">
+                        <EditIcon />
                       </button>
-                      <button
-                        onClick={() => toggleActiveMutation.mutate(announcement.id)}
-                        disabled={toggleActiveMutation.isPending}
-                        className="text-sm text-amber-600 hover:text-amber-800 disabled:opacity-50"
-                      >
-                        Deactivate
+                      <button type="button" onClick={() => toggleActiveMutation.mutate(announcement.id)} className={iconAction('amber')} title="Deactivate announcement" aria-label="Deactivate announcement" disabled={toggleActiveMutation.isPending}>
+                        <BanIcon />
                       </button>
-                      <button
-                        onClick={() => handleDelete(announcement.id)}
-                        disabled={deleteMutation.isPending}
-                        className="text-sm text-red-600 hover:text-red-800 disabled:opacity-50"
-                      >
-                        Delete
+                      <button type="button" onClick={() => handleDelete(announcement.id)} className={iconAction('red')} title="Delete announcement" aria-label="Delete announcement" disabled={deleteMutation.isPending}>
+                        <TrashIcon />
                       </button>
                     </div>
                   </div>
@@ -580,26 +570,15 @@ export default function AnnouncementList() {
                       )}
                       <p className="text-gray-500 text-sm line-clamp-2">{announcement.content}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => startEdit(announcement)}
-                        className="text-sm text-blue-600 hover:text-blue-800"
-                      >
-                        Edit
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button type="button" onClick={() => startEdit(announcement)} className={iconAction()} title="Edit announcement" aria-label="Edit announcement">
+                        <EditIcon />
                       </button>
-                      <button
-                        onClick={() => toggleActiveMutation.mutate(announcement.id)}
-                        disabled={toggleActiveMutation.isPending}
-                        className="text-sm text-green-600 hover:text-green-800 disabled:opacity-50"
-                      >
-                        Activate
+                      <button type="button" onClick={() => toggleActiveMutation.mutate(announcement.id)} className={iconAction('green')} title="Activate announcement" aria-label="Activate announcement" disabled={toggleActiveMutation.isPending}>
+                        <CheckCircleIcon />
                       </button>
-                      <button
-                        onClick={() => handleDelete(announcement.id)}
-                        disabled={deleteMutation.isPending}
-                        className="text-sm text-red-600 hover:text-red-800 disabled:opacity-50"
-                      >
-                        Delete
+                      <button type="button" onClick={() => handleDelete(announcement.id)} className={iconAction('red')} title="Delete announcement" aria-label="Delete announcement" disabled={deleteMutation.isPending}>
+                        <TrashIcon />
                       </button>
                     </div>
                   </div>

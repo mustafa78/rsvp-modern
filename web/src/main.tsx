@@ -16,6 +16,8 @@ import ResetPassword from './pages/ResetPassword'
 import ChangePassword from './pages/ChangePassword'
 import AnnouncementsPage from './pages/AnnouncementsPage'
 import ProfilePage from './pages/ProfilePage'
+import WebinarsPage from './pages/WebinarsPage'
+import MagicJoinPage from './pages/MagicJoinPage'
 // Admin pages
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -37,6 +39,11 @@ import ThaaliOrderReport from './pages/admin/reports/ThaaliOrderReport'
 import NiyazRsvpReport from './pages/admin/reports/NiyazRsvpReport'
 import ShoppingListGenerator from './pages/admin/reports/ShoppingListGenerator'
 import AnnouncementList from './pages/admin/announcements/AnnouncementList'
+import WebinarList from './pages/admin/webinars/WebinarList'
+import CreateWebinar from './pages/admin/webinars/CreateWebinar'
+import WebinarAttendees from './pages/admin/webinars/WebinarAttendees'
+import FamilyMembers from './pages/admin/webinars/FamilyMembers'
+import WebinarReport from './pages/admin/webinars/WebinarReport'
 import './styles/index.css'
 
 const router = createBrowserRouter([
@@ -54,6 +61,8 @@ const router = createBrowserRouter([
       { path: 'thaali/quick-register', element: <BulkThaaliRegistration /> },
       { path: 'announcements', element: <AnnouncementsPage /> },
       { path: 'profile', element: <ProfilePage /> },
+      { path: 'webinars', element: <WebinarsPage /> },
+      { path: 'j/:token', element: <MagicJoinPage /> },
       {
         path: 'admin',
         element: <AdminLayout />,
@@ -79,6 +88,12 @@ const router = createBrowserRouter([
           { path: 'reports/rsvps/:eventId', element: <NiyazRsvpReport /> },
           { path: 'reports/shopping-list', element: <ShoppingListGenerator /> },
           { path: 'announcements', element: <AnnouncementList /> },
+          { path: 'webinars', element: <WebinarList /> },
+          { path: 'webinars/new', element: <CreateWebinar /> },
+          { path: 'webinars/family-members', element: <FamilyMembers /> },
+          { path: 'webinars/:id/attendees', element: <WebinarAttendees /> },
+          { path: 'webinars/:id/report', element: <WebinarReport /> },
+          { path: 'webinars/:id/edit', element: <CreateWebinar /> },
         ],
       },
       { path: 'login', element: <Login /> },

@@ -72,6 +72,12 @@ public class SessionAuthFilter extends OncePerRequestFilter {
 			return;
 		}
 
+		// Magic-link endpoints are anonymous: the token in the path is the credential.
+		if ("GET".equalsIgnoreCase(method) && path.startsWith("/api/webinars/public/")) {
+			chain.doFilter(req, resp);
+			return;
+		}
+
 		String cookie = CookieUtil.readCookie(req, COOKIE_NAME);
 		if (cookie != null && !cookie.isBlank()) {
 			try {

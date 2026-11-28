@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '../../../api/client';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { EditIcon, TrashIcon, iconAction } from '../../../components/ActionIcons';
 
 type Event = {
   id: number;
@@ -489,19 +490,11 @@ export default function NiyazRsvpReport() {
                     {!isPast && (
                       <td className="py-3 px-4 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => openEditModal(rsvp)}
-                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                            title="Edit RSVP"
-                          >
-                            Edit
+                          <button type="button" onClick={() => openEditModal(rsvp)} className={iconAction()} title={`Edit RSVP for ${rsvp.personName}`} aria-label={`Edit RSVP for ${rsvp.personName}`}>
+                            <EditIcon />
                           </button>
-                          <button
-                            onClick={() => openDeleteModal(rsvp)}
-                            className="text-red-600 hover:text-red-800 text-sm font-medium"
-                            title="Delete RSVP"
-                          >
-                            Delete
+                          <button type="button" onClick={() => openDeleteModal(rsvp)} className={iconAction('red')} title={`Delete RSVP for ${rsvp.personName}`} aria-label={`Delete RSVP for ${rsvp.personName}`}>
+                            <TrashIcon />
                           </button>
                         </div>
                       </td>

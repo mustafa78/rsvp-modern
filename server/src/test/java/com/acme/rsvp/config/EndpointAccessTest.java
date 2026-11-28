@@ -51,15 +51,16 @@ class EndpointAccessTest extends PostgresIntegrationTest {
   static final String MENU = "MENU_COORDINATOR";
   static final String SHOPPING = "SHOPPING_COORDINATOR";
   static final String DANA = "DANA_COORDINATOR";
+  static final String WEBINAR = "WEBINAR_COORDINATOR";
 
-  static final List<String> COORDINATORS = List.of(NIYAZ, THAALI, MENU, SHOPPING, DANA);
+  static final List<String> COORDINATORS = List.of(NIYAZ, THAALI, MENU, SHOPPING, DANA, WEBINAR);
   static final List<String> EVERY_IDENTITY =
-      List.of(ANON, USER, SUPER, ADMIN, NIYAZ, THAALI, MENU, SHOPPING, DANA);
+      List.of(ANON, USER, SUPER, ADMIN, NIYAZ, THAALI, MENU, SHOPPING, DANA, WEBINAR);
 
   // Who may call an endpoint
   static final Set<String> PUBLIC = Set.copyOf(EVERY_IDENTITY);
-  static final Set<String> MEMBER = Set.of(USER, SUPER, ADMIN, NIYAZ, THAALI, MENU, SHOPPING, DANA);
-  static final Set<String> STAFF = Set.of(ADMIN, NIYAZ, THAALI, MENU, SHOPPING, DANA);
+  static final Set<String> MEMBER = Set.of(USER, SUPER, ADMIN, NIYAZ, THAALI, MENU, SHOPPING, DANA, WEBINAR);
+  static final Set<String> STAFF = Set.of(ADMIN, NIYAZ, THAALI, MENU, SHOPPING, DANA, WEBINAR);
   static final Set<String> ADMIN_ONLY = Set.of(ADMIN);
 
   record Rule(HttpMethod method, String path, Set<String> allowed) {}
@@ -107,6 +108,33 @@ class EndpointAccessTest extends PostgresIntegrationTest {
     get("/api/pickup-zones", MEMBER);
     get("/api/pickup-zones/active", MEMBER);
     get("/api/pickup-zones/999999", MEMBER);
+
+    // ---- Webinars
+    get("/api/webinars/public/999999", PUBLIC);
+    get("/api/webinars/public/999999/launch", PUBLIC);
+    get("/api/webinars", MEMBER);
+    get("/api/webinars/999999/launch", MEMBER);
+    Set<String> webinarDesk = Set.of(ADMIN, WEBINAR);
+    get("/api/webinars/admin/zoom/preview", webinarDesk);
+    post("/api/webinars/admin/zoom/import", webinarDesk);
+    get("/api/webinars/admin", webinarDesk);
+    post("/api/webinars/admin", webinarDesk);
+    get("/api/webinars/admin/999999", webinarDesk);
+    put("/api/webinars/admin/999999", webinarDesk);
+    delete("/api/webinars/admin/999999", webinarDesk);
+    get("/api/webinars/admin/999999/seats", webinarDesk);
+    get("/api/webinars/admin/999999/assignable", webinarDesk);
+    post("/api/webinars/admin/999999/seats", webinarDesk);
+    delete("/api/webinars/admin/999999/seats/999999", webinarDesk);
+    post("/api/webinars/admin/999999/seats/copy-from/999999", webinarDesk);
+    post("/api/webinars/admin/999999/seats/999999/link", webinarDesk);
+    post("/api/webinars/admin/999999/send-invites", webinarDesk);
+    get("/api/webinars/admin/999999/report", webinarDesk);
+    get("/api/admin/family-members/hofs", webinarDesk);
+    get("/api/admin/family-members", webinarDesk);
+    post("/api/admin/family-members", webinarDesk);
+    put("/api/admin/family-members/999999", webinarDesk);
+    put("/api/admin/family-members/999999/active", webinarDesk);
 
     // ---- Events
     get("/api/events", STAFF);

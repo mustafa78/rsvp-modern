@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { api } from '../../../api/client';
+import { EditIcon, iconAction } from '../../../components/ActionIcons';
 
 type PickupZone = {
   id: number;
@@ -205,11 +206,8 @@ export default function PickupZoneList() {
                   )}
                 </td>
                 <td className="py-3 px-4 text-right">
-                  <button
-                    onClick={() => startEdit(zone)}
-                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                  >
-                    Edit
+                  <button type="button" onClick={() => startEdit(zone)} className={iconAction()} title={`Edit ${formatZoneName(zone.name)}`} aria-label={`Edit ${formatZoneName(zone.name)}`}>
+                    <EditIcon />
                   </button>
                 </td>
               </tr>

@@ -20,3 +20,17 @@ app:
     api-key: ${SENDGRID_API_KEY:}
     from-email: ${SENDGRID_FROM_EMAIL:noreply@example.com}
     from-name: ${SENDGRID_FROM_NAME:RSVP System}
+  webinar:
+    join-window-before-minutes: ${WEBINAR_JOIN_WINDOW_BEFORE_MIN:10}
+    join-window-after-minutes: ${WEBINAR_JOIN_WINDOW_AFTER_MIN:15}
+    display-zone: ${WEBINAR_DISPLAY_ZONE:America/New_York}
+  zoom:
+    enabled: ${ZOOM_ENABLED:false}
+    account-id: ${ZOOM_ACCOUNT_ID:}
+    client-id: ${ZOOM_CLIENT_ID:}
+    client-secret: ${ZOOM_CLIENT_SECRET:}
+    import-user-id: ${ZOOM_IMPORT_USER_ID:me}
+    webinar-import-user-id: ${ZOOM_WEBINAR_IMPORT_USER_ID:}
+    oauth-url: ${ZOOM_OAUTH_URL:https://zoom.us/oauth/token}
+    base-url: ${ZOOM_BASE_URL:https://api.zoom.us}
+    default-host-name: ${ZOOM_DEFAULT_HOST_NAME:FMB}

@@ -1,6 +1,7 @@
 package com.acme.rsvp.repository;
 
 import com.acme.rsvp.model.Person;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -42,4 +43,17 @@ public interface PersonRepository extends JpaRepository<Person, Long> {
       ORDER BY p.firstName, p.lastName
       """)
   List<Person> findWithoutRsvpForEvent(@Param("eventId") Long eventId, @Param("now") Instant now);
+
+  // Active, non-expired people matching a name or ITS prefix. Not limited to HOFs.
+  @Query("""
+      SELECT p FROM Person p
+      WHERE p.accountStatus = com.acme.rsvp.model.AccountStatus.ACTIVE
+        AND (p.userType = com.acme.rsvp.model.UserType.REGISTERED
+             OR p.accountExpiresAt IS NULL
+             OR p.accountExpiresAt > :now)
+        AND (LOWER(CONCAT(p.firstName, ' ', p.lastName)) LIKE LOWER(CONCAT('%', :search, '%'))
+             OR p.itsNumber LIKE CONCAT(:search, '%'))
+      ORDER BY p.firstName, p.lastName
+      """)
+  List<Person> searchActive(@Param("search") String search, @Param("now") Instant now, Pageable pageable);
 }

@@ -82,16 +82,39 @@ POSTGRES_DB=rsvp
 
 ### Step 4: Start the Application
 
+> **Security warning.** On a server, always start with `docker-compose.qa.yml`.
+> Never run `docker-compose.dev.yml` on a machine other people can reach: it
+> starts the Vite dev server, and a dev server reachable from the internet can
+> be taken over remotely. This happened to the QA site in November 2026.
+> `docker-compose.qa.yml` builds the frontend once and serves it with nginx.
+> The database and API are bound to `127.0.0.1` and are not reachable from outside.
+
 ```bash
-# Start the dev environment
-docker compose --env-file ./.env.dev -f docker-compose.dev.yml up -d --build
+# Start the QA environment (database and backend settings come from docker-compose.dev.yml)
+docker compose --env-file ./.env.dev -f docker-compose.qa.yml up -d --build
 
 # Check if containers are running
-docker compose -f docker-compose.dev.yml ps
+docker compose --env-file ./.env.dev -f docker-compose.qa.yml ps
 
 # View logs if needed
-docker compose -f docker-compose.dev.yml logs -f
+docker compose --env-file ./.env.dev -f docker-compose.qa.yml logs -f
 ```
+
+After pulling new code, add `--force-recreate`:
+
+```bash
+docker compose --env-file ./.env.dev -f docker-compose.qa.yml up -d --build --force-recreate
+```
+
+Without `--force-recreate` only the frontend is rebuilt. The backend container
+keeps running the code it started with, because its settings have not changed.
+There is no hot reload on QA.
+
+Elsewhere in this guide, commands that say `-f docker-compose.dev.yml` should be
+run with `-f docker-compose.qa.yml` on a server.
+
+Set a strong `POSTGRES_PASSWORD` in `.env.dev` on a server. Do not keep the
+default `rsvp`.
 
 ### Step 5: Configure Firewall
 
@@ -99,8 +122,8 @@ docker compose -f docker-compose.dev.yml logs -f
 ```bash
 sudo apt install -y ufw
 sudo ufw allow 22/tcp    # SSH
-sudo ufw allow 5173/tcp  # Frontend (dev)
-sudo ufw allow 8080/tcp  # Backend API
+sudo ufw allow 5173/tcp  # Frontend (nginx, static files)
+# Do NOT open 8080 (API) or 5433 (database). The frontend proxies /api itself.
 sudo ufw enable
 sudo ufw status
 ```
@@ -108,7 +131,7 @@ sudo ufw status
 #### Using iptables
 ```bash
 sudo iptables -A INPUT -p tcp --dport 5173 -j ACCEPT
-sudo iptables -A INPUT -p tcp --dport 8080 -j ACCEPT
+# Do NOT open 8080 (API) or 5433 (database).
 ```
 
 ### Step 6: Configure CORS for Domain Access
@@ -249,8 +272,8 @@ Once everything is running:
 | Service | URL |
 |---------|-----|
 | Frontend | `http://YOUR_SERVER_IP:5173` |
-| Backend API | `http://YOUR_SERVER_IP:8080/api` |
-| Database | `localhost:5433` (internal only) |
+| Backend API | `http://YOUR_SERVER_IP:5173/api` (through the frontend; port 8080 is local only) |
+| Database | `localhost:5433` (on the server only) |
 
 Default admin credentials:
 - **ITS**: 30702039
@@ -506,6 +529,95 @@ WantedBy=multi-user.target
 # Enable the service
 sudo systemctl enable rsvp.service
 sudo systemctl start rsvp.service
+```
+
+---
+
+## Webinars and Zoom
+
+The webinar module lets coordinators publish Zoom sessions and give seats to members and their family members. Each seat gets its own join link, and the Zoom display name is set to the ITS number and name of the person holding the seat.
+
+### Creating the Zoom app
+
+Zoom is optional (see below). To use "Sync from Zoom":
+
+1. In the Zoom App Marketplace, sign in as the Zoom account that owns the meetings.
+2. Choose Develop, then Build App, then Server-to-Server OAuth.
+3. Add read scopes for listing meetings and webinars. The expected scope names are:
+   - `meeting:read:list_meetings:admin`
+   - `webinar:read:list_webinars:admin`
+
+   These names are not fully confirmed. The meetings scope came from a Zoom developer-forum thread, not the official reference. Confirm the exact names in the App Marketplace when creating the app.
+4. Activate the app and copy the Account ID, Client ID and Client Secret.
+
+The format of Zoom's list responses has not yet been verified against a live account. On first setup, open "Sync from Zoom" in the admin Webinars page. If the list is empty while sessions exist in Zoom, check the server log for the line reporting how many items Zoom returned versus how many were usable.
+
+### Production environment
+
+Add these to the production `.env` on the server. They never go in git.
+
+```
+ZOOM_ENABLED=true
+ZOOM_ACCOUNT_ID=your_account_id
+ZOOM_CLIENT_ID=your_client_id
+ZOOM_CLIENT_SECRET=your_client_secret
+ZOOM_IMPORT_USER_ID=me
+# Optional: Zoom user whose webinars are imported, if different
+ZOOM_WEBINAR_IMPORT_USER_ID=
+FRONTEND_URL=https://fmb.dcjamaat.com
+SENDGRID_ENABLED=true
+```
+
+- `ZOOM_IMPORT_USER_ID` is the Zoom user whose schedule is imported. `me` is the app owner.
+- `FRONTEND_URL` must be `https://fmb.dcjamaat.com` in production, because join links are built from it.
+- `SENDGRID_ENABLED` must be `true` and `SENDGRID_API_KEY` must be set before sending invites. Until both are set, Send Invites is refused (no links are reissued and nothing is written to the log); meanwhile each person's link can be copied individually from the webinar's Attendees screen.
+- Both compose files pass every setting in the table below to the server container. If you add a new variable to the app, also list it under the server service, otherwise a value in `.env` is not visible to the app.
+
+Optional settings (all have defaults, set them in `.env` only to change them):
+
+| Variable | Default | What it does |
+|---|---|---|
+| `WEBINAR_JOIN_WINDOW_BEFORE_MIN` | `10` | Minutes before the start time that joining opens |
+| `WEBINAR_JOIN_WINDOW_AFTER_MIN` | `15` | Minutes after the start time that joining stays open |
+| `WEBINAR_DISPLAY_ZONE` | `America/New_York` | Time zone used to show webinar times in emails |
+| `ZOOM_IMPORT_USER_ID` | `me` | Zoom user whose meetings are imported |
+| `ZOOM_WEBINAR_IMPORT_USER_ID` | empty | Zoom user whose webinars are imported. If empty, `ZOOM_IMPORT_USER_ID` is used |
+| `ZOOM_DEFAULT_HOST_NAME` | `FMB` | Host name shown when Zoom does not provide one |
+| `ZOOM_OAUTH_URL` | `https://zoom.us/oauth/token` | Zoom token endpoint. Normally never needs changing |
+| `ZOOM_BASE_URL` | `https://api.zoom.us` | Zoom API base URL. Normally never needs changing |
+
+After changing `.env`, recreate the server container (`docker compose up -d server`) so it picks up the new values.
+
+### Zoom is optional
+
+With `ZOOM_ENABLED=false`, no Zoom API calls are made. Coordinators create webinars by hand and paste the Zoom link, and everything else works. The pasted link must be a complete `https://` URL with no spaces.
+
+### Granting the coordinator role
+
+Admin, then Settings, then Users, edit the user, and tick `WEBINAR_COORDINATOR`.
+
+### Behaviour to know about
+
+- A seat cannot be removed after its attendee has joined, so that attendance records are kept.
+- When an invite email fails, that family is listed as skipped, and their previous links no longer work until invites are resent or a link is copied for them.
+
+### Deploy note
+
+The V37 migration is applied by both the `flyway` container and the app on start. If Flyway reports a checksum mismatch on an older migration, repair the Flyway history of the affected database. Never edit V37 or any other migration file to work around it.
+
+Production: run repair through the compose `flyway` service, which uses the same database settings and migration location as its normal `migrate` run:
+
+```bash
+docker compose run --rm flyway -connectRetries=60 -locations=filesystem:/flyway/sql repair
+```
+
+Dev: `./gradlew flywayRepair` uses the `flyway {}` block in `server/build.gradle.kts`, which reads `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` and `SPRING_DATASOURCE_PASSWORD` and otherwise falls back to `localhost:5432`. The dev database is exposed on port 5433, so point Gradle at it:
+
+```bash
+cd server
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/rsvp \
+SPRING_DATASOURCE_USERNAME=rsvp SPRING_DATASOURCE_PASSWORD=rsvp \
+./gradlew flywayRepair
 ```
 
 ---

@@ -5,6 +5,7 @@ import { api } from '../../../api/client';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { EditIcon, TrashIcon, iconAction } from '../../../components/ActionIcons';
 
 type Event = {
   id: number;
@@ -1151,19 +1152,11 @@ export default function ThaaliOrderReport() {
                         {!isPast && (
                           <td className="py-3 px-4 text-center">
                             <div className="flex items-center justify-center gap-2">
-                              <button
-                                onClick={() => openEditModal(order)}
-                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                                title="Edit order"
-                              >
-                                Edit
+                              <button type="button" onClick={() => openEditModal(order)} className={iconAction()} title="Edit order" aria-label="Edit order">
+                                <EditIcon />
                               </button>
-                              <button
-                                onClick={() => openDeleteModal(order)}
-                                className="text-red-600 hover:text-red-800 text-sm font-medium"
-                                title="Delete order"
-                              >
-                                Delete
+                              <button type="button" onClick={() => openDeleteModal(order)} className={iconAction('red')} title="Delete order" aria-label="Delete order">
+                                <TrashIcon />
                               </button>
                             </div>
                           </td>

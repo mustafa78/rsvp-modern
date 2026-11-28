@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../api/client';
+import { BanIcon, CheckCircleIcon, EditIcon, iconAction } from '../../../components/ActionIcons';
 
 type Role = {
   id: number;
@@ -269,20 +270,13 @@ export default function RoleManagement() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => startEdit(role)}
-                          className="text-sm text-blue-600 hover:text-blue-800"
-                        >
-                          Edit
+                      <div className="flex items-center justify-center gap-1">
+                        <button type="button" onClick={() => startEdit(role)} className={iconAction()} title={`Edit role ${role.name}`} aria-label={`Edit role ${role.name}`}>
+                          <EditIcon />
                         </button>
                         {!isSystemRole(role.name) && (
-                          <button
-                            onClick={() => deactivateMutation.mutate(role.id)}
-                            disabled={deactivateMutation.isPending}
-                            className="text-sm text-red-600 hover:text-red-800 disabled:opacity-50"
-                          >
-                            Deactivate
+                          <button type="button" onClick={() => deactivateMutation.mutate(role.id)} className={iconAction('red')} title={`Deactivate role ${role.name}`} aria-label={`Deactivate role ${role.name}`} disabled={deactivateMutation.isPending}>
+                            <BanIcon />
                           </button>
                         )}
                       </div>
@@ -331,19 +325,12 @@ export default function RoleManagement() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => startEdit(role)}
-                          className="text-sm text-blue-600 hover:text-blue-800"
-                        >
-                          Edit
+                      <div className="flex items-center justify-center gap-1">
+                        <button type="button" onClick={() => startEdit(role)} className={iconAction()} title={`Edit role ${role.name}`} aria-label={`Edit role ${role.name}`}>
+                          <EditIcon />
                         </button>
-                        <button
-                          onClick={() => activateMutation.mutate(role.id)}
-                          disabled={activateMutation.isPending}
-                          className="text-sm text-green-600 hover:text-green-800 disabled:opacity-50"
-                        >
-                          Activate
+                        <button type="button" onClick={() => activateMutation.mutate(role.id)} className={iconAction('green')} title={`Activate role ${role.name}`} aria-label={`Activate role ${role.name}`} disabled={activateMutation.isPending}>
+                          <CheckCircleIcon />
                         </button>
                       </div>
                     </td>

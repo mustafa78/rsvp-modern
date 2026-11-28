@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { api } from '../../../api/client';
+import { EditIcon, TrashIcon, iconAction } from '../../../components/ActionIcons';
 
 type LookupItem = {
   id: number;
@@ -221,19 +222,15 @@ export default function LookupManagement({ type, title, description }: Props) {
                       </span>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-center">
-                    <button
-                      onClick={() => startEdit(item)}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-800 mr-3"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(item)}
-                      className="text-sm font-medium text-red-600 hover:text-red-800"
-                    >
-                      Delete
-                    </button>
+                  <td className="py-2 px-4 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <button type="button" onClick={() => startEdit(item)} className={iconAction()} title={`Edit ${item.name}`} aria-label={`Edit ${item.name}`}>
+                        <EditIcon />
+                      </button>
+                      <button type="button" onClick={() => handleDelete(item)} className={iconAction('red')} title={`Delete ${item.name}`} aria-label={`Delete ${item.name}`}>
+                        <TrashIcon />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -19,7 +19,7 @@ type User = {
 };
 
 // Public routes that don't require authentication
-const PUBLIC_ROUTES = ['/', '/login', '/forgot-password', '/reset-password'];
+const PUBLIC_ROUTES = ['/', '/login', '/forgot-password', '/reset-password', '/j/'];
 
 export default function App() {
   const navigate = useNavigate();
@@ -43,13 +43,23 @@ export default function App() {
 
   const unreadCount = unreadCountData?.count || 0;
 
+  // Upcoming meetings (webinars in the code) for the badge on the Meetings tab. Shares its cache with that page.
+  const { data: myWebinars } = useQuery<unknown[]>({
+    queryKey: ['my-webinars'],
+    queryFn: async () => (await api.get('/webinars')).data,
+    enabled: !!user,
+    staleTime: 1000 * 30,
+    refetchInterval: 1000 * 60 * 5,
+  });
+  const webinarCount = myWebinars?.length ?? 0;
+
   const isPublicRoute = PUBLIC_ROUTES.some(route =>
     route === '/' ? location.pathname === '/' : location.pathname.startsWith(route)
   );
 
   // Check if user has any admin role
   const hasAdminRole = user?.roles?.some(role =>
-    ['ADMIN', 'NIYAZ_COORDINATOR', 'THAALI_COORDINATOR', 'MENU_COORDINATOR', 'SHOPPING_COORDINATOR', 'DANA_COORDINATOR'].includes(role)
+    ['ADMIN', 'NIYAZ_COORDINATOR', 'THAALI_COORDINATOR', 'MENU_COORDINATOR', 'SHOPPING_COORDINATOR', 'DANA_COORDINATOR', 'WEBINAR_COORDINATOR'].includes(role)
   );
 
   // User dropdown state - must be declared before any conditional returns (Rules of Hooks)
@@ -80,6 +90,8 @@ export default function App() {
         navigate('/events', { replace: true });
       } else if (hasAdminRole) {
         navigate('/admin', { replace: true });
+      } else {
+        navigate('/webinars', { replace: true });
       }
     }
     // Non-HOF users should be redirected to admin if they try to access events
@@ -180,6 +192,7 @@ export default function App() {
   // Check if current route is active
   const isEventsActive = location.pathname.startsWith('/events') && !location.pathname.startsWith('/admin');
   const isCalendarActive = location.pathname === '/calendar';
+  const isWebinarsActive = location.pathname.startsWith('/webinars');
   const isAdminActive = location.pathname.startsWith('/admin');
 
   // Authenticated layout
@@ -225,6 +238,22 @@ export default function App() {
                   </Link>
                 </>
               )}
+              <Link
+                to="/webinars"
+                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isWebinarsActive
+                    ? 'bg-white/20 text-white'
+                    : 'text-white/80 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                Meetings
+                {webinarCount > 0 && (
+                  <span className="rounded-full bg-white px-1.5 text-xs font-semibold leading-5 text-purple-700">
+                    <span aria-hidden="true">{webinarCount}</span>
+                    <span className="sr-only">({webinarCount} upcoming)</span>
+                  </span>
+                )}
+              </Link>
               {hasAdminRole && (
                 <Link
                   to="/admin"
