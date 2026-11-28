@@ -32,8 +32,17 @@ export default function WebinarsPage() {
         </div>
       )}
       {!isLoading && data?.length === 0 && (
-        <div className="rounded-xl border bg-white p-8 text-center text-gray-500">
-          You have no upcoming webinars.
+        <div className="rounded-xl border bg-white p-8 text-center">
+          <p className="font-medium text-gray-900">No webinars are scheduled for you right now.</p>
+          <p className="mt-2 text-sm text-gray-600">
+            When one is, it will appear here, and the Join button opens shortly before it starts.
+          </p>
+          <p className="mt-2 text-sm text-gray-600">
+            Family members can request their own link, which will be sent by email to the head of family.
+          </p>
+          <p className="mt-2 text-sm text-gray-600">
+            Expecting a webinar that is not listed? Please contact your webinar coordinator.
+          </p>
         </div>
       )}
 

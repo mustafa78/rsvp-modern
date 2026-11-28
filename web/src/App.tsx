@@ -43,6 +43,16 @@ export default function App() {
 
   const unreadCount = unreadCountData?.count || 0;
 
+  // Upcoming webinars for the badge on the Webinars tab. Shares its cache with the Webinars page.
+  const { data: myWebinars } = useQuery<unknown[]>({
+    queryKey: ['my-webinars'],
+    queryFn: async () => (await api.get('/webinars')).data,
+    enabled: !!user,
+    staleTime: 1000 * 30,
+    refetchInterval: 1000 * 60 * 5,
+  });
+  const webinarCount = myWebinars?.length ?? 0;
+
   const isPublicRoute = PUBLIC_ROUTES.some(route =>
     route === '/' ? location.pathname === '/' : location.pathname.startsWith(route)
   );
@@ -230,13 +240,19 @@ export default function App() {
               )}
               <Link
                 to="/webinars"
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isWebinarsActive
                     ? 'bg-white/20 text-white'
                     : 'text-white/80 hover:bg-white/10 hover:text-white'
                 }`}
               >
                 Webinars
+                {webinarCount > 0 && (
+                  <span className="rounded-full bg-white px-1.5 text-xs font-semibold leading-5 text-purple-700">
+                    <span aria-hidden="true">{webinarCount}</span>
+                    <span className="sr-only">({webinarCount} upcoming)</span>
+                  </span>
+                )}
               </Link>
               {hasAdminRole && (
                 <Link
